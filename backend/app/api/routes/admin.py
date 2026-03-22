@@ -215,17 +215,57 @@ async def embedding_stats(
 async def trigger_ingest(
     admin: User = Depends(require_platform_admin),
 ):
-    """Manuel embedding ingestion başlat."""
-    from fastapi import BackgroundTasks
+    """İçtihat embedding ingestion başlat."""
     from app.api.deps import get_ingestion_pipeline
     from app.ingestion.ingest import DEFAULT_TOPICS
 
     pipeline = get_ingestion_pipeline()
 
     import asyncio
-    asyncio.create_task(pipeline.ingest_topics(topics=DEFAULT_TOPICS[:10], pages_per_topic=3))
+    asyncio.create_task(pipeline.ingest_topics(topics=DEFAULT_TOPICS, pages_per_topic=3))
 
-    return {"status": "started", "topics": len(DEFAULT_TOPICS[:10]), "pages_per_topic": 3}
+    return {"status": "started", "type": "ictihat", "topics": len(DEFAULT_TOPICS), "pages_per_topic": 3}
+
+
+@router.post("/ingest/mevzuat")
+async def trigger_mevzuat_ingest(
+    admin: User = Depends(require_platform_admin),
+):
+    """Mevzuat embedding ingestion başlat."""
+    from app.api.deps import get_ingestion_pipeline
+
+    pipeline = get_ingestion_pipeline()
+
+    mevzuat_topics = [
+        "iş kanunu", "türk ceza kanunu", "türk borçlar kanunu", "türk medeni kanunu",
+        "hukuk muhakemeleri kanunu", "ceza muhakemesi kanunu", "icra iflas kanunu",
+        "idari yargılama usulü kanunu", "ticaret kanunu", "tüketicinin korunması kanunu",
+        "kişisel verilerin korunması kanunu", "anayasa", "avukatlık kanunu",
+        "noterlik kanunu", "tapu kanunu", "kat mülkiyeti kanunu",
+    ]
+
+    import asyncio
+    asyncio.create_task(pipeline.ingest_topics(topics=mevzuat_topics, pages_per_topic=3))
+
+    return {"status": "started", "type": "mevzuat", "topics": len(mevzuat_topics), "pages_per_topic": 3}
+
+
+@router.get("/logs")
+async def get_recent_logs(
+    admin: User = Depends(require_platform_admin),
+):
+    """Son backend loglarını getir."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["tail", "-50", "/proc/1/fd/1"],
+            capture_output=True, text=True, timeout=5
+        )
+        lines = result.stdout.strip().split("\n") if result.stdout else []
+        return {"lines": lines[-50:], "count": len(lines)}
+    except Exception:
+        # Docker log alternatifi
+        return {"lines": ["Log okuma desteklenmiyor. Docker logs kullanın."], "count": 0}
 
 
 # ── Platform İstatistikleri ───────────────────────────

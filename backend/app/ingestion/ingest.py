@@ -126,7 +126,7 @@ class IngestionPipeline:
                         all_chunks.extend(chunks)
 
                         # Rate limiting — karar başına bekleme
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(2.0)
 
                     if not all_chunks:
                         continue
@@ -169,7 +169,7 @@ class IngestionPipeline:
                         embedded=len(points),
                     )
 
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(3.0)
 
                 except Exception as e:
                     logger.error(
@@ -316,7 +316,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(clean, metadata)
                         all_chunks.extend(chunks)
 
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(2.0)
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
@@ -344,7 +344,7 @@ class IngestionPipeline:
                         )
                         total_embedded += len(points)
 
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(3.0)
 
                 except Exception as e:
                     logger.error("ingest_daire_page_error", daire=d_name, page=page, error=str(e))

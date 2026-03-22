@@ -231,10 +231,79 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-          <button onClick={triggerIngest} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[13px] font-medium text-white transition-colors">
-            Yeni Ingestion Başlat
-          </button>
+          <div className="flex gap-2">
+            <button onClick={triggerIngest} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[13px] font-medium text-white transition-colors">
+              İçtihat Ingestion
+            </button>
+            <button onClick={async () => { await fetch(`${API_URL}/api/v1/admin/ingest/mevzuat`, { method: "POST", headers }); setToast("Mevzuat ingestion başlatıldı"); }} className="px-4 py-2 bg-[#3DD68C] hover:bg-[#2CC67C] rounded-lg text-[13px] font-medium text-white transition-colors">
+              Mevzuat Ingestion
+            </button>
+            <button onClick={() => fetchAll()} className="px-4 py-2 bg-[#111113] border border-white/[0.06] hover:border-white/[0.12] rounded-lg text-[13px] font-medium text-[#8B8B8E] hover:text-[#ECECEE] transition-colors">
+              Yenile
+            </button>
+          </div>
+
+          {/* Ingestion durumu */}
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4">
+            <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-3">Ingestion Durumu</h3>
+            <IngestionStatus token={token} apiUrl={API_URL} />
+          </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function IngestionStatus({ token, apiUrl }: { token: string | null; apiUrl: string }) {
+  const [status, setStatus] = useState<any>(null);
+  const [progress, setProgress] = useState<any>(null);
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    const h = { Authorization: `Bearer ${token}` };
+    const [sRes, pRes] = await Promise.allSettled([
+      fetch(`${apiUrl}/api/v1/ingest/status`, { headers: h }),
+      fetch(`${apiUrl}/api/v1/ingest/progress`, { headers: h }),
+    ]);
+    if (sRes.status === "fulfilled" && sRes.value.ok) setStatus(await sRes.value.json());
+    if (pRes.status === "fulfilled" && pRes.value.ok) setProgress(await pRes.value.json());
+  }, [token, apiUrl]);
+
+  useEffect(() => { refresh(); const i = setInterval(refresh, 5000); return () => clearInterval(i); }, [refresh]);
+
+  return (
+    <div className="space-y-2 text-[13px]">
+      <div className="flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${status?.running ? "bg-[#3DD68C] animate-pulse" : "bg-[#5C5C5F]"}`} />
+        <span className="text-[#ECECEE]">{status?.running ? "Çalışıyor..." : "Beklemede"}</span>
+      </div>
+      {progress && (
+        <>
+          <div className="flex justify-between text-[#5C5C5F]">
+            <span>Toplam Embedding</span>
+            <span className="text-[#ECECEE] font-medium">{progress.total_embeddings}</span>
+          </div>
+          <div className="flex justify-between text-[#5C5C5F]">
+            <span>Tamamlanan Konular</span>
+            <span className="text-[#ECECEE] font-medium">{progress.completed_topics}</span>
+          </div>
+          {progress.last_update && (
+            <div className="flex justify-between text-[#5C5C5F]">
+              <span>Son Güncelleme</span>
+              <span className="text-[#ECECEE]">{new Date(progress.last_update).toLocaleString("tr-TR")}</span>
+            </div>
+          )}
+          {progress.topics_list?.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-white/[0.04]">
+              <p className="text-[11px] text-[#5C5C5F] mb-1">Tamamlanan:</p>
+              <div className="flex flex-wrap gap-1">
+                {progress.topics_list.map((t: string) => (
+                  <span key={t} className="px-1.5 py-0.5 text-[10px] bg-[#3DD68C]/10 text-[#3DD68C] rounded">{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
