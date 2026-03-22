@@ -5,7 +5,8 @@ import { useState, useCallback } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function KayitPage() {
-  const [form, setForm] = useState({ email: "", password: "", full_name: "", baro_sicil_no: "", baro: "", phone: "" });
+  const [accountType, setAccountType] = useState<"bireysel" | "firma">("bireysel");
+  const [form, setForm] = useState({ email: "", password: "", full_name: "", baro_sicil_no: "", baro: "", phone: "", firma_adi: "", firma_vergi_no: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,9 @@ export default function KayitPage() {
           baro_sicil_no: form.baro_sicil_no || null,
           baro: form.baro || null,
           phone: form.phone || null,
+          account_type: accountType,
+          firma_adi: accountType === "firma" ? form.firma_adi : null,
+          firma_vergi_no: accountType === "firma" ? form.firma_vergi_no : null,
         }),
       });
       if (!res.ok) {
@@ -76,6 +80,34 @@ export default function KayitPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Hesap türü */}
+          <div>
+            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-2">Hesap Türü</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setAccountType("bireysel")} className={`py-2.5 text-[13px] font-medium rounded-lg border transition-all ${accountType === "bireysel" ? "bg-[#6C6CFF]/10 border-[#6C6CFF]/50 text-[#6C6CFF]" : "bg-[#16161A] border-white/[0.06] text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
+                Bireysel Avukat
+              </button>
+              <button type="button" onClick={() => setAccountType("firma")} className={`py-2.5 text-[13px] font-medium rounded-lg border transition-all ${accountType === "firma" ? "bg-[#6C6CFF]/10 border-[#6C6CFF]/50 text-[#6C6CFF]" : "bg-[#16161A] border-white/[0.06] text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
+                Hukuk Bürosu
+              </button>
+            </div>
+          </div>
+
+          {/* Firma bilgileri */}
+          {accountType === "firma" && (
+            <div className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-3 space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6C6CFF]">Büro Bilgileri</p>
+              <div>
+                <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Büro Adı *</label>
+                <input type="text" required value={form.firma_adi} onChange={(e) => update("firma_adi", e.target.value)} placeholder="Yıldırım & Partners" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Vergi No</label>
+                <input type="text" value={form.firma_vergi_no} onChange={(e) => update("firma_vergi_no", e.target.value)} placeholder="1234567890" className={inputCls} />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Ad Soyad *</label>
             <input type="text" required value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="Av. Mehmet Demir" className={inputCls} />

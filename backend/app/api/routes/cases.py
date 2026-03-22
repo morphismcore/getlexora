@@ -279,6 +279,45 @@ async def list_deadlines(
     return result.scalars().all()
 
 
+@router.put("/{case_id}/deadlines/{deadline_id}")
+async def update_deadline(
+    case_id: uuid.UUID,
+    deadline_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Süreyi güncelle veya tamamlandı olarak işaretle."""
+    await _get_user_case(case_id, current_user, db)
+    result = await db.execute(
+        select(Deadline).where(Deadline.id == deadline_id, Deadline.case_id == case_id)
+    )
+    dl = result.scalar_one_or_none()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Süre bulunamadı")
+    dl.is_completed = not dl.is_completed
+    await db.flush()
+    return {"status": "ok", "is_completed": dl.is_completed}
+
+
+@router.delete("/{case_id}/deadlines/{deadline_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_deadline(
+    case_id: uuid.UUID,
+    deadline_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Süreyi sil."""
+    await _get_user_case(case_id, current_user, db)
+    result = await db.execute(
+        select(Deadline).where(Deadline.id == deadline_id, Deadline.case_id == case_id)
+    )
+    dl = result.scalar_one_or_none()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Süre bulunamadı")
+    await db.delete(dl)
+    await db.flush()
+
+
 # ── Saved Searches ────────────────────────────────────────────────────
 
 

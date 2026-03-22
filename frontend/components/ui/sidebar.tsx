@@ -258,7 +258,8 @@ export default function Sidebar() {
         <UserSection collapsed={!isMobile && collapsed} isMobile={isMobile} />
 
         {/* Settings */}
-        <button
+        <Link
+          href="/ayarlar"
           className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#8B8B8E] hover:bg-[rgba(255,255,255,0.04)] hover:text-[#ECECEE] transition-colors ${
             !isMobile && collapsed ? "justify-center" : ""
           }`}
@@ -269,7 +270,7 @@ export default function Sidebar() {
             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           {(isMobile || !collapsed) && <span>Ayarlar</span>}
-        </button>
+        </Link>
 
         {/* Collapse toggle - desktop only */}
         {!isMobile && (

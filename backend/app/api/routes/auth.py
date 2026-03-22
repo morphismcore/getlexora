@@ -32,6 +32,9 @@ class RegisterRequest(BaseModel):
     baro_sicil_no: str | None = None
     baro: str | None = None
     phone: str | None = None
+    account_type: str = "bireysel"  # "bireysel" veya "firma"
+    firma_adi: str | None = None
+    firma_vergi_no: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -48,6 +51,8 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    role: str
+    firm_id: uuid.UUID | None = None
     baro_sicil_no: str | None
     baro: str | None
     phone: str | None
@@ -128,8 +133,25 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.flush()
+
+    # Firma hesabı ise otomatik firma oluştur
+    if body.account_type == "firma" and body.firma_adi:
+        firm = Firm(
+            name=body.firma_adi,
+            tax_id=body.firma_vergi_no,
+        )
+        db.add(firm)
+        await db.flush()
+        user.firm_id = firm.id
+        user.role = "admin"
+        await db.flush()
+
     await db.refresh(user)
-    return {"message": "Kaydınız alındı. Admin onayı bekleniyor.", "email": body.email}
+    return {
+        "message": "Kaydınız alındı. Admin onayı bekleniyor.",
+        "email": body.email,
+        "account_type": body.account_type,
+    }
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -157,6 +179,49 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def me(current_user: User = Depends(get_current_user)):
     """Mevcut kullanıcı bilgilerini getir."""
     return current_user
+
+
+# ── Profil & Güvenlik ─────────────────────────────────────
+
+
+class ProfileUpdateRequest(BaseModel):
+    full_name: str | None = None
+    phone: str | None = None
+    baro_sicil_no: str | None = None
+    baro: str | None = None
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    body: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Profil bilgilerini güncelle."""
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
+    await db.flush()
+    await db.refresh(current_user)
+    return current_user
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@router.put("/password")
+async def change_password(
+    body: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Şifre değiştir."""
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Mevcut şifre yanlış")
+    current_user.hashed_password = hash_password(body.new_password)
+    await db.flush()
+    return {"status": "ok", "message": "Şifre başarıyla değiştirildi"}
 
 
 # ── Firma Yönetimi ────────────────────────────────────────
