@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/components/ui/auth-provider";
 import { useRouter } from "next/navigation";
 
@@ -255,55 +255,94 @@ export default function AdminPage() {
 }
 
 function IngestionStatus({ token, apiUrl }: { token: string | null; apiUrl: string }) {
-  const [status, setStatus] = useState<any>(null);
   const [progress, setProgress] = useState<any>(null);
+  const [logs, setLogs] = useState<any>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
     if (!token) return;
     const h = { Authorization: `Bearer ${token}` };
-    const [sRes, pRes] = await Promise.allSettled([
-      fetch(`${apiUrl}/api/v1/ingest/status`, { headers: h }),
+    const [pRes, lRes] = await Promise.allSettled([
       fetch(`${apiUrl}/api/v1/ingest/progress`, { headers: h }),
+      fetch(`${apiUrl}/api/v1/admin/logs`, { headers: h }),
     ]);
-    if (sRes.status === "fulfilled" && sRes.value.ok) setStatus(await sRes.value.json());
     if (pRes.status === "fulfilled" && pRes.value.ok) setProgress(await pRes.value.json());
+    if (lRes.status === "fulfilled" && lRes.value.ok) setLogs(await lRes.value.json());
   }, [token, apiUrl]);
 
-  useEffect(() => { refresh(); const i = setInterval(refresh, 5000); return () => clearInterval(i); }, [refresh]);
+  useEffect(() => { refresh(); const i = setInterval(refresh, 3000); return () => clearInterval(i); }, [refresh]);
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+  }, [logs]);
+
+  const totalTopics = 100;
+  const completed = progress?.completed_topics || 0;
+  const pct = totalTopics > 0 ? Math.round((completed / totalTopics) * 100) : 0;
+  const isRunning = logs?.running === true;
+  const logEntries = logs?.logs || [];
+
+  const levelColor = (level: string) => {
+    if (level === "error") return "text-[#E5484D]";
+    if (level === "success") return "text-[#3DD68C]";
+    if (level === "warn") return "text-[#FFB224]";
+    return "text-[#8B8B8E]";
+  };
 
   return (
-    <div className="space-y-2 text-[13px]">
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${status?.running ? "bg-[#3DD68C] animate-pulse" : "bg-[#5C5C5F]"}`} />
-        <span className="text-[#ECECEE]">{status?.running ? "Çalışıyor..." : "Beklemede"}</span>
+    <div className="space-y-4 text-[13px]">
+      {/* Status + ilerleme */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full ${isRunning ? "bg-[#3DD68C] animate-pulse" : "bg-[#5C5C5F]"}`} />
+          <span className="text-[#ECECEE] font-medium">{isRunning ? "Çalışıyor" : "Beklemede"}</span>
+        </div>
+        <span className="text-[#5C5C5F]">|</span>
+        <span className="text-[#ECECEE]">{progress?.total_embeddings || 0} embedding</span>
+        <span className="text-[#5C5C5F]">|</span>
+        <span className="text-[#ECECEE]">{completed}/{totalTopics} konu</span>
       </div>
-      {progress && (
-        <>
-          <div className="flex justify-between text-[#5C5C5F]">
-            <span>Toplam Embedding</span>
-            <span className="text-[#ECECEE] font-medium">{progress.total_embeddings}</span>
-          </div>
-          <div className="flex justify-between text-[#5C5C5F]">
-            <span>Tamamlanan Konular</span>
-            <span className="text-[#ECECEE] font-medium">{progress.completed_topics}</span>
-          </div>
-          {progress.last_update && (
-            <div className="flex justify-between text-[#5C5C5F]">
-              <span>Son Güncelleme</span>
-              <span className="text-[#ECECEE]">{new Date(progress.last_update).toLocaleString("tr-TR")}</span>
-            </div>
-          )}
-          {progress.topics_list?.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-white/[0.04]">
-              <p className="text-[11px] text-[#5C5C5F] mb-1">Tamamlanan:</p>
-              <div className="flex flex-wrap gap-1">
-                {progress.topics_list.map((t: string) => (
-                  <span key={t} className="px-1.5 py-0.5 text-[10px] bg-[#3DD68C]/10 text-[#3DD68C] rounded">{t}</span>
-                ))}
+
+      {/* İlerleme çubuğu */}
+      <div className="w-full h-2 bg-[#1A1A1F] rounded-full overflow-hidden">
+        <div className="h-full bg-[#6C6CFF] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+      </div>
+
+      {progress?.last_update && (
+        <p className="text-[11px] text-[#5C5C5F]">Son güncelleme: {new Date(progress.last_update).toLocaleString("tr-TR")}</p>
+      )}
+
+      {/* Terminal */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#5C5C5F]">Canlı Log</p>
+          <span className="text-[10px] text-[#5C5C5F]">{logEntries.length} satır — 3sn'de yenilenir</span>
+        </div>
+        <div ref={terminalRef} className="bg-[#000000] border border-white/[0.08] rounded-lg p-3 h-[350px] overflow-y-auto font-mono text-[11px] leading-[1.6]">
+          {logEntries.length === 0 ? (
+            <div className="text-[#5C5C5F] text-center py-8">Henüz log yok. Ingestion başlatın.</div>
+          ) : (
+            logEntries.map((entry: any, i: number) => (
+              <div key={i} className={`${levelColor(entry.level)} flex gap-2`}>
+                <span className="text-[#5C5C5F] shrink-0 select-none">{entry.ts?.slice(11, 19) || ""}</span>
+                <span>{entry.msg}</span>
               </div>
-            </div>
+            ))
           )}
-        </>
+        </div>
+      </div>
+
+      {/* Tamamlanan konular */}
+      {progress?.topics_list?.length > 0 && (
+        <div>
+          <p className="text-[11px] text-[#5C5C5F] mb-1">Tamamlanan ({progress.topics_list.length}):</p>
+          <div className="flex flex-wrap gap-1">
+            {progress.topics_list.map((t: string) => (
+              <span key={t} className="px-1.5 py-0.5 text-[10px] bg-[#3DD68C]/10 text-[#3DD68C] rounded">{t}</span>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

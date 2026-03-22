@@ -254,18 +254,14 @@ async def trigger_mevzuat_ingest(
 async def get_recent_logs(
     admin: User = Depends(require_platform_admin),
 ):
-    """Son backend loglarını getir."""
-    import subprocess
-    try:
-        result = subprocess.run(
-            ["tail", "-50", "/proc/1/fd/1"],
-            capture_output=True, text=True, timeout=5
-        )
-        lines = result.stdout.strip().split("\n") if result.stdout else []
-        return {"lines": lines[-50:], "count": len(lines)}
-    except Exception:
-        # Docker log alternatifi
-        return {"lines": ["Log okuma desteklenmiyor. Docker logs kullanın."], "count": 0}
+    """Canlı ingestion loglarını getir (in-memory buffer)."""
+    from app.ingestion.ingest import _ingest_logs, _ingest_running
+
+    return {
+        "logs": _ingest_logs[-100:],
+        "running": _ingest_running,
+        "count": len(_ingest_logs),
+    }
 
 
 # ── Platform İstatistikleri ───────────────────────────

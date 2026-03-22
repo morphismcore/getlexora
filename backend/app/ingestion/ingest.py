@@ -22,6 +22,28 @@ logger = structlog.get_logger()
 
 CHECKPOINT_FILE = "/app/data/ingestion_checkpoint.json"
 
+# ── In-memory log buffer (son 200 satır) ──────────────────
+_ingest_logs: list[dict] = []
+_ingest_running = False
+MAX_LOG_LINES = 200
+
+
+def _log(level: str, message: str):
+    """Log buffer'a ekle."""
+    global _ingest_logs
+    _ingest_logs.append({
+        "ts": datetime.now().isoformat(),
+        "level": level,
+        "msg": message,
+    })
+    if len(_ingest_logs) > MAX_LOG_LINES:
+        _ingest_logs = _ingest_logs[-MAX_LOG_LINES:]
+    # Ayrıca structlog'a da yaz
+    if level == "error":
+        logger.error("ingest_log", msg=message)
+    else:
+        logger.info("ingest_log", msg=message)
+
 
 class IngestionPipeline:
     """Bedesten API → Chunking → Embedding → Qdrant."""
@@ -188,43 +210,53 @@ class IngestionPipeline:
             "court_types": court_types,
         }
         logger.info("ingest_complete", **summary)
+        _log("success", f"✅ {keyword} tamamlandı — {total_embedded} embedding")
         return summary
 
     async def ingest_topics(self, topics: list[str], pages_per_topic: int = 3) -> dict:
         """Birden fazla hukuk konusu için toplu ingestion."""
+        global _ingest_running
+        _ingest_running = True
+        _log("info", f"📋 Ingestion başladı — {len(topics)} konu, sayfa/konu: {pages_per_topic}")
+
         checkpoint = self._load_checkpoint()
         completed_topics = set(checkpoint.get("completed_topics", []))
         all_summaries = []
 
-        for topic in topics:
-            if topic in completed_topics:
-                logger.info("ingest_topic_skipped", topic=topic, reason="checkpoint")
-                continue
+        try:
+            for topic in topics:
+                if topic in completed_topics:
+                    logger.info("ingest_topic_skipped", topic=topic, reason="checkpoint")
+                    continue
 
-            logger.info("ingest_topic_start", topic=topic)
-            summary = await self.ingest_search_results(
-                keyword=topic,
-                pages=pages_per_topic,
-            )
-            all_summaries.append(summary)
+                logger.info("ingest_topic_start", topic=topic)
+                _log("info", f"🔄 {topic} konusu başladı")
+                summary = await self.ingest_search_results(
+                    keyword=topic,
+                    pages=pages_per_topic,
+                )
+                all_summaries.append(summary)
 
-            # Save checkpoint
-            completed_topics.add(topic)
-            checkpoint["completed_topics"] = list(completed_topics)
-            checkpoint["last_update"] = datetime.now().isoformat()
-            self._save_checkpoint(checkpoint)
+                # Save checkpoint
+                completed_topics.add(topic)
+                checkpoint["completed_topics"] = list(completed_topics)
+                checkpoint["last_update"] = datetime.now().isoformat()
+                self._save_checkpoint(checkpoint)
 
-            await asyncio.sleep(5.0)
+                await asyncio.sleep(5.0)
 
-        total = {
-            "topics": len(topics),
-            "topics_skipped": len(topics) - len(all_summaries),
-            "total_fetched": sum(s["total_fetched"] for s in all_summaries),
-            "total_chunks": sum(s["total_chunks"] for s in all_summaries),
-            "total_embedded": sum(s["total_embedded"] for s in all_summaries),
-        }
-        logger.info("ingest_all_topics_complete", **total)
-        return total
+            total = {
+                "topics": len(topics),
+                "topics_skipped": len(topics) - len(all_summaries),
+                "total_fetched": sum(s["total_fetched"] for s in all_summaries),
+                "total_chunks": sum(s["total_chunks"] for s in all_summaries),
+                "total_embedded": sum(s["total_embedded"] for s in all_summaries),
+            }
+            logger.info("ingest_all_topics_complete", **total)
+            _log("success", f"🎉 Ingestion tamamlandı — {total['total_embedded']} embedding")
+            return total
+        finally:
+            _ingest_running = False
 
     async def ingest_by_daire(
         self,
