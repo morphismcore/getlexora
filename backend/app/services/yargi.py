@@ -8,7 +8,7 @@ import asyncio
 import base64
 import structlog
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from app.config import get_settings
 
@@ -71,7 +71,7 @@ class YargiService:
     async def close(self):
         await self.client.aclose()
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=5, max=60))
     async def search_bedesten(
         self,
         keyword: str,
@@ -143,7 +143,7 @@ class YargiService:
             logger.error("bedesten_search_error", error=str(e), keyword=keyword)
             raise
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=5, max=60))
     async def get_document(self, document_id: str) -> dict:
         """Tam karar metnini getir (base64 encoded HTML/PDF)."""
         # Check cache first
