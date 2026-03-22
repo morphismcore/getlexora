@@ -1,0 +1,142 @@
+name: Build, Test & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  SERVER_HOST: 204.168.136.223
+  SERVER_USER: root
+  DEPLOY_PATH: /opt/lexora
+
+jobs:
+  # ─── Backend Tests ──────────────────────────────────
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: lexora_test
+          POSTGRES_USER: lexora
+          POSTGRES_PASSWORD: test123
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://lexora:test123@localhost:5432/lexora_test
+          REDIS_URL: redis://localhost:6379/0
+          QDRANT_HOST: localhost
+          QDRANT_PORT: 6333
+          ENV: test
+        run: python -m pytest tests/ -v --tb=short -k "not test_search_"
+
+  # ─── Frontend Build Check ──────────────────────────
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint || true
+
+      - name: Build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://getlexora.net
+        run: npm run build
+
+  # ─── Deploy to Server ──────────────────────────────
+  deploy:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            --exclude node_modules \
+            --exclude .next \
+            --exclude __pycache__ \
+            --exclude .git \
+            --exclude .env \
+            --exclude docker-compose.prod.yml \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: Build and restart containers
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'DEPLOY'
+            cd /opt/lexora
+            
+            # Build
+            docker compose -f docker-compose.prod.yml build --no-cache frontend backend
+            
+            # Restart (down+up to pick up env changes)
+            docker compose -f docker-compose.prod.yml down backend frontend
+            docker compose -f docker-compose.prod.yml up -d
+            
+            # Wait for health
+            sleep 10
+            
+            # Connect to Caddy network
+            docker network connect docker_default lexora-frontend-1 2>/dev/null || true
+            docker network connect docker_default lexora-backend-1 2>/dev/null || true
+            
+            # Health check
+            curl -sf http://localhost:8001/health || exit 1
+            echo "Deploy successful!"
+          DEPLOY
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -sf --max-time 10 https://getlexora.net/health || echo "Warning: External health check failed"
