@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Backgrounds */
+  --color-base: #09090B;
+  --color-surface: #111113;
+  --color-elevated: #1A1A1F;
+  --color-input: #16161A;
+
+  /* Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.10);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+
+  /* Text */
+  --color-text-primary: #ECECEE;
+  --color-text-secondary: #8B8B8E;
+  --color-text-tertiary: #5C5C5F;
+
+  /* Accent */
+  --color-accent: #6C6CFF;
+  --color-accent-hover: #7B7BFF;
+  --color-accent-subtle: rgba(108, 108, 255, 0.12);
+  --color-accent-muted: rgba(108, 108, 255, 0.06);
+
+  /* Semantic */
+  --color-success: #3DD68C;
+  --color-success-subtle: rgba(61, 214, 140, 0.12);
+  --color-warning: #FFB224;
+  --color-warning-subtle: rgba(255, 178, 36, 0.12);
+  --color-destructive: #E5484D;
+  --color-destructive-subtle: rgba(229, 72, 77, 0.12);
+
+  /* Animations */
+  --animate-gradient-shift: gradient-shift 8s ease infinite;
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-base);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
