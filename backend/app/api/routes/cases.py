@@ -145,6 +145,7 @@ async def create_case(
     """Yeni dava dosyası oluştur."""
     case = Case(
         user_id=current_user.id,
+        firm_id=current_user.firm_id,
         title=body.title,
         case_type=body.case_type,
         court=body.court,
@@ -165,8 +166,15 @@ async def list_cases(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının dava dosyalarını listele."""
-    stmt = select(Case).where(Case.user_id == current_user.id)
+    """Kullanıcının ve bürosunun dava dosyalarını listele."""
+    if current_user.firm_id:
+        # Firmadaysa firma davalarını da göster
+        from sqlalchemy import or_
+        stmt = select(Case).where(
+            or_(Case.user_id == current_user.id, Case.firm_id == current_user.firm_id)
+        )
+    else:
+        stmt = select(Case).where(Case.user_id == current_user.id)
     if status_filter:
         stmt = stmt.where(Case.status == status_filter)
     stmt = stmt.order_by(Case.updated_at.desc())
@@ -181,9 +189,13 @@ async def get_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Dava detaylarını belgeler ve sürelerle birlikte getir."""
+    from sqlalchemy import or_
     result = await db.execute(
         select(Case)
-        .where(Case.id == case_id, Case.user_id == current_user.id)
+        .where(
+            Case.id == case_id,
+            or_(Case.user_id == current_user.id, Case.firm_id == current_user.firm_id) if current_user.firm_id else Case.user_id == current_user.id,
+        )
         .options(
             selectinload(Case.documents),
             selectinload(Case.deadlines),

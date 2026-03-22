@@ -10,7 +10,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -264,6 +264,16 @@ async def invite_to_firm(
     if not current_user.firm_id:
         raise HTTPException(status_code=400, detail="Önce bir firma oluşturun")
 
+    # max_users kontrolü
+    firm_result = await db.execute(select(Firm).where(Firm.id == current_user.firm_id))
+    firm = firm_result.scalar_one_or_none()
+    if firm:
+        member_count = await db.execute(
+            select(func.count()).select_from(User).where(User.firm_id == firm.id)
+        )
+        if (member_count.scalar() or 0) >= firm.max_users:
+            raise HTTPException(status_code=400, detail=f"Firma üye limiti doldu ({firm.max_users})")
+
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -275,3 +285,180 @@ async def invite_to_firm(
     user.role = "avukat"
     await db.flush()
     return {"status": "ok", "message": f"{user.full_name} firmaya eklendi"}
+
+
+# ── Büro Admin: Üye Yönetimi ─────────────────────────
+
+
+class FirmRoleUpdateRequest(BaseModel):
+    role: str = Field(..., description="partner, avukat, stajyer, asistan")
+
+
+@router.put("/firm/members/{user_id}/role")
+async def update_firm_member_role(
+    user_id: uuid.UUID,
+    body: FirmRoleUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Büro admini kendi üyesinin rolünü değiştirsin."""
+    if current_user.role not in ("admin", "partner"):
+        raise HTTPException(status_code=403, detail="Sadece admin veya partner rol değiştirebilir")
+    if not current_user.firm_id:
+        raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
+
+    allowed_roles = {"partner", "avukat", "stajyer", "asistan"}
+    if body.role not in allowed_roles:
+        raise HTTPException(status_code=400, detail=f"Geçersiz rol. İzin verilen: {', '.join(allowed_roles)}")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or user.firm_id != current_user.firm_id:
+        raise HTTPException(status_code=404, detail="Kullanıcı firmada bulunamadı")
+
+    user.role = body.role
+    await db.flush()
+    return {"status": "ok", "message": f"{user.full_name} rolü '{body.role}' olarak güncellendi"}
+
+
+@router.delete("/firm/members/{user_id}")
+async def remove_firm_member(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Büro admini üyeyi firmadan çıkarsın."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Sadece firma admini üye çıkarabilir")
+    if not current_user.firm_id:
+        raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Kendinizi firmadan çıkaramazsınız")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or user.firm_id != current_user.firm_id:
+        raise HTTPException(status_code=404, detail="Kullanıcı firmada bulunamadı")
+
+    user.firm_id = None
+    user.role = "avukat"
+    await db.flush()
+    return {"status": "ok", "message": f"{user.full_name} firmadan çıkarıldı"}
+
+
+class FirmUpdateRequest(BaseModel):
+    name: str | None = None
+    address: str | None = None
+    phone: str | None = None
+    email: EmailStr | None = None
+    tax_id: str | None = None
+
+
+@router.put("/firm")
+async def update_firm(
+    body: FirmUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Büro bilgilerini güncelle (sadece admin)."""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Sadece firma admini bilgileri güncelleyebilir")
+    if not current_user.firm_id:
+        raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
+
+    result = await db.execute(select(Firm).where(Firm.id == current_user.firm_id))
+    firm = result.scalar_one_or_none()
+    if not firm:
+        raise HTTPException(status_code=404, detail="Firma bulunamadı")
+
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(firm, field, value)
+    await db.flush()
+    return {"status": "ok", "message": "Firma bilgileri güncellendi"}
+
+
+# ── Büro: Dava & Süre Görünümü ───────────────────────
+
+from app.models.database import Case, Deadline
+
+
+@router.get("/firm/cases")
+async def list_firm_cases(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bürodaki TÜM davaları listele."""
+    if not current_user.firm_id:
+        raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
+
+    # Firma üyelerinin ID'lerini al
+    members_result = await db.execute(
+        select(User.id).where(User.firm_id == current_user.firm_id)
+    )
+    member_ids = [r[0] for r in members_result.all()]
+
+    # Tüm firma davalarını getir
+    cases_result = await db.execute(
+        select(Case).where(Case.user_id.in_(member_ids)).order_by(Case.updated_at.desc())
+    )
+    cases = cases_result.scalars().all()
+
+    return [
+        {
+            "id": str(c.id),
+            "title": c.title,
+            "case_type": c.case_type,
+            "court": c.court,
+            "case_number": c.case_number,
+            "opponent": c.opponent,
+            "assigned_to": c.assigned_to,
+            "status": c.status,
+            "user_id": str(c.user_id),
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        }
+        for c in cases
+    ]
+
+
+@router.get("/firm/deadlines")
+async def list_firm_deadlines(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bürodaki TÜM yaklaşan süreleri listele."""
+    from datetime import date, timedelta
+
+    if not current_user.firm_id:
+        raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
+
+    members_result = await db.execute(
+        select(User.id).where(User.firm_id == current_user.firm_id)
+    )
+    member_ids = [r[0] for r in members_result.all()]
+
+    today = date.today()
+    month_later = today + timedelta(days=30)
+
+    deadlines_result = await db.execute(
+        select(Deadline, Case.title.label("case_title"))
+        .join(Case, Deadline.case_id == Case.id)
+        .where(
+            Case.user_id.in_(member_ids),
+            Deadline.deadline_date >= today,
+            Deadline.deadline_date <= month_later,
+            Deadline.is_completed == False,
+        )
+        .order_by(Deadline.deadline_date.asc())
+    )
+
+    return [
+        {
+            "id": str(dl.id),
+            "title": dl.title,
+            "deadline_date": dl.deadline_date.isoformat(),
+            "deadline_type": dl.deadline_type,
+            "case_title": case_title,
+            "case_id": str(dl.case_id),
+        }
+        for dl, case_title in deadlines_result.all()
+    ]
