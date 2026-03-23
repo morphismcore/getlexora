@@ -123,7 +123,7 @@ class IncrementalIngestion:
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
-                        embeddings = self.embedding.embed_texts(texts)
+                        embeddings = await self.embedding.embed_texts_async(texts)
 
                         points = []
                         for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):

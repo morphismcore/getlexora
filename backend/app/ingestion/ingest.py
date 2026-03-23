@@ -92,7 +92,7 @@ class IngestionPipeline:
         tam metinlerini al, chunk'la, embed et ve Qdrant'a yükle.
         """
         if court_types is None:
-            court_types = ["yargitay"]
+            court_types = ["yargitay", "danistay"]
 
         total_fetched = 0
         total_chunks = 0
@@ -169,7 +169,7 @@ class IngestionPipeline:
 
                     # Batch embed
                     texts = [c["text"] for c in all_chunks]
-                    embeddings = self.embedding.embed_texts(texts)
+                    embeddings = await self.embedding.embed_texts_async(texts)
 
                     # Qdrant'a yükle
                     points = []
@@ -373,7 +373,7 @@ class IngestionPipeline:
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
-                        embeddings = self.embedding.embed_texts(texts)
+                        embeddings = await self.embedding.embed_texts_async(texts)
 
                         points = []
                         for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
@@ -429,7 +429,7 @@ class IngestionPipeline:
         start_date, end_date: "DD.MM.YYYY" formatında.
         """
         if court_types is None:
-            court_types = ["yargitay"]
+            court_types = ["yargitay", "danistay"]
 
         total_fetched = 0
         total_embedded = 0
@@ -498,7 +498,7 @@ class IngestionPipeline:
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
-                        embeddings = self.embedding.embed_texts(texts)
+                        embeddings = await self.embedding.embed_texts_async(texts)
 
                         points = []
                         for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
@@ -611,7 +611,7 @@ class IngestionPipeline:
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
-                        embeddings = self.embedding.embed_texts(texts)
+                        embeddings = await self.embedding.embed_texts_async(texts)
 
                         points = []
                         for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
@@ -733,7 +733,7 @@ class IngestionPipeline:
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
-                        embeddings = self.embedding.embed_texts(texts)
+                        embeddings = await self.embedding.embed_texts_async(texts)
 
                         points = []
                         for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):

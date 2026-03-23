@@ -1,8 +1,10 @@
 """
 Embedding servisi.
 BAAI/bge-m3 modeli ile dense + native sparse vektör üretir.
+CPU-intensive encode işlemi thread pool'da çalışır, HTTP isteklerini bloklamaz.
 """
 
+import asyncio
 import structlog
 
 from app.config import get_settings
@@ -28,17 +30,26 @@ def _get_model():
     return _model
 
 
+def _encode_batch_sync(texts: list[str]) -> dict:
+    """Senkron encode — thread pool'da çalıştırılır."""
+    model = _get_model()
+    return model.encode(
+        texts,
+        return_dense=True,
+        return_sparse=True,
+        return_colbert_vecs=False,
+    )
+
+
 class EmbeddingService:
     """bge-m3 embedding servisi. Dense ve native sparse vektör üretir."""
 
     def __init__(self):
         self.settings = get_settings()
 
-    def embed_texts(self, texts: list[str], batch_size: int = 32) -> list[dict]:
+    def embed_texts(self, texts: list[str], batch_size: int = 8) -> list[dict]:
         """
-        Metin listesini embed et.
-        Her metin için dense vector + sparse vector döner.
-        bge-m3 native sparse (learned lexical weights) kullanır.
+        Metin listesini embed et (senkron versiyon — mevcut pipeline uyumluluğu).
         """
         model = _get_model()
 
@@ -57,12 +68,8 @@ class EmbeddingService:
             lexical_weights = output["lexical_weights"]
 
             for i in range(len(batch_texts)):
-                # Dense vector
                 dense = dense_vecs[i].tolist()
-
-                # Sparse vector from bge-m3 lexical weights
                 sparse = self._lexical_to_sparse(lexical_weights[i])
-
                 results.append({
                     "dense_vector": dense,
                     "sparse_vector": sparse,
@@ -77,16 +84,51 @@ class EmbeddingService:
 
         return results
 
+    async def embed_texts_async(self, texts: list[str], batch_size: int = 8) -> list[dict]:
+        """
+        Metin listesini embed et (asenkron versiyon).
+        Her batch thread pool'da çalışır, aralarında event loop'a kontrol verilir.
+        Bu sayede HTTP istekleri bloklanmaz.
+        """
+        loop = asyncio.get_event_loop()
+        results = []
+
+        for batch_start in range(0, len(texts), batch_size):
+            batch_texts = texts[batch_start:batch_start + batch_size]
+
+            # CPU-intensive encode'u thread pool'da çalıştır
+            output = await loop.run_in_executor(None, _encode_batch_sync, batch_texts)
+
+            dense_vecs = output["dense_vecs"]
+            lexical_weights = output["lexical_weights"]
+
+            for i in range(len(batch_texts)):
+                dense = dense_vecs[i].tolist()
+                sparse = self._lexical_to_sparse(lexical_weights[i])
+                results.append({
+                    "dense_vector": dense,
+                    "sparse_vector": sparse,
+                })
+
+            logger.debug(
+                "embedding_batch_complete",
+                batch_size=len(batch_texts),
+                total_processed=min(batch_start + batch_size, len(texts)),
+                total=len(texts),
+            )
+
+            # Event loop'a nefes aldır
+            await asyncio.sleep(0.5)
+
+        return results
+
     def embed_query(self, query: str) -> dict:
         """Tek bir sorguyu embed et."""
         return self.embed_texts([query])[0]
 
     @staticmethod
     def _lexical_to_sparse(weights: dict) -> dict:
-        """
-        bge-m3 lexical weights'i Qdrant sparse vector formatına çevir.
-        weights: {token_id: weight, ...}
-        """
+        """bge-m3 lexical weights'i Qdrant sparse vector formatına çevir."""
         if not weights:
             return {"indices": [], "values": []}
 
