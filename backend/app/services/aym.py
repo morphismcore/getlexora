@@ -108,38 +108,20 @@ class AymService:
             raise
 
     def _parse_search_results(self, html: str) -> list[dict]:
-        """Arama sonuclarini HTML'den parse et."""
+        """Arama sonuçlarını HTML'den parse et."""
         results = []
+        seen = set()
 
-        # Karar kartlarini bul
-        pattern = re.compile(
-            r'<tr[^>]*>.*?'
-            r'(?:Başvuru\s*(?:No|Numarası)\s*[:\s]*)([\d/]+).*?'
-            r'(?:Karar\s*Tarihi\s*[:\s]*)([\d./]+).*?'
-            r'(?:Konu\s*[:\s]*)([^<]+)',
-            re.DOTALL | re.IGNORECASE,
-        )
-
-        for match in pattern.finditer(html):
+        # Başvuru numaralarını bul (2019/15788 formatı)
+        for match in re.finditer(r'(\d{4}/\d{3,})', html):
+            basvuru_no = match.group(1)
+            if basvuru_no in seen:
+                continue
+            seen.add(basvuru_no)
             results.append({
-                "basvuru_no": match.group(1).strip(),
-                "karar_tarihi": match.group(2).strip(),
-                "konu": match.group(3).strip(),
+                "basvuru_no": basvuru_no,
                 "kaynak": "aym",
             })
-
-        # Fallback: link bazli parsing
-        if not results:
-            link_pattern = re.compile(
-                r'href=["\']*/Karar/([^"\']+)["\'][^>]*>([^<]+)',
-                re.IGNORECASE,
-            )
-            for match in link_pattern.finditer(html):
-                results.append({
-                    "basvuru_no": match.group(1).strip(),
-                    "baslik": match.group(2).strip(),
-                    "kaynak": "aym",
-                })
 
         return results
 

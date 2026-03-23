@@ -62,25 +62,23 @@ class HudocService:
         importance: "1" (Key), "2" (Important), "3" (Standard)
         language: "TUR" (Türkçe çeviri), "ENG", "FRE"
         """
-        query_parts = [
-            'contentsitename="ECHR"',
-            'documentcollectionid2="JUDGMENTS"',
-            f'respondent="{respondent}"',
-        ]
+        query_parts = ['contentsitename=ECHR']
+        if respondent:
+            query_parts.append(f'respondent={respondent}')
         if importance:
-            query_parts.append(f'importance="{importance}"')
+            query_parts.append(f'importance={importance}')
         if language:
-            query_parts.append(f'languageisocode="{language}"')
+            query_parts.append(f'languageisocode={language}')
 
-        query = " AND ".join(f"({p})" for p in query_parts)
+        query = " AND ".join(query_parts)
+        logger.debug("hudoc_query", query=query)
 
         params = {
             "query": query,
-            "select": "itemid,appno,docname,respondent,judgementdate,kpdate,"
-                      "article,violation,nonviolation,conclusion,importance,"
-                      "languageisocode,ecli,doctypebranch,representedby,"
-                      "kpthesaurus,issue",
-            "sort": "judgementdate Descending",
+            "select": "itemid,appno,docname,respondent,judgementdate,"
+                      "article,violation,conclusion,importance,"
+                      "languageisocode,doctypebranch",
+            "sort": "",
             "start": start,
             "length": min(length, 500),
             "rankingModelId": "11111111-0000-0000-0000-000000000000",
