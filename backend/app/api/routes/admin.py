@@ -4,8 +4,11 @@ Kullanıcı yönetimi, sistem durumu, embedding istatistikleri.
 Sadece platform_admin rolüne sahip kullanıcılar erişebilir.
 """
 
+import asyncio
+import json
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.routes.auth import get_current_user
 from app.models.database import User, Firm, Case, Deadline, SavedSearch
 from app.models.db import get_db
-from app.api.deps import get_vector_store, get_cache_service
+from app.api.deps import get_vector_store, get_cache_service, get_ingestion_pipeline
+from app.ingestion.ingest import _ingest_state, _ingest_logs
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -287,3 +291,118 @@ async def platform_stats(
         "deadlines": deadlines_total,
         "searches": searches_total,
     }
+
+
+@router.get("/embeddings/breakdown")
+async def embedding_breakdown(
+    admin: User = Depends(require_platform_admin),
+):
+    """Kaynak bazlı embedding istatistikleri."""
+    vector_store = get_vector_store()
+
+    sources = ["yargitay", "danistay", "aym", "aihm"]
+    breakdown = {}
+    for source in sources:
+        breakdown[source] = await vector_store.count_by_filter(
+            "ictihat_embeddings", "mahkeme", source
+        )
+
+    try:
+        mevzuat_info = await vector_store.get_collection_info("mevzuat_embeddings")
+        mevzuat_count = mevzuat_info.get("points_count", 0)
+    except Exception:
+        mevzuat_count = 0
+
+    return {
+        "sources": breakdown,
+        "mevzuat": mevzuat_count,
+        "total": sum(breakdown.values()) + mevzuat_count,
+    }
+
+
+@router.get("/ingest/stream")
+async def ingest_stream(
+    token: str = "",
+    admin: User = Depends(require_platform_admin),
+):
+    """SSE stream -- anlik ingestion durumu."""
+    async def event_generator():
+        last_log_count = 0
+        while True:
+            current_logs = _ingest_logs.copy()
+            new_logs = current_logs[last_log_count:] if last_log_count < len(current_logs) else []
+            last_log_count = len(current_logs)
+
+            data = {
+                **_ingest_state,
+                "new_logs": new_logs[-10:],
+            }
+            yield f"data: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get("/ingest/state")
+async def ingest_state_endpoint(
+    admin: User = Depends(require_platform_admin),
+):
+    """Mevcut ingestion durumu (polling fallback)."""
+    return {
+        **_ingest_state,
+        "logs": _ingest_logs[-20:],
+    }
+
+
+@router.post("/ingest/aym")
+async def admin_ingest_aym(
+    background_tasks: BackgroundTasks,
+    pipeline=Depends(get_ingestion_pipeline),
+    admin: User = Depends(require_platform_admin),
+):
+    """AYM bireysel basvuru kararlarini ingest et."""
+    from app.ingestion.ingest import _ingest_running
+    if _ingest_running:
+        raise HTTPException(status_code=409, detail="Bir ingestion zaten calisiyor.")
+
+    async def run():
+        import app.ingestion.ingest as ing
+        ing._ingest_running = True
+        try:
+            await pipeline.ingest_aym(pages=10, ihlal_only=True)
+        finally:
+            ing._ingest_running = False
+
+    background_tasks.add_task(run)
+    return {"status": "started", "source": "aym"}
+
+
+@router.post("/ingest/aihm")
+async def admin_ingest_aihm(
+    background_tasks: BackgroundTasks,
+    pipeline=Depends(get_ingestion_pipeline),
+    admin: User = Depends(require_platform_admin),
+):
+    """AIHM Turkiye kararlarini ingest et."""
+    from app.ingestion.ingest import _ingest_running
+    if _ingest_running:
+        raise HTTPException(status_code=409, detail="Bir ingestion zaten calisiyor.")
+
+    async def run():
+        import app.ingestion.ingest as ing
+        ing._ingest_running = True
+        try:
+            await pipeline.ingest_aihm(max_results=500, turkish_only=False)
+        finally:
+            ing._ingest_running = False
+
+    background_tasks.add_task(run)
+    return {"status": "started", "source": "aihm"}

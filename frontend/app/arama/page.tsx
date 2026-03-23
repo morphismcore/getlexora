@@ -64,6 +64,7 @@ interface IctihatResult {
   tarih: string;
   ozet: string;
   relevance_score?: number;
+  kaynak?: string;
 }
 
 interface SearchResponse {
@@ -628,10 +629,10 @@ export default function AramaPage() {
                          result.mahkeme}
                       </span>
                       {result.daire && <span className="text-[11px] text-[#8B8B8E]">{result.daire}</span>}
-                      {(result.mahkeme === "aym" || (result as any).kaynak === "aym") && (
+                      {(result.mahkeme === "aym" || result.kaynak === "aym") && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/10 text-[#E5484D]">AYM</span>
                       )}
-                      {(result.mahkeme === "aihm" || (result as any).kaynak === "aihm") && (
+                      {(result.mahkeme === "aihm" || result.kaynak === "aihm") && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
                       )}
                     </div>

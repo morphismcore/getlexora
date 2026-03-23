@@ -217,5 +217,18 @@ class VectorStoreService:
             "status": info.status.value,
         }
 
+    async def count_by_filter(self, collection: str, field: str, value: str) -> int:
+        """Filtreye göre point sayısı."""
+        try:
+            result = await self.client.count(
+                collection_name=collection,
+                count_filter=Filter(must=[
+                    FieldCondition(key=field, match=MatchValue(value=value))
+                ]),
+            )
+            return result.count
+        except Exception:
+            return 0
+
     async def close(self):
         await self.client.close()

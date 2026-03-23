@@ -29,6 +29,24 @@ _ingest_logs: list[dict] = []
 _ingest_running = False
 MAX_LOG_LINES = 200
 
+_ingest_state = {
+    "running": False,
+    "source": None,
+    "task": None,
+    "started_at": None,
+    "fetched": 0,
+    "embedded": 0,
+    "errors": 0,
+    "total_topics": 0,
+    "completed_topics": 0,
+}
+
+
+def _update_state(**kwargs):
+    """Ingestion state güncelle."""
+    global _ingest_state
+    _ingest_state.update(kwargs)
+
 
 def _log(level: str, message: str):
     """Log buffer'a ekle."""
@@ -98,6 +116,7 @@ class IngestionPipeline:
                         break
 
                     total_fetched += len(items)
+                    _update_state(fetched=total_fetched)
 
                     # Her karar için tam metin çek ve chunk'la
                     all_chunks = []
@@ -141,7 +160,7 @@ class IngestionPipeline:
                         all_chunks.extend(chunks)
 
                         # Rate limiting — karar başına bekleme
-                        await asyncio.sleep(1.5)
+                        await asyncio.sleep(3.0)
 
                     if not all_chunks:
                         continue
@@ -174,6 +193,7 @@ class IngestionPipeline:
                         points=points,
                     )
                     total_embedded += len(points)
+                    _update_state(embedded=total_embedded)
 
                     logger.info(
                         "ingest_page_complete",
@@ -184,7 +204,7 @@ class IngestionPipeline:
                         embedded=len(points),
                     )
 
-                    await asyncio.sleep(3.0)
+                    await asyncio.sleep(5.0)
 
                 except Exception as e:
                     logger.error(
@@ -193,6 +213,7 @@ class IngestionPipeline:
                         page=page,
                         error=str(e),
                     )
+                    _update_state(errors=_ingest_state["errors"] + 1)
                     continue
 
         summary = {
@@ -210,6 +231,12 @@ class IngestionPipeline:
         """Birden fazla hukuk konusu için toplu ingestion."""
         global _ingest_running
         _ingest_running = True
+        _update_state(
+            running=True, source="bedesten", task=None,
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=len(topics), completed_topics=0,
+        )
         _log("info", f"📋 Ingestion başladı — {len(topics)} konu, sayfa/konu: {pages_per_topic}")
 
         checkpoint = self._load_checkpoint()
@@ -224,6 +251,7 @@ class IngestionPipeline:
 
                 logger.info("ingest_topic_start", topic=topic)
                 _log("info", f"🔄 {topic} konusu başladı")
+                _update_state(task=topic)
                 summary = await self.ingest_search_results(
                     keyword=topic,
                     pages=pages_per_topic,
@@ -232,6 +260,7 @@ class IngestionPipeline:
 
                 # Save checkpoint
                 completed_topics.add(topic)
+                _update_state(completed_topics=len(completed_topics))
                 checkpoint["completed_topics"] = list(completed_topics)
                 checkpoint["last_update"] = datetime.now().isoformat()
                 self._save_checkpoint(checkpoint)
@@ -250,6 +279,7 @@ class IngestionPipeline:
             return total
         finally:
             _ingest_running = False
+            _update_state(running=False, source=None, task=None)
 
     async def ingest_by_daire(
         self,
@@ -339,7 +369,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(clean, metadata)
                         all_chunks.extend(chunks)
 
-                        await asyncio.sleep(1.5)
+                        await asyncio.sleep(3.0)
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
@@ -367,7 +397,7 @@ class IngestionPipeline:
                         )
                         total_embedded += len(points)
 
-                    await asyncio.sleep(3.0)
+                    await asyncio.sleep(5.0)
 
                 except Exception as e:
                     logger.error("ingest_daire_page_error", daire=d_name, page=page, error=str(e))
@@ -464,7 +494,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(clean, metadata)
                         all_chunks.extend(chunks)
 
-                        await asyncio.sleep(1.5)
+                        await asyncio.sleep(3.0)
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
@@ -496,7 +526,7 @@ class IngestionPipeline:
                     if page >= math.ceil(total / 10):
                         break
 
-                    await asyncio.sleep(3.0)
+                    await asyncio.sleep(5.0)
 
                 except Exception as e:
                     logger.error("ingest_date_range_error", page=page, error=str(e))
@@ -523,6 +553,12 @@ class IngestionPipeline:
         total_embedded = 0
 
         _log("info", f"⚖️ AYM ingestion başladı — sayfa: {pages}")
+        _update_state(
+            running=True, source="aym", task="Bireysel Başvuru",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=pages, completed_topics=0,
+        )
 
         try:
             for page in range(1, pages + 1):
@@ -537,6 +573,7 @@ class IngestionPipeline:
                         break
 
                     total_fetched += len(items)
+                    _update_state(fetched=total_fetched, task=f"Sayfa {page}/{pages}")
 
                     all_chunks = []
                     for item in items:
@@ -597,15 +634,18 @@ class IngestionPipeline:
                             points=points,
                         )
                         total_embedded += len(points)
+                    _update_state(embedded=total_embedded, completed_topics=page)
 
                     _log("info", f"📄 AYM sayfa {page} — {len(items)} karar, {total_embedded} embedding")
                     await asyncio.sleep(5.0)
 
                 except Exception as e:
                     logger.error("aym_page_error", page=page, error=str(e))
+                    _update_state(errors=_ingest_state["errors"] + 1)
                     continue
         finally:
             await aym.close()
+            _update_state(running=False, source=None, task=None)
 
         summary = {
             "source": "aym",
@@ -629,6 +669,12 @@ class IngestionPipeline:
         batch_size = 50
 
         _log("info", f"🇪🇺 AİHM ingestion başladı — max: {max_results}")
+        _update_state(
+            running=True, source="aihm", task="HUDOC",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=max_results // 50, completed_topics=0,
+        )
 
         try:
             for start in range(0, max_results, batch_size):
@@ -644,6 +690,7 @@ class IngestionPipeline:
                         break
 
                     total_fetched += len(items)
+                    _update_state(fetched=total_fetched, task=f"Batch {start}-{start+batch_size}")
 
                     all_chunks = []
                     for item in items:
@@ -682,7 +729,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(content, metadata)
                         all_chunks.extend(chunks)
 
-                        await asyncio.sleep(1.0)
+                        await asyncio.sleep(2.0)
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
@@ -709,15 +756,18 @@ class IngestionPipeline:
                             points=points,
                         )
                         total_embedded += len(points)
+                    _update_state(embedded=total_embedded, completed_topics=(start // batch_size) + 1)
 
                     _log("info", f"🌍 AİHM batch {start}-{start+batch_size} — {total_embedded} embedding")
-                    await asyncio.sleep(2.0)
+                    await asyncio.sleep(3.0)
 
                 except Exception as e:
                     logger.error("aihm_batch_error", start=start, error=str(e))
+                    _update_state(errors=_ingest_state["errors"] + 1)
                     continue
         finally:
             await hudoc.close()
+            _update_state(running=False, source=None, task=None)
 
         summary = {
             "source": "aihm",

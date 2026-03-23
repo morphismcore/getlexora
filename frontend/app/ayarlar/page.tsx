@@ -47,7 +47,8 @@ export default function AyarlarPage() {
   // Load profile
   useEffect(() => {
     if (user) {
-      setProfile({ full_name: user.full_name || "", phone: (user as any).phone || "", baro_sicil_no: (user as any).baro_sicil_no || "", baro: (user as any).baro || "" });
+      const u = user as unknown as Record<string, string>;
+      setProfile({ full_name: user.full_name || "", phone: u.phone || "", baro_sicil_no: u.baro_sicil_no || "", baro: u.baro || "" });
     }
   }, [user]);
 
