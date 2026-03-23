@@ -14,12 +14,14 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.auth import get_current_user
+from app.config import get_settings
 from app.models.database import User, Firm, Case, Deadline, SavedSearch
 from app.models.db import get_db
 from app.api.deps import get_vector_store, get_cache_service, get_ingestion_pipeline
 from app.ingestion.ingest import _ingest_state, _ingest_logs
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+settings = get_settings()
 
 
 # ── Guard ──────────────────────────────────────────────
@@ -323,9 +325,22 @@ async def embedding_breakdown(
 @router.get("/ingest/stream")
 async def ingest_stream(
     token: str = "",
-    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
 ):
-    """SSE stream -- anlik ingestion durumu."""
+    """SSE stream -- anlik ingestion durumu. Token query param ile auth."""
+    # SSE EventSource header gönderemediği için token query param'dan alınır
+    if not token:
+        raise HTTPException(status_code=401, detail="Token gerekli")
+    try:
+        import jwt as pyjwt
+        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        user_id = uuid.UUID(payload["sub"])
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user or user.role != "platform_admin":
+            raise HTTPException(status_code=403, detail="Yetkisiz")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Geçersiz token")
     async def event_generator():
         last_log_count = 0
         while True:
