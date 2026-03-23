@@ -6,6 +6,7 @@ Bedesten API'den kararları çeker, chunk'lar, embed eder, Qdrant'a yükler.
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 from datetime import datetime
@@ -16,6 +17,7 @@ from app.services.yargi import YargiService, ITEM_TYPES, YARGITAY_HUKUK_DAIRELER
 from app.services.vector_store import VectorStoreService
 from app.services.embedding import EmbeddingService
 from app.ingestion.chunker import LegalChunker
+from app.ingestion.html_cleaner import clean_legal_html
 from app.config import get_settings
 
 logger = structlog.get_logger()
@@ -91,6 +93,7 @@ class IngestionPipeline:
                     )
 
                     items = result.get("data", {}).get("emsalKararList", [])
+                    total = result.get("data", {}).get("total", 0)
                     if not items:
                         break
 
@@ -110,19 +113,9 @@ class IngestionPipeline:
                             if not content:
                                 continue
 
-                            # HTML temizle — yapısal bilgiyi koru
-                            clean = re.sub(r"<(?:br|BR)\s*/?>", "\n", content)
-                            clean = re.sub(r"<(?:p|P|div|DIV)[^>]*>", "\n", clean)
-                            clean = re.sub(r"<[^>]+>", " ", clean)
-                            clean = clean.replace("&nbsp;", " ").replace("&amp;", "&")
-                            clean = clean.replace("&lt;", "<").replace("&gt;", ">")
-                            clean = clean.replace("&quot;", '"').replace("&apos;", "'")
-                            clean = re.sub(r"&#\d+;", " ", clean)
-                            clean = re.sub(r"&\w+;", " ", clean)
-                            clean = re.sub(r"[ \t]+", " ", clean)
-                            clean = re.sub(r"\n\s*\n+", "\n\n", clean).strip()
+                            clean = clean_legal_html(content)
 
-                            if len(clean) < 500:
+                            if len(clean) < self.settings.min_karar_chars:
                                 continue
 
                         except Exception as e:
@@ -148,7 +141,7 @@ class IngestionPipeline:
                         all_chunks.extend(chunks)
 
                         # Rate limiting — karar başına bekleme
-                        await asyncio.sleep(5.0)
+                        await asyncio.sleep(1.5)
 
                     if not all_chunks:
                         continue
@@ -171,7 +164,7 @@ class IngestionPipeline:
                             "sparse_vector": emb.get("sparse_vector"),
                             "payload": {
                                 **chunk["metadata"],
-                                "text": chunk["text"],
+                                "text": chunk["text"][:self.settings.max_payload_text_chars],
                                 "ozet": chunk["text"][:500],
                             },
                         })
@@ -191,7 +184,7 @@ class IngestionPipeline:
                         embedded=len(points),
                     )
 
-                    await asyncio.sleep(10.0)
+                    await asyncio.sleep(3.0)
 
                 except Exception as e:
                     logger.error(
@@ -243,7 +236,7 @@ class IngestionPipeline:
                 checkpoint["last_update"] = datetime.now().isoformat()
                 self._save_checkpoint(checkpoint)
 
-                await asyncio.sleep(5.0)
+                await asyncio.sleep(3.0)
 
             total = {
                 "topics": len(topics),
@@ -304,6 +297,7 @@ class IngestionPipeline:
                     )
 
                     items = result.get("data", {}).get("emsalKararList", [])
+                    total = result.get("data", {}).get("total", 0)
                     if not items:
                         break
 
@@ -319,12 +313,9 @@ class IngestionPipeline:
                             if not content:
                                 continue
 
-                            clean = re.sub(r"<[^>]+>", " ", content)
-                            clean = clean.replace("&nbsp;", " ").replace("&amp;", "&")
-                            clean = re.sub(r"&\w+;", " ", clean)
-                            clean = re.sub(r"\s+", " ", clean).strip()
+                            clean = clean_legal_html(content)
 
-                            if len(clean) < 100:
+                            if len(clean) < self.settings.min_karar_chars:
                                 continue
                         except Exception as e:
                             logger.warning("ingest_doc_fetch_error", doc_id=doc_id, error=str(e))
@@ -348,7 +339,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(clean, metadata)
                         all_chunks.extend(chunks)
 
-                        await asyncio.sleep(5.0)
+                        await asyncio.sleep(1.5)
 
                     if all_chunks:
                         texts = [c["text"] for c in all_chunks]
@@ -365,7 +356,7 @@ class IngestionPipeline:
                                 "sparse_vector": emb.get("sparse_vector"),
                                 "payload": {
                                     **chunk["metadata"],
-                                    "text": chunk["text"][:2000],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
                                     "ozet": chunk["text"][:500],
                                 },
                             })
@@ -376,7 +367,7 @@ class IngestionPipeline:
                         )
                         total_embedded += len(points)
 
-                    await asyncio.sleep(10.0)
+                    await asyncio.sleep(3.0)
 
                 except Exception as e:
                     logger.error("ingest_daire_page_error", daire=d_name, page=page, error=str(e))
@@ -388,13 +379,353 @@ class IngestionPipeline:
             self._save_checkpoint(checkpoint)
 
             logger.info("ingest_daire_complete", daire=d_name, embedded=total_embedded)
-            await asyncio.sleep(5.0)
+            await asyncio.sleep(3.0)
 
         return {
             "court_type": court_type,
             "daireler_processed": len(daireler),
             "total_embedded": total_embedded,
         }
+
+    async def ingest_by_date_range(
+        self,
+        start_date: str,
+        end_date: str,
+        court_types: list[str] | None = None,
+        max_pages: int = 50,
+    ) -> dict:
+        """
+        Tarih aralığına göre sistematik ingestion.
+        start_date, end_date: "DD.MM.YYYY" formatında.
+        """
+        if court_types is None:
+            court_types = ["yargitay"]
+
+        total_fetched = 0
+        total_embedded = 0
+
+        _log("info", f"📅 Tarih bazlı ingestion: {start_date} → {end_date}")
+
+        for ct in court_types:
+            item_type = ITEM_TYPES.get(ct, "YARGITAYKARARI")
+
+            for page in range(1, max_pages + 1):
+                try:
+                    result = await self.yargi.search_bedesten(
+                        keyword="*",
+                        item_type=item_type,
+                        page=page,
+                        page_size=10,
+                        date_from=start_date,
+                        date_to=end_date,
+                    )
+
+                    items = result.get("data", {}).get("emsalKararList", [])
+                    total = result.get("data", {}).get("total", 0)
+                    if not items:
+                        break
+
+                    total_fetched += len(items)
+
+                    all_chunks = []
+                    for item in items:
+                        doc_id = item.get("documentId", "")
+                        if not doc_id:
+                            continue
+
+                        try:
+                            doc = await self.yargi.get_document(doc_id)
+                            content = doc.get("data", {}).get("decoded_content", "")
+                            if not content:
+                                continue
+
+                            clean = clean_legal_html(content)
+                            if len(clean) < self.settings.min_karar_chars:
+                                continue
+                        except Exception as e:
+                            logger.warning("ingest_doc_fetch_error", doc_id=doc_id, error=str(e))
+                            continue
+
+                        esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
+                        karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+
+                        metadata = {
+                            "karar_id": doc_id,
+                            "mahkeme": ct,
+                            "daire": item.get("birimAdi", ""),
+                            "esas_no": esas_no,
+                            "karar_no": karar_no,
+                            "tarih": item.get("kararTarihiStr", ""),
+                            "kaynak": "bedesten",
+                        }
+
+                        chunks = self.chunker.chunk_karar(clean, metadata)
+                        if not chunks:
+                            chunks = self.chunker.chunk_generic(clean, metadata)
+                        all_chunks.extend(chunks)
+
+                        await asyncio.sleep(1.5)
+
+                    if all_chunks:
+                        texts = [c["text"] for c in all_chunks]
+                        embeddings = self.embedding.embed_texts(texts)
+
+                        points = []
+                        for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
+                            point_id = self._generate_id(
+                                chunk["metadata"].get("karar_id", "") + str(i)
+                            )
+                            points.append({
+                                "id": point_id,
+                                "dense_vector": emb["dense_vector"],
+                                "sparse_vector": emb.get("sparse_vector"),
+                                "payload": {
+                                    **chunk["metadata"],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                    "ozet": chunk["text"][:self.settings.max_ozet_chars],
+                                },
+                            })
+
+                        await self.vector_store.upsert_points(
+                            collection=self.settings.qdrant_collection_ictihat,
+                            points=points,
+                        )
+                        total_embedded += len(points)
+
+                    # Stop if we've fetched all available
+                    if page >= math.ceil(total / 10):
+                        break
+
+                    await asyncio.sleep(3.0)
+
+                except Exception as e:
+                    logger.error("ingest_date_range_error", page=page, error=str(e))
+                    continue
+
+        summary = {
+            "date_range": f"{start_date} - {end_date}",
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+        }
+        _log("success", f"✅ Tarih bazlı ingestion tamamlandı — {total_embedded} embedding")
+        return summary
+
+    async def ingest_aym(
+        self,
+        pages: int = 10,
+        ihlal_only: bool = True,
+    ) -> dict:
+        """AYM bireysel basvuru kararlarini ingest et."""
+        from app.services.aym import AymService
+
+        aym = AymService()
+        total_fetched = 0
+        total_embedded = 0
+
+        _log("info", f"⚖️ AYM ingestion başladı — sayfa: {pages}")
+
+        try:
+            for page in range(1, pages + 1):
+                try:
+                    result = await aym.search_bireysel_basvuru(
+                        page=page,
+                        ihlal_only=ihlal_only,
+                    )
+
+                    items = result.get("results", [])
+                    if not items:
+                        break
+
+                    total_fetched += len(items)
+
+                    all_chunks = []
+                    for item in items:
+                        basvuru_no = item.get("basvuru_no", "")
+                        if not basvuru_no:
+                            continue
+
+                        try:
+                            doc = await aym.get_document(basvuru_no)
+                            content = doc.get("content", "")
+                            if not content or len(content) < self.settings.min_karar_chars:
+                                continue
+                        except Exception as e:
+                            logger.warning("aym_doc_error", basvuru_no=basvuru_no, error=str(e))
+                            continue
+
+                        metadata = {
+                            "karar_id": f"aym_{basvuru_no}",
+                            "mahkeme": "aym",
+                            "daire": "Bireysel Başvuru",
+                            "esas_no": basvuru_no,
+                            "karar_no": basvuru_no,
+                            "tarih": doc.get("metadata", {}).get("karar_tarihi", ""),
+                            "kaynak": "aym",
+                            "konu": doc.get("metadata", {}).get("konu", ""),
+                            "ihlal_edilen_hak": doc.get("metadata", {}).get("ihlal_edilen_hak", ""),
+                        }
+
+                        chunks = self.chunker.chunk_karar(content, metadata)
+                        if not chunks:
+                            chunks = self.chunker.chunk_generic(content, metadata)
+                        all_chunks.extend(chunks)
+
+                        await asyncio.sleep(3.0)
+
+                    if all_chunks:
+                        texts = [c["text"] for c in all_chunks]
+                        embeddings = self.embedding.embed_texts(texts)
+
+                        points = []
+                        for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
+                            point_id = self._generate_id(
+                                chunk["metadata"].get("karar_id", "") + str(i)
+                            )
+                            points.append({
+                                "id": point_id,
+                                "dense_vector": emb["dense_vector"],
+                                "sparse_vector": emb.get("sparse_vector"),
+                                "payload": {
+                                    **chunk["metadata"],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                    "ozet": chunk["text"][:self.settings.max_ozet_chars],
+                                },
+                            })
+
+                        await self.vector_store.upsert_points(
+                            collection=self.settings.qdrant_collection_ictihat,
+                            points=points,
+                        )
+                        total_embedded += len(points)
+
+                    _log("info", f"📄 AYM sayfa {page} — {len(items)} karar, {total_embedded} embedding")
+                    await asyncio.sleep(5.0)
+
+                except Exception as e:
+                    logger.error("aym_page_error", page=page, error=str(e))
+                    continue
+        finally:
+            await aym.close()
+
+        summary = {
+            "source": "aym",
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+        }
+        _log("success", f"✅ AYM tamamlandı — {total_embedded} embedding")
+        return summary
+
+    async def ingest_aihm(
+        self,
+        max_results: int = 500,
+        turkish_only: bool = False,
+    ) -> dict:
+        """AİHM Türkiye aleyhine kararları ingest et."""
+        from app.services.hudoc import HudocService
+
+        hudoc = HudocService()
+        total_fetched = 0
+        total_embedded = 0
+        batch_size = 50
+
+        _log("info", f"🇪🇺 AİHM ingestion başladı — max: {max_results}")
+
+        try:
+            for start in range(0, max_results, batch_size):
+                try:
+                    result = await hudoc.search_judgments(
+                        start=start,
+                        length=batch_size,
+                        language="TUR" if turkish_only else None,
+                    )
+
+                    items = result.get("results", [])
+                    if not items:
+                        break
+
+                    total_fetched += len(items)
+
+                    all_chunks = []
+                    for item in items:
+                        itemid = item.get("itemid", "")
+                        if not itemid:
+                            continue
+
+                        try:
+                            content = await hudoc.get_document(itemid)
+                            if not content or len(content) < self.settings.min_karar_chars:
+                                # Metadata'dan en azından conclusion'ı kullan
+                                content = item.get("sonuc", "")
+                                if not content or len(content) < 100:
+                                    continue
+                        except Exception as e:
+                            logger.warning("aihm_doc_error", itemid=itemid, error=str(e))
+                            content = item.get("sonuc", "")
+                            if not content or len(content) < 100:
+                                continue
+
+                        metadata = {
+                            "karar_id": item.get("karar_id", f"aihm_{itemid}"),
+                            "mahkeme": "aihm",
+                            "daire": item.get("daire_tipi", ""),
+                            "esas_no": item.get("basvuru_no", ""),
+                            "karar_no": item.get("basvuru_no", ""),
+                            "tarih": item.get("tarih", ""),
+                            "kaynak": "aihm",
+                            "ihlal_maddeleri": ", ".join(item.get("ihlal_maddeleri", [])),
+                            "onem": item.get("onem", ""),
+                            "baslik": item.get("baslik", ""),
+                        }
+
+                        chunks = self.chunker.chunk_karar(content, metadata)
+                        if not chunks:
+                            chunks = self.chunker.chunk_generic(content, metadata)
+                        all_chunks.extend(chunks)
+
+                        await asyncio.sleep(1.0)
+
+                    if all_chunks:
+                        texts = [c["text"] for c in all_chunks]
+                        embeddings = self.embedding.embed_texts(texts)
+
+                        points = []
+                        for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
+                            point_id = self._generate_id(
+                                chunk["metadata"].get("karar_id", "") + str(i)
+                            )
+                            points.append({
+                                "id": point_id,
+                                "dense_vector": emb["dense_vector"],
+                                "sparse_vector": emb.get("sparse_vector"),
+                                "payload": {
+                                    **chunk["metadata"],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                    "ozet": chunk["text"][:self.settings.max_ozet_chars],
+                                },
+                            })
+
+                        await self.vector_store.upsert_points(
+                            collection=self.settings.qdrant_collection_ictihat,
+                            points=points,
+                        )
+                        total_embedded += len(points)
+
+                    _log("info", f"🌍 AİHM batch {start}-{start+batch_size} — {total_embedded} embedding")
+                    await asyncio.sleep(2.0)
+
+                except Exception as e:
+                    logger.error("aihm_batch_error", start=start, error=str(e))
+                    continue
+        finally:
+            await hudoc.close()
+
+        summary = {
+            "source": "aihm",
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+        }
+        _log("success", f"✅ AİHM tamamlandı — {total_embedded} embedding")
+        return summary
 
     async def get_progress(self) -> dict:
         """Ingestion ilerleme durumunu döndür."""

@@ -127,6 +127,106 @@ async def ingest_by_daire(
     }
 
 
+class IngestDateRangeRequest(BaseModel):
+    start_date: str  # DD.MM.YYYY
+    end_date: str    # DD.MM.YYYY
+    court_types: list[str] | None = None
+    max_pages: int = 50
+
+
+@router.post("/date-range")
+async def ingest_by_date_range(
+    request: IngestDateRangeRequest,
+    background_tasks: BackgroundTasks,
+    pipeline=Depends(get_ingestion_pipeline),
+    current_user: User = Depends(get_current_user),
+):
+    """Tarih aralığına göre sistematik ingestion."""
+    if _ingest_status["running"]:
+        raise HTTPException(status_code=409, detail="Bir ingestion zaten çalışıyor.")
+
+    async def run():
+        _ingest_status["running"] = True
+        try:
+            result = await pipeline.ingest_by_date_range(
+                start_date=request.start_date,
+                end_date=request.end_date,
+                court_types=request.court_types,
+                max_pages=request.max_pages,
+            )
+            _ingest_status["last_result"] = result
+        finally:
+            _ingest_status["running"] = False
+
+    background_tasks.add_task(run)
+    return {
+        "status": "started",
+        "date_range": f"{request.start_date} - {request.end_date}",
+    }
+
+
+class IngestAymRequest(BaseModel):
+    pages: int = 10
+    ihlal_only: bool = True
+
+
+@router.post("/aym")
+async def ingest_aym(
+    request: IngestAymRequest,
+    background_tasks: BackgroundTasks,
+    pipeline=Depends(get_ingestion_pipeline),
+    current_user: User = Depends(get_current_user),
+):
+    """AYM bireysel başvuru kararlarını ingest et."""
+    if _ingest_status["running"]:
+        raise HTTPException(status_code=409, detail="Bir ingestion zaten çalışıyor.")
+
+    async def run():
+        _ingest_status["running"] = True
+        try:
+            result = await pipeline.ingest_aym(
+                pages=request.pages,
+                ihlal_only=request.ihlal_only,
+            )
+            _ingest_status["last_result"] = result
+        finally:
+            _ingest_status["running"] = False
+
+    background_tasks.add_task(run)
+    return {"status": "started", "source": "aym", "pages": request.pages}
+
+
+class IngestAihmRequest(BaseModel):
+    max_results: int = 500
+    turkish_only: bool = False
+
+
+@router.post("/aihm")
+async def ingest_aihm(
+    request: IngestAihmRequest,
+    background_tasks: BackgroundTasks,
+    pipeline=Depends(get_ingestion_pipeline),
+    current_user: User = Depends(get_current_user),
+):
+    """AİHM Türkiye aleyhine kararlarını ingest et."""
+    if _ingest_status["running"]:
+        raise HTTPException(status_code=409, detail="Bir ingestion zaten çalışıyor.")
+
+    async def run():
+        _ingest_status["running"] = True
+        try:
+            result = await pipeline.ingest_aihm(
+                max_results=request.max_results,
+                turkish_only=request.turkish_only,
+            )
+            _ingest_status["last_result"] = result
+        finally:
+            _ingest_status["running"] = False
+
+    background_tasks.add_task(run)
+    return {"status": "started", "source": "aihm", "max_results": request.max_results}
+
+
 @router.get("/progress")
 async def ingest_progress(
     pipeline=Depends(get_ingestion_pipeline),

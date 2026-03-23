@@ -79,6 +79,8 @@ class YargiService:
         birim_adi: str | None = None,
         page: int = 1,
         page_size: int = 10,
+        date_from: str | None = None,
+        date_to: str | None = None,
     ) -> dict:
         """
         Bedesten API'de karar arama.
@@ -99,6 +101,11 @@ class YargiService:
 
         if birim_adi:
             payload["data"]["birimAdi"] = birim_adi
+
+        if date_from:
+            payload["data"]["kararTarihiBaslangic"] = date_from
+        if date_to:
+            payload["data"]["kararTarihiBitis"] = date_to
 
         # Check cache first
         if self.cache:
@@ -173,9 +180,20 @@ class YargiService:
             content_b64 = data.get("data", {}).get("content", "")
             mime_type = data.get("data", {}).get("mimeType", "text/html")
 
-            if content_b64 and mime_type == "text/html":
-                content = base64.b64decode(content_b64).decode("utf-8", errors="replace")
-                data["data"]["decoded_content"] = content
+            if content_b64:
+                if mime_type == "text/html":
+                    content = base64.b64decode(content_b64).decode("utf-8", errors="replace")
+                    data["data"]["decoded_content"] = content
+                elif mime_type == "application/pdf":
+                    try:
+                        from app.services.document_processor import DocumentProcessor
+                        pdf_bytes = base64.b64decode(content_b64)
+                        processor = DocumentProcessor()
+                        extraction = processor.extract_text_from_pdf(pdf_bytes)
+                        data["data"]["decoded_content"] = extraction["text"]
+                        logger.info("bedesten_pdf_extracted", doc_id=document_id, pages=extraction["pages"])
+                    except Exception as e:
+                        logger.warning("bedesten_pdf_extract_error", doc_id=document_id, error=str(e))
 
             # Store in cache (TTL: 24 hours)
             if self.cache:

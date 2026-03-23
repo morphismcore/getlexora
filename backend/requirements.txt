@@ -14,6 +14,7 @@ qdrant-client==1.14.2
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 sentence-transformers==4.1.0
+FlagEmbedding>=1.3.0
 
 # Database
 sqlalchemy[asyncio]==2.0.41
@@ -36,6 +37,9 @@ pymupdf
 python-docx
 python-multipart
 fpdf2
+
+# Scheduler
+apscheduler>=3.10
 
 # Utils
 python-dotenv==1.1.0

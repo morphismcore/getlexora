@@ -155,8 +155,8 @@ class VectorStoreService:
         sparse_points: list,
         limit: int,
         k: int = 60,
-        dense_weight: float = 0.65,
-        sparse_weight: float = 0.35,
+        dense_weight: float = 0.55,
+        sparse_weight: float = 0.45,
     ) -> list[dict]:
         """Weighted Reciprocal Rank Fusion — dense'e daha fazla ağırlık verir."""
         scores = {}

@@ -24,6 +24,8 @@ const MAHKEME_VALUE_MAP: Record<string, string> = {
   Danıştay: "danistay",
   "Anayasa Mahkemesi": "aym",
   "Bölge Adliye Mahkemesi": "bam",
+  "AYM": "aym",
+  "AİHM": "aihm",
 };
 
 function parseDaireValue(label: string): string | null {
@@ -98,6 +100,8 @@ const DAIRELER = [
   "13. Ceza Dairesi", "14. Ceza Dairesi", "15. Ceza Dairesi", "16. Ceza Dairesi",
   "Hukuk Genel Kurulu", "Ceza Genel Kurulu",
 ];
+const KAYNAKLAR = ["Tümü", "Bedesten", "AYM", "AİHM"];
+const SIRALAMALAR = ["Alaka düzeyi", "Tarih (yeni→eski)", "Tarih (eski→yeni)"];
 
 function ShimmerBlock({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
@@ -161,6 +165,8 @@ export default function AramaPage() {
   const [tarihBaslangic, setTarihBaslangic] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [tarihBitis, setTarihBitis] = useState("");
+  const [kaynak, setKaynak] = useState("Tümü");
+  const [siralama, setSiralama] = useState("Alaka düzeyi");
 
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -301,6 +307,8 @@ export default function AramaPage() {
           ...(daire !== "Tümü" && parseDaireValue(daire) && { daire: parseDaireValue(daire) }),
           ...(tarihBaslangic && { tarih_baslangic: tarihBaslangic }),
           ...(tarihBitis && { tarih_bitis: tarihBitis }),
+          ...(kaynak !== "Tümü" && { kaynak: kaynak.toLowerCase() }),
+          ...(siralama !== "Alaka düzeyi" && { siralama: siralama === "Tarih (yeni→eski)" ? "tarih_desc" : "tarih_asc" }),
         }),
         signal: controller.signal,
       });
@@ -330,7 +338,7 @@ export default function AramaPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, mahkeme, daire]);
+  }, [query, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama]);
 
   const handleSelectResult = useCallback(async (result: IctihatResult) => {
     setSelectedResult(result);
@@ -474,13 +482,13 @@ export default function AramaPage() {
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M3 4h18M6 8h12M9 12h6M11 16h2" /></svg>
             {showFilters ? "Filtreleri Gizle" : "Filtrele"}
-            {(mahkeme !== "Tümü" || daire !== "Tümü" || tarihBaslangic || tarihBitis) && (
+            {(mahkeme !== "Tümü" || daire !== "Tümü" || tarihBaslangic || tarihBitis || kaynak !== "Tümü" || siralama !== "Alaka düzeyi") && (
               <span className="w-1.5 h-1.5 rounded-full bg-[#6C6CFF]" />
             )}
           </button>
 
           {showFilters && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 p-3 bg-[#111113] border border-white/[0.06] rounded-xl">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-2 p-3 bg-[#111113] border border-white/[0.06] rounded-xl">
               <select value={mahkeme} onChange={(e) => setMahkeme(e.target.value)} className="bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors">
                 {MAHKEMELER.map((m) => (<option key={m} value={m}>{m === "Tümü" ? "Mahkeme: Tümü" : m}</option>))}
               </select>
@@ -489,6 +497,12 @@ export default function AramaPage() {
               </select>
               <input type="date" value={tarihBaslangic} onChange={(e) => setTarihBaslangic(e.target.value)} title="Başlangıç tarihi" className="bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors [color-scheme:dark]" />
               <input type="date" value={tarihBitis} onChange={(e) => setTarihBitis(e.target.value)} title="Bitiş tarihi" className="bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors [color-scheme:dark]" />
+              <select value={kaynak} onChange={(e) => setKaynak(e.target.value)} className="bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors">
+                {KAYNAKLAR.map((k) => (<option key={k} value={k}>{k === "Tümü" ? "Kaynak: Tümü" : k}</option>))}
+              </select>
+              <select value={siralama} onChange={(e) => setSiralama(e.target.value)} className="bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors">
+                {SIRALAMALAR.map((s) => (<option key={s} value={s}>{s === "Alaka düzeyi" ? "Sıralama: Alaka" : s}</option>))}
+              </select>
             </div>
           )}
         </div>
@@ -599,22 +613,34 @@ export default function AramaPage() {
                   >
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                        result.mahkeme === "Yargıtay" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" :
-                        result.mahkeme === "Danıştay" ? "bg-[#A78BFA]/10 text-[#A78BFA]" :
-                        result.mahkeme === "Anayasa Mahkemesi" ? "bg-[#E5484D]/10 text-[#E5484D]" :
-                        result.mahkeme?.includes("Bölge") ? "bg-[#3DD68C]/10 text-[#3DD68C]" :
-                        "bg-[#FFB224]/10 text-[#FFB224]"
+                        result.mahkeme === "Yargıtay" || result.mahkeme === "yargitay" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" :
+                        result.mahkeme === "Danıştay" || result.mahkeme === "danistay" ? "bg-[#A78BFA]/10 text-[#A78BFA]" :
+                        result.mahkeme === "Anayasa Mahkemesi" || result.mahkeme === "aym" ? "bg-[#E5484D]/10 text-[#E5484D]" :
+                        result.mahkeme === "aihm" ? "bg-[#3DD68C]/10 text-[#3DD68C]" :
+                        result.mahkeme?.includes("Bölge") || result.mahkeme === "bam" ? "bg-[#FFB224]/10 text-[#FFB224]" :
+                        "bg-white/[0.06] text-[#8B8B8E]"
                       }`}>
-                        {result.mahkeme}
+                        {result.mahkeme === "yargitay" ? "Yargıtay" :
+                         result.mahkeme === "danistay" ? "Danıştay" :
+                         result.mahkeme === "aym" ? "AYM" :
+                         result.mahkeme === "aihm" ? "AİHM" :
+                         result.mahkeme === "bam" ? "BAM" :
+                         result.mahkeme}
                       </span>
                       {result.daire && <span className="text-[11px] text-[#8B8B8E]">{result.daire}</span>}
+                      {(result.mahkeme === "aym" || (result as any).kaynak === "aym") && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/10 text-[#E5484D]">AYM</span>
+                      )}
+                      {(result.mahkeme === "aihm" || (result as any).kaynak === "aihm") && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-[12px] mb-1.5">
                       <span className="font-mono text-[#ECECEE]">E. {result.esas_no}</span>
                       <span className="font-mono text-[#ECECEE]">K. {result.karar_no}</span>
                       <span className="ml-auto text-[#5C5C5F]">{result.tarih}</span>
                     </div>
-                    <p className="text-[13px] text-[#8B8B8E] line-clamp-2 leading-relaxed">
+                    <p className="text-[13px] text-[#8B8B8E] line-clamp-3 leading-relaxed">
                       {highlightText(result.ozet, query)}
                     </p>
                     {result.relevance_score !== undefined && (

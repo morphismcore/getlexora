@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.api.routes import health, search, ingest, auth, cases, deadlines, statistics, dashboard, upload, templates, export, admin
 from app.api.deps import get_vector_store, cleanup
 from app.models.db import init_db
+from app.scheduler import start_scheduler, stop_scheduler
 
 structlog.configure(
     processors=[
@@ -43,9 +44,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("qdrant_init_error", error=str(e))
 
+    # Scheduler baslat
+    await start_scheduler()
+
     yield
 
     # Shutdown
+    await stop_scheduler()
     await cleanup()
     logger.info("lexora_shutdown")
 

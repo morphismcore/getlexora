@@ -133,6 +133,11 @@ jobs:
             
             # Health check
             curl -sf http://localhost:8001/health || exit 1
+
+            # Cleanup old images and build cache to prevent disk filling up
+            docker image prune -f --filter "until=24h"
+            docker builder prune -f --filter "until=24h"
+
             echo "Deploy successful!"
           DEPLOY
 

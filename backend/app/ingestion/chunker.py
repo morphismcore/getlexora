@@ -134,11 +134,8 @@ class LegalChunker:
         return chunks
 
     def _detect_karar_sections(self, text: str) -> list[tuple[str, str]]:
-        """Karar metnindeki bölümleri tespit et."""
-        sections = []
-
-        # Basit heuristik — gelişmiş NLP ile değiştirilebilir
-        section_markers = [
+        """Karar metnindeki bölümleri tespit et — case-insensitive, tüm eşleşmeler."""
+        section_patterns = [
             (r"(?:Davacı|DAVACI|Şüpheli|SANIK|Başvurucu)", "taraflar"),
             (r"(?:OLAY|Dava\s+konusu|Olaylar)", "olaylar"),
             (r"(?:İLK\s+DERECE|İlk\s+derece|Yerel\s+mahkeme)", "ilk_derece"),
@@ -147,31 +144,40 @@ class LegalChunker:
             (r"(?:SONUÇ|HÜKÜM|Sonuç|Hüküm|KARAR)", "sonuc"),
         ]
 
-        # Her marker'ın pozisyonunu bul
+        # Tüm eşleşmeleri bul (case-insensitive)
         positions = []
-        for pattern, section_type in section_markers:
-            match = re.search(pattern, text)
-            if match:
-                positions.append((match.start(), section_type))
+        seen_types = set()
+        for pattern, section_type in section_patterns:
+            for match in re.finditer(pattern, text, re.IGNORECASE):
+                # Her bölüm türünden sadece ilkini al (duplikat başlıkları atla)
+                if section_type not in seen_types:
+                    positions.append((match.start(), section_type))
+                    seen_types.add(section_type)
 
         positions.sort(key=lambda x: x[0])
 
         if not positions:
-            # Bölüm tespit edilemedi → tek chunk
+            # Bölüm tespit edilemedi → paragraf bazlı bölme
+            if len(text) > 2000:
+                paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+                if len(paragraphs) > 1:
+                    return [(f"bolum_{i}", p) for i, p in enumerate(paragraphs)]
             return [("tam_metin", text)]
+
+        sections = []
+
+        # İlk bölümden önceki kısım
+        if positions[0][0] > 100:
+            sections.append(("baslik", text[:positions[0][0]].strip()))
 
         # Bölümleri ayır
         for i, (pos, section_type) in enumerate(positions):
             end = positions[i + 1][0] if i + 1 < len(positions) else len(text)
             section_text = text[pos:end].strip()
-            if section_text:
+            if len(section_text) > 50:
                 sections.append((section_type, section_text))
 
-        # İlk bölümden önceki kısım
-        if positions[0][0] > 100:
-            sections.insert(0, ("baslik", text[:positions[0][0]].strip()))
-
-        return sections
+        return sections if sections else [("tam_metin", text)]
 
     def _split_by_paragraph(self, text: str) -> list[str]:
         """Uzun metni paragraf sınırlarında böl."""

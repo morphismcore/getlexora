@@ -1,11 +1,9 @@
 """
 Embedding servisi.
-bge-m3 modeli ile dense + sparse (BM25-like) vektör üretir.
+BAAI/bge-m3 modeli ile dense + native sparse vektör üretir.
 """
 
 import structlog
-import numpy as np
-from functools import lru_cache
 
 from app.config import get_settings
 
@@ -18,42 +16,64 @@ _model = None
 def _get_model():
     global _model
     if _model is None:
-        from sentence_transformers import SentenceTransformer
+        from FlagEmbedding import BGEM3FlagModel
 
         settings = get_settings()
         logger.info("loading_embedding_model", model=settings.embedding_model)
-        _model = SentenceTransformer(settings.embedding_model)
-        logger.info("embedding_model_loaded")
+        _model = BGEM3FlagModel(
+            settings.embedding_model,
+            use_fp16=True,
+        )
+        logger.info("embedding_model_loaded", model=settings.embedding_model)
     return _model
 
 
 class EmbeddingService:
-    """bge-m3 embedding servisi. Dense ve sparse vektör üretir."""
+    """bge-m3 embedding servisi. Dense ve native sparse vektör üretir."""
 
     def __init__(self):
         self.settings = get_settings()
 
-    def embed_texts(self, texts: list[str]) -> list[dict]:
+    def embed_texts(self, texts: list[str], batch_size: int = 32) -> list[dict]:
         """
         Metin listesini embed et.
         Her metin için dense vector + sparse vector döner.
+        bge-m3 native sparse (learned lexical weights) kullanır.
         """
         model = _get_model()
 
-        # Dense embeddings
-        dense_vectors = model.encode(
-            texts,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
-
         results = []
-        for i, text in enumerate(texts):
-            result = {
-                "dense_vector": dense_vectors[i].tolist(),
-                "sparse_vector": self._compute_sparse(text),
-            }
-            results.append(result)
+        for batch_start in range(0, len(texts), batch_size):
+            batch_texts = texts[batch_start:batch_start + batch_size]
+
+            output = model.encode(
+                batch_texts,
+                return_dense=True,
+                return_sparse=True,
+                return_colbert_vecs=False,
+            )
+
+            dense_vecs = output["dense_vecs"]
+            lexical_weights = output["lexical_weights"]
+
+            for i in range(len(batch_texts)):
+                # Dense vector
+                dense = dense_vecs[i].tolist()
+
+                # Sparse vector from bge-m3 lexical weights
+                sparse = self._lexical_to_sparse(lexical_weights[i])
+
+                results.append({
+                    "dense_vector": dense,
+                    "sparse_vector": sparse,
+                })
+
+            logger.debug(
+                "embedding_batch_complete",
+                batch_size=len(batch_texts),
+                total_processed=min(batch_start + batch_size, len(texts)),
+                total=len(texts),
+            )
 
         return results
 
@@ -61,98 +81,20 @@ class EmbeddingService:
         """Tek bir sorguyu embed et."""
         return self.embed_texts([query])[0]
 
-    def _compute_sparse(self, text: str) -> dict:
+    @staticmethod
+    def _lexical_to_sparse(weights: dict) -> dict:
         """
-        Gelişmiş BM25-like sparse vector üret.
-        TF + basit IDF benzeri ağırlıklama + Türkçe suffix stripping.
+        bge-m3 lexical weights'i Qdrant sparse vector formatına çevir.
+        weights: {token_id: weight, ...}
         """
-        import re
-        import math
-
-        # Tokenize
-        words = re.findall(r"[a-zA-ZçğıöşüÇĞİÖŞÜ]+", text.lower())
-        if not words:
+        if not weights:
             return {"indices": [], "values": []}
-
-        # Türkçe suffix stripping + stop word filtresi
-        cleaned = []
-        for word in words:
-            if len(word) < 3 or word in TURKISH_STOP_WORDS:
-                continue
-            stem = _turkish_stem(word)
-            if stem and len(stem) >= 2:
-                cleaned.append(stem)
-
-        if not cleaned:
-            return {"indices": [], "values": []}
-
-        # Term frequency
-        tf = {}
-        for word in cleaned:
-            tf[word] = tf.get(word, 0) + 1
-
-        # BM25-like scoring: tf * (k1 + 1) / (tf + k1 * (1 - b + b * dl/avgdl))
-        k1 = 1.5
-        b = 0.75
-        dl = len(cleaned)
-        avgdl = max(dl, 100)  # POC: ortalama doküman uzunluğu tahmini
 
         indices = []
         values = []
-        for word, count in tf.items():
-            # Deterministik hash — collision azaltmak için büyük alan
-            idx = abs(hash(word)) % 500000
-            # BM25 TF saturation
-            score = (count * (k1 + 1)) / (count + k1 * (1 - b + b * dl / avgdl))
-            # Log normalizasyon
-            score = math.log(1 + score)
+        for token_id, weight in weights.items():
+            idx = int(token_id) if isinstance(token_id, str) else token_id
             indices.append(idx)
-            values.append(float(score))
+            values.append(float(weight))
 
         return {"indices": indices, "values": values}
-
-
-def _turkish_stem(word: str) -> str:
-    """Basit Türkçe suffix stripping — morfolojik analiz yerine heuristik."""
-    suffixes = [
-        "ları", "leri", "ların", "lerin", "lardan", "lerden",
-        "lar", "ler", "dan", "den", "tan", "ten",
-        "nın", "nin", "nun", "nün", "ın", "in", "un", "ün",
-        "ya", "ye", "na", "ne", "da", "de", "ta", "te",
-        "dır", "dir", "dur", "dür", "tır", "tir", "tur", "tür",
-        "mış", "miş", "muş", "müş", "yor", "rak", "rek",
-        "arak", "erek", "ıyor", "iyor", "uyor", "üyor",
-        "ması", "mesi", "mak", "mek",
-        "lık", "lik", "luk", "lük",
-        "sız", "siz", "suz", "süz",
-        "cı", "ci", "cu", "cü", "çı", "çi", "çu", "çü",
-    ]
-    for suffix in suffixes:
-        if word.endswith(suffix) and len(word) - len(suffix) >= 2:
-            return word[:-len(suffix)]
-    return word
-
-
-# Genişletilmiş Türkçe stop words
-TURKISH_STOP_WORDS = {
-    # Bağlaçlar
-    "bir", "ve", "bu", "da", "de", "ile", "için", "olan", "olarak",
-    "gibi", "daha", "ancak", "ise", "veya", "hem", "her", "çok",
-    "kadar", "sonra", "önce", "üzere", "göre", "karşı", "rağmen",
-    "dolayı", "tarafından", "buna", "şu", "diğer", "aynı", "bazı",
-    # Zamirler
-    "ben", "sen", "biz", "siz", "onlar", "kendi", "bunu", "şunu",
-    "onu", "bunun", "onun", "bunlar", "şunlar",
-    # Edatlar
-    "den", "dan", "dir", "dır", "nin", "nın", "nün", "nun",
-    "ler", "lar", "ın", "in", "ya", "ye", "ki", "mi", "mu",
-    "mı", "mü", "deki", "daki",
-    # Yardımcı fiiller
-    "olan", "olup", "olmuş", "olan", "etmek", "etmiş", "etti",
-    "var", "yok", "değil", "ama", "fakat", "lakin", "halde",
-    # Yaygın kelimeler
-    "arasında", "üzerinde", "altında", "yanında", "içinde",
-    "hakkında", "ilişkin", "dair", "ait", "itibaren", "kadar",
-    "sadece", "yalnız", "bile", "henüz", "artık", "zaten",
-    "hiç", "hiçbir", "böyle", "öyle", "nasıl", "neden", "niçin",
-}

@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 24
 
     # Embedding (POC: lightweight model, production: BAAI/bge-m3)
-    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    embedding_dim: int = 384
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dim: int = 1024
 
     # Bedesten API (yargi-mcp source)
     bedesten_base_url: str = "https://bedesten.adalet.gov.tr"
@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     rag_top_k: int = 20
     rag_rerank_top_k: int = 5
     rag_min_relevance: float = 0.4
+
+    # Ingestion thresholds
+    min_karar_chars: int = 300
+    max_payload_text_chars: int = 3000
+    max_ozet_chars: int = 500
 
     # CORS
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
