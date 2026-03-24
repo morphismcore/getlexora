@@ -3,8 +3,10 @@ Redis cache service.
 Caches search results, document content, and verification results.
 """
 
+import asyncio
 import json
 import hashlib
+from typing import Any, Callable, Awaitable
 import structlog
 import redis.asyncio as redis
 
@@ -53,6 +55,45 @@ class CacheService:
         except Exception as e:
             logger.warning("cache_exists_error", key=key, error=str(e))
             return False
+
+    # ── Stampede-protected cache ────────────────────────────────────
+
+    async def get_or_compute(self, key: str, compute_fn: Callable[[], Awaitable[Any]], ttl: int = 300) -> Any:
+        """Get from cache, or compute with lock to prevent stampede."""
+        # Try cache first
+        cached = await self.get(key)
+        if cached is not None:
+            return cached
+
+        # Acquire lock
+        lock_key = f"lock:{key}"
+        try:
+            # Try to acquire lock (NX = only if not exists, EX = 30s timeout)
+            acquired = await self.client.set(lock_key, "1", nx=True, ex=30)
+            if not acquired:
+                # Another process is computing — wait briefly then retry cache
+                await asyncio.sleep(0.5)
+                cached = await self.get(key)
+                if cached is not None:
+                    return cached
+                # Still not ready — compute anyway (fallback)
+
+            # Compute the value
+            result = await compute_fn()
+
+            # Store in cache
+            await self.set(key, result, ttl=ttl)
+            return result
+        except Exception as e:
+            logger.warning("get_or_compute_error", key=key, error=str(e))
+            # Fallback: compute without caching
+            return await compute_fn()
+        finally:
+            # Release lock
+            try:
+                await self.client.delete(lock_key)
+            except Exception:
+                pass
 
     # ── Specialized cache methods ────────────────────────────────────
 

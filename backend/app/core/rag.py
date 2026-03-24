@@ -106,6 +106,7 @@ class RAGPipeline:
         )
 
         # 1b. Eş anlamlı terimlerle ek arama (varsa, ilk 2 synonym)
+        expansion_failures = 0
         if expansion_info and expansion_info["synonyms"]:
             for syn_query in expansion_info["expanded_queries"][1:3]:
                 try:
@@ -116,8 +117,14 @@ class RAGPipeline:
                         max_results=5,
                     )
                     api_results.extend(syn_results)
-                except Exception:
-                    pass
+                except Exception as e:
+                    expansion_failures += 1
+                    logger.warning("synonym_search_failed", query=syn_query, error=str(e))
+
+        # Track warnings for partial results
+        search_warnings = []
+        if expansion_failures > 0:
+            search_warnings.append(f"{expansion_failures} ek arama başarısız oldu, sonuçlar kısmi olabilir.")
 
         # 2. Vector DB'de semantic search (koleksiyon doluysa)
         vector_results = []
@@ -167,6 +174,7 @@ class RAGPipeline:
             toplam_bulunan=len(results),
             sure_ms=elapsed,
             query_kullanilan=request.query,
+            warnings=search_warnings if search_warnings else [],
         )
 
     async def ask(self, query: str, search_request: SearchRequest | None = None) -> RAGResponse:

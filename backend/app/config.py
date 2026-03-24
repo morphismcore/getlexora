@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # JWT Auth
     jwt_secret: str = "lexora-dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"
-    jwt_expire_hours: int = 24
+    jwt_expire_hours: int = 4
 
     # Embedding (POC: lightweight model, production: BAAI/bge-m3)
     embedding_model: str = "BAAI/bge-m3"

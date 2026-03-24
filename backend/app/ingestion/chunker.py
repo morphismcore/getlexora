@@ -94,9 +94,9 @@ class LegalChunker:
         return chunks
 
     def chunk_generic(self, text: str, metadata: dict) -> list[dict]:
-        """Genel metin chunking — paragraf bazlı, overlap ile."""
+        """Genel metin chunking — paragraf bazlı, cümle seviyesinde overlap ile."""
         paragraphs = text.split("\n\n")
-        chunks = []
+        raw_chunks = []
         current = ""
 
         for para in paragraphs:
@@ -106,32 +106,50 @@ class LegalChunker:
 
             if len(current) + len(para) + 2 > self.max_chunk_chars:
                 if current:
-                    chunks.append({
-                        "text": current,
-                        "metadata": {**metadata, "chunk_index": len(chunks)},
-                    })
-                    # Overlap: son paragrafın bir kısmını tut
-                    overlap = current[-self.overlap_chars:] if len(current) > self.overlap_chars else ""
-                    current = overlap + "\n\n" + para if overlap else para
+                    raw_chunks.append(current)
+                    current = para
                 else:
                     # Tek paragraf çok uzun → zorla böl
                     for i in range(0, len(para), self.max_chunk_chars - self.overlap_chars):
                         chunk_text = para[i:i + self.max_chunk_chars]
-                        chunks.append({
-                            "text": chunk_text,
-                            "metadata": {**metadata, "chunk_index": len(chunks)},
-                        })
+                        raw_chunks.append(chunk_text)
                     current = ""
             else:
                 current = current + "\n\n" + para if current else para
 
         if current.strip():
+            raw_chunks.append(current)
+
+        # Apply sentence-level overlap for better context preservation
+        raw_chunks = self._add_sentence_overlap(raw_chunks, overlap_sentences=3)
+
+        # Build final chunk dicts with metadata
+        chunks = []
+        for i, chunk_text in enumerate(raw_chunks):
             chunks.append({
-                "text": current,
-                "metadata": {**metadata, "chunk_index": len(chunks)},
+                "text": chunk_text,
+                "metadata": {**metadata, "chunk_index": i},
             })
 
         return chunks
+
+    def _add_sentence_overlap(self, chunks: list[str], overlap_sentences: int = 3) -> list[str]:
+        """Add last N sentences from previous chunk to start of next chunk."""
+        if len(chunks) <= 1:
+            return chunks
+
+        result = [chunks[0]]
+        for i in range(1, len(chunks)):
+            # Get last N sentences from previous chunk
+            prev_sentences = re.split(r'(?<=[.!?])\s+', chunks[i - 1].strip())
+            overlap = ' '.join(prev_sentences[-overlap_sentences:]) if len(prev_sentences) >= overlap_sentences else ''
+
+            if overlap:
+                result.append(overlap + '\n' + chunks[i])
+            else:
+                result.append(chunks[i])
+
+        return result
 
     def _detect_karar_sections(self, text: str) -> list[tuple[str, str]]:
         """Karar metnindeki bölümleri tespit et — case-insensitive, tüm eşleşmeler."""

@@ -96,6 +96,10 @@ def _clear_login_attempts(email: str):
 # ── Pydantic Schemas ──────────────────────────────────────────────────
 
 
+class RefreshTokenRequest(BaseModel):
+    pass  # Uses current token from Authorization header
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
@@ -282,6 +286,30 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def me(current_user: User = Depends(get_current_user)):
     """Mevcut kullanıcı bilgilerini getir."""
     return current_user
+
+
+@router.post("/refresh")
+async def refresh_token(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Refresh JWT token — issues new token if current is valid and not expired."""
+    # Only refresh if token is still valid (get_current_user already verifies)
+    # Issue a new token with fresh expiration
+    payload = {
+        "sub": str(current_user.id),
+        "email": current_user.email,
+        "role": current_user.role,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expire_hours),
+        "iat": datetime.now(timezone.utc),
+    }
+    new_token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    return {
+        "access_token": new_token,
+        "token_type": "bearer",
+        "expires_in": settings.jwt_expire_hours * 3600,
+    }
 
 
 # ── Şifre Sıfırlama ───────────────────────────────────────────────

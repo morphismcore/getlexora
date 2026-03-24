@@ -45,6 +45,16 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
+function isTokenNearExpiry(token: string, minutesLeft: number): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000;
+    return Date.now() > exp - (minutesLeft * 60 * 1000);
+  } catch {
+    return false;
+  }
+}
+
 const PUBLIC_PATHS = ["/", "/giris", "/kayit"];
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
@@ -90,11 +100,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchUser]);
 
-  // Periodic token expiry check
+  // Periodic token expiry check + auto-refresh
   useEffect(() => {
     if (!token) return;
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (isTokenExpired(token)) {
         localStorage.removeItem("lexora_token");
         localStorage.removeItem("lexora_search_history");
@@ -104,6 +114,24 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         if (typeof window !== 'undefined') {
           window.location.href = '/giris?expired=1';
+        }
+        return;
+      }
+
+      // Auto-refresh if <30 min remaining
+      if (isTokenNearExpiry(token, 30)) {
+        try {
+          const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('lexora_token', data.access_token);
+            setToken(data.access_token);
+          }
+        } catch {
+          // Silent fail — will retry in 30s
         }
       }
     }, 30000); // Check every 30 seconds

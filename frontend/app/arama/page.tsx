@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -355,6 +355,72 @@ function RelevanceBar({ score }: { score: number }) {
     </div>
   );
 }
+
+/* ─── Memoized Search Result Card ─── */
+const SearchResultCard = React.memo(function SearchResultCard({
+  result,
+  isSelected,
+  query,
+  onSelect,
+}: {
+  result: IctihatResult;
+  isSelected: boolean;
+  query: string;
+  onSelect: (result: IctihatResult) => void;
+}) {
+  const court = getCourtStyle(result.mahkeme);
+  return (
+    <motion.button
+      key={result.karar_id}
+      variants={listItem}
+      onClick={() => onSelect(result)}
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 ${
+        isSelected
+          ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
+          : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
+      }`}
+    >
+      {/* Top row: court badge + daire */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} ${court.glow}`}>
+          {court.label || result.mahkeme}
+        </span>
+        {result.daire && (
+          <span className="text-[11px] text-[#8B8B8E] font-medium">{result.daire}</span>
+        )}
+        {result.kaynak === "aym" && result.mahkeme !== "aym" && (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/10 text-[#E5484D]">AYM</span>
+        )}
+        {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
+        )}
+      </div>
+
+      {/* Case numbers row */}
+      <div className="flex items-center gap-3 text-[12px] mb-2">
+        <span className="font-mono text-[#ECECEE]">
+          <span className="text-[#5C5C5F] text-[10px] mr-0.5">E.</span>
+          {result.esas_no}
+        </span>
+        <span className="font-mono text-[#ECECEE]">
+          <span className="text-[#5C5C5F] text-[10px] mr-0.5">K.</span>
+          {result.karar_no}
+        </span>
+        <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums">{result.tarih}</span>
+      </div>
+
+      {/* Summary with highlights */}
+      <p className="text-[13px] text-[#8B8B8E] line-clamp-3 leading-relaxed group-hover:text-[#A0A0A3] transition-colors">
+        {highlightText(result.ozet, query)}
+      </p>
+
+      {/* Relevance bar */}
+      {result.relevance_score !== undefined && (
+        <RelevanceBar score={result.relevance_score} />
+      )}
+    </motion.button>
+  );
+});
 
 /* ─── Select Component ─── */
 function FilterSelect({
@@ -1056,62 +1122,15 @@ export default function AramaPage() {
               {/* Results list */}
               {hasResults && (
                 <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
-                  {results.sonuclar.map((result) => {
-                    const court = getCourtStyle(result.mahkeme);
-                    const isSelected = selectedResult?.karar_id === result.karar_id;
-
-                    return (
-                      <motion.button
-                        key={result.karar_id}
-                        variants={listItem}
-                        onClick={() => handleSelectResult(result)}
-                        className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 ${
-                          isSelected
-                            ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
-                            : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
-                        }`}
-                      >
-                        {/* Top row: court badge + daire */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} ${court.glow}`}>
-                            {court.label || result.mahkeme}
-                          </span>
-                          {result.daire && (
-                            <span className="text-[11px] text-[#8B8B8E] font-medium">{result.daire}</span>
-                          )}
-                          {result.kaynak === "aym" && result.mahkeme !== "aym" && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/10 text-[#E5484D]">AYM</span>
-                          )}
-                          {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
-                          )}
-                        </div>
-
-                        {/* Case numbers row */}
-                        <div className="flex items-center gap-3 text-[12px] mb-2">
-                          <span className="font-mono text-[#ECECEE]">
-                            <span className="text-[#5C5C5F] text-[10px] mr-0.5">E.</span>
-                            {result.esas_no}
-                          </span>
-                          <span className="font-mono text-[#ECECEE]">
-                            <span className="text-[#5C5C5F] text-[10px] mr-0.5">K.</span>
-                            {result.karar_no}
-                          </span>
-                          <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums">{result.tarih}</span>
-                        </div>
-
-                        {/* Summary with highlights */}
-                        <p className="text-[13px] text-[#8B8B8E] line-clamp-3 leading-relaxed group-hover:text-[#A0A0A3] transition-colors">
-                          {highlightText(result.ozet, query)}
-                        </p>
-
-                        {/* Relevance bar */}
-                        {result.relevance_score !== undefined && (
-                          <RelevanceBar score={result.relevance_score} />
-                        )}
-                      </motion.button>
-                    );
-                  })}
+                  {results.sonuclar.map((result) => (
+                    <SearchResultCard
+                      key={result.karar_id}
+                      result={result}
+                      isSelected={selectedResult?.karar_id === result.karar_id}
+                      query={query}
+                      onSelect={handleSelectResult}
+                    />
+                  ))}
                 </motion.div>
               )}
 

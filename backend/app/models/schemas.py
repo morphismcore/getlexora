@@ -64,6 +64,7 @@ class SearchResponse(BaseModel):
     sure_ms: int
     query_kullanilan: str
     guven_skoru: float | None = None
+    warnings: list[str] = []
 
 
 # --- Citation Verification ---

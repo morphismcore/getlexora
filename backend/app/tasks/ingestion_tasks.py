@@ -5,6 +5,7 @@ IngestionPipeline async metodlarini Celery task olarak sarar.
 
 import asyncio
 import json
+from datetime import datetime
 import structlog
 
 from app.worker import celery_app
@@ -12,6 +13,34 @@ from app.worker import celery_app
 logger = structlog.get_logger()
 
 REDIS_CHANNEL = "ingestion_events"
+
+
+def _on_task_failure(self, exc, task_id, args, kwargs, einfo):
+    """Log failed tasks to Redis dead letter queue for monitoring after all retries exhausted."""
+    try:
+        import redis as sync_redis
+        from app.config import get_settings
+        settings = get_settings()
+        r = sync_redis.from_url(settings.celery_broker_url, socket_timeout=2)
+        failure_data = json.dumps({
+            "task_id": task_id,
+            "task_name": self.name,
+            "error": str(exc),
+            "args": str(args)[:500],
+            "timestamp": str(datetime.now()),
+        }, ensure_ascii=False, default=str)
+        r.lpush("celery:dead_letters", failure_data)
+        r.ltrim("celery:dead_letters", 0, 99)  # Keep last 100 failures
+        r.close()
+        logger.error("celery_task_dead_letter", task_id=task_id, task_name=self.name, error=str(exc))
+    except Exception as e:
+        logger.warning("dead_letter_log_failed", error=str(e))
+
+
+class LexoraTask(celery_app.Task):
+    """Base task class with dead letter queue logging on failure."""
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        _on_task_failure(self, exc, task_id, args, kwargs, einfo)
 
 
 def _publish_progress(state: dict):
@@ -48,6 +77,7 @@ def _create_pipeline():
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_topics_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -106,6 +136,7 @@ def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_aym_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -162,6 +193,7 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_aihm_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -218,6 +250,7 @@ def ingest_aihm_task(self, max_results: int = 500):
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_mevzuat_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -273,6 +306,7 @@ def ingest_mevzuat_task(self):
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_batch_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -339,6 +373,7 @@ def ingest_batch_task(
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_daire_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -398,6 +433,7 @@ def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None =
 
 @celery_app.task(
     bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_date_range_task",
     autoretry_for=(Exception,),
     max_retries=3,
