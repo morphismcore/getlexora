@@ -232,8 +232,13 @@ class RAGPipeline:
         # 4. Citation verification
         verification = await self.verifier.verify_all(answer)
 
-        # 5. Confidence score
-        source_confidence = min(len(search_response.sonuclar) / 5, 1.0)
+        # 5. Confidence score — weight by actual relevance scores, not just count
+        if search_response.sonuclar:
+            avg_relevance = sum(r.relevance_score for r in search_response.sonuclar) / len(search_response.sonuclar)
+            count_factor = min(len(search_response.sonuclar) / 3, 1.0)  # 3 good results is enough
+            source_confidence = avg_relevance * 0.6 + count_factor * 0.4
+        else:
+            source_confidence = 0.0
         citation_confidence = verification.overall_confidence
         confidence = (source_confidence * 0.4) + (citation_confidence * 0.6)
 

@@ -4,6 +4,7 @@ Türk avukatları için AI destekli hukuk araştırma asistanı.
 """
 
 import time
+import uuid as _uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -128,14 +129,25 @@ request_metrics = _RequestMetrics()
 # Request logging middleware
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(_uuid.uuid4())[:8]
         start = time.monotonic()
+
+        # Store request_id for use in route handlers
+        request.state.request_id = request_id
+
         response = await call_next(request)
+
         duration_ms = round((time.monotonic() - start) * 1000, 1)
         is_error = response.status_code >= 500
         request_metrics.record(duration_ms, is_error)
+
+        # Add request ID to response headers
+        response.headers["X-Request-ID"] = request_id
+
         if not request.url.path.startswith("/health"):
             logger.info(
                 "request",
+                request_id=request_id,
                 method=request.method,
                 path=request.url.path,
                 status=response.status_code,

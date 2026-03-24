@@ -27,9 +27,19 @@ PATTERNS = {
         r"(\d{4})/(\d+)\s*E\.?\s*,?\s*(\d{4})/(\d+)\s*K\.?",
         re.IGNORECASE,
     ),
+    # "11. HD 2020/100 E., 2020/200 K." (Daire abbreviation without "Yargıtay" prefix)
+    "yargitay_short": re.compile(
+        r"(\d+)\.\s*(?:HD|CD|HGK|CGK)\s+(\d{4}/\d+)\s*E\.",
+        re.IGNORECASE,
+    ),
     "danistay": re.compile(
         r"Danıştay\s+(\d+)\.\s*(D|Daire|İDDK|VDDK)\s+"
         r"(\d{4})/(\d+)\s*E\.?\s*,?\s*(\d{4})/(\d+)\s*K\.?",
+        re.IGNORECASE,
+    ),
+    # "Danıştay 10. D., 2020/123 E." (shorter Danıştay format)
+    "danistay_short": re.compile(
+        r"Danıştay\s+(\d+)\.\s*D\.\s*,?\s*(\d{4}/\d+)\s*E\.",
         re.IGNORECASE,
     ),
     "aym_norm": re.compile(
@@ -40,8 +50,18 @@ PATTERNS = {
         r"(?:AYM|Anayasa\s+Mahkemesi)\s+(?:Bireysel\s+Başvuru\s+)?(?:No\.?\s*:?\s*)?(\d{4}/\d+)",
         re.IGNORECASE,
     ),
+    # "E. 2021/123, K. 2021/456" (reverse order, standalone)
+    "esas_karar_standalone": re.compile(
+        r"E\.\s*(\d{4}/\d+)\s*,?\s*K\.\s*(\d{4}/\d+)",
+        re.IGNORECASE,
+    ),
     "kanun_sayili": re.compile(
         r"(\d{3,5})\s*sayılı\s+(?:Kanun|KHK|Yasa)",
+        re.IGNORECASE,
+    ),
+    # "4857 sayılı Kanun md. 18" or "4857 sayılı Yasa madde 18"
+    "kanun_sayili_madde": re.compile(
+        r"(\d{4})\s*sayılı\s+\w+\s+(?:md|madde)\.?\s*(\d+)",
         re.IGNORECASE,
     ),
     "kanun_madde": re.compile(
@@ -50,6 +70,15 @@ PATTERNS = {
         re.IGNORECASE,
     ),
 }
+
+
+def _validate_year(year_str: str) -> bool:
+    """Validate that a year string falls within a reasonable range for Turkish legal citations."""
+    try:
+        year = int(year_str)
+        return 1900 <= year <= 2050
+    except (ValueError, TypeError):
+        return False
 
 
 class CitationVerifierService:
@@ -64,8 +93,11 @@ class CitationVerifierService:
         """Metinden tüm hukuki referansları çıkar."""
         citations = []
 
-        # Yargıtay kararları
+        # Yargıtay kararları (full format)
         for m in PATTERNS["yargitay"].finditer(text):
+            # Year validation
+            if not _validate_year(m.group(3)) or not _validate_year(m.group(5)):
+                continue
             citations.append(
                 CitationRef(
                     raw_text=m.group(0),
@@ -76,8 +108,28 @@ class CitationVerifierService:
                 )
             )
 
-        # Danıştay kararları
+        # Yargıtay short format: "11. HD 2020/100 E."
+        for m in PATTERNS["yargitay_short"].finditer(text):
+            # Skip if already captured by the full yargitay pattern
+            if any(m.group(0) in c.raw_text for c in citations):
+                continue
+            esas_str = m.group(2)
+            year_part = esas_str.split("/")[0] if "/" in esas_str else ""
+            if year_part and not _validate_year(year_part):
+                continue
+            citations.append(
+                CitationRef(
+                    raw_text=m.group(0),
+                    citation_type="ictihat",
+                    mahkeme=f"Yargıtay {m.group(1)}. Daire",
+                    esas_no=esas_str,
+                )
+            )
+
+        # Danıştay kararları (full format)
         for m in PATTERNS["danistay"].finditer(text):
+            if not _validate_year(m.group(3)) or not _validate_year(m.group(5)):
+                continue
             citations.append(
                 CitationRef(
                     raw_text=m.group(0),
@@ -88,8 +140,27 @@ class CitationVerifierService:
                 )
             )
 
+        # Danıştay short format: "Danıştay 10. D., 2020/123 E."
+        for m in PATTERNS["danistay_short"].finditer(text):
+            if any(m.group(0) in c.raw_text for c in citations):
+                continue
+            esas_str = m.group(2)
+            year_part = esas_str.split("/")[0] if "/" in esas_str else ""
+            if year_part and not _validate_year(year_part):
+                continue
+            citations.append(
+                CitationRef(
+                    raw_text=m.group(0),
+                    citation_type="ictihat",
+                    mahkeme=f"Danıştay {m.group(1)}. Daire",
+                    esas_no=esas_str,
+                )
+            )
+
         # AYM norm denetimi
         for m in PATTERNS["aym_norm"].finditer(text):
+            if not _validate_year(m.group(1)) or not _validate_year(m.group(3)):
+                continue
             citations.append(
                 CitationRef(
                     raw_text=m.group(0),
@@ -104,6 +175,9 @@ class CitationVerifierService:
         for m in PATTERNS["aym_bireysel"].finditer(text):
             # aym_norm ile çakışmayı önle
             if not any(c.raw_text in m.group(0) or m.group(0) in c.raw_text for c in citations):
+                year_part = m.group(1).split("/")[0] if "/" in m.group(1) else ""
+                if year_part and not _validate_year(year_part):
+                    continue
                 citations.append(
                     CitationRef(
                         raw_text=m.group(0),
@@ -113,6 +187,26 @@ class CitationVerifierService:
                     )
                 )
 
+        # "E. 2021/123, K. 2021/456" (standalone esas/karar format)
+        for m in PATTERNS["esas_karar_standalone"].finditer(text):
+            # Skip if already captured by other patterns
+            if any(m.group(0) in c.raw_text or c.raw_text in m.group(0) for c in citations):
+                continue
+            esas_str = m.group(1)
+            karar_str = m.group(2)
+            esas_year = esas_str.split("/")[0] if "/" in esas_str else ""
+            karar_year = karar_str.split("/")[0] if "/" in karar_str else ""
+            if (esas_year and not _validate_year(esas_year)) or (karar_year and not _validate_year(karar_year)):
+                continue
+            citations.append(
+                CitationRef(
+                    raw_text=m.group(0),
+                    citation_type="ictihat",
+                    esas_no=esas_str,
+                    karar_no=karar_str,
+                )
+            )
+
         # Kanun numarası
         for m in PATTERNS["kanun_sayili"].finditer(text):
             citations.append(
@@ -120,6 +214,20 @@ class CitationVerifierService:
                     raw_text=m.group(0),
                     citation_type="mevzuat",
                     kanun_no=m.group(1),
+                )
+            )
+
+        # "4857 sayılı Kanun md. 18" format
+        for m in PATTERNS["kanun_sayili_madde"].finditer(text):
+            # Skip if already captured by kanun_sayili
+            if any(m.group(0) in c.raw_text for c in citations):
+                continue
+            citations.append(
+                CitationRef(
+                    raw_text=m.group(0),
+                    citation_type="mevzuat",
+                    kanun_no=m.group(1),
+                    madde_no=m.group(2),
                 )
             )
 

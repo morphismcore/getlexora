@@ -150,19 +150,29 @@ class RerankerService:
                 texts.append(text)
 
             pairs = [(query, text) for text in texts]
-            scores = self._model.predict(pairs)
+            raw_scores = self._model.predict(pairs)
 
-            # (skor, sonuç) çiftleri
-            scored = list(zip(scores, results))
-            scored.sort(key=lambda x: float(x[0]), reverse=True)
+            # Normalize all rerank scores to [0,1] using min-max across the batch
+            float_scores = [float(s) for s in raw_scores]
+            min_score = min(float_scores)
+            max_score = max(float_scores)
+            score_range = max_score - min_score if max_score > min_score else 1.0
+
+            # (normalized_score, raw_score, result) tuples
+            scored = []
+            for i, r in enumerate(results):
+                normalized_rerank = (float_scores[i] - min_score) / score_range
+                scored.append((normalized_rerank, float_scores[i], r))
+            scored.sort(key=lambda x: x[0], reverse=True)
 
             reranked = []
-            for score, r in scored:
-                # relevance_score'u güncelle (orijinal skoru koru)
-                r.rerank_score = float(score)
-                # Blended skor: %40 orijinal + %60 rerank
+            for normalized_rerank, raw_score, r in scored:
+                # Store raw rerank score for debugging
+                r.rerank_score = raw_score
+                # Original relevance already in [0,1]
                 original = getattr(r, "relevance_score", 0.5) or 0.5
-                r.relevance_score = round(original * 0.4 + self._normalize_score(float(score)) * 0.6, 4)
+                # Blend: 40% original + 60% normalized rerank
+                r.relevance_score = round(original * 0.4 + normalized_rerank * 0.6, 4)
                 reranked.append(r)
 
             if top_k:

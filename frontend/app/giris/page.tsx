@@ -77,6 +77,15 @@ export default function GirisPage() {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const { login } = useAuth();
   const router = useRouter();
+  const [expired, setExpired] = useState(false);
+
+  // Check for expired session redirect
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setExpired(params.get('expired') === '1');
+    }
+  }, []);
 
   // Typewriter effect
   useEffect(() => {
@@ -256,6 +265,17 @@ export default function GirisPage() {
               Hesabiniza giris yapin
             </p>
           </div>
+
+          {/* Expired session warning */}
+          {expired && (
+            <div role="alert" className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-3 flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB224" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+              <span className="text-[13px] text-[#FFB224]">Oturumunuz sona erdi. Lutfen tekrar giris yapin.</span>
+            </div>
+          )}
 
           {/* Form */}
           <motion.form

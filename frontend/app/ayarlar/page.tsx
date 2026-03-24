@@ -49,6 +49,8 @@ export default function AyarlarPage() {
   });
   const [notifLoading, setNotifLoading] = useState(false);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
@@ -72,7 +74,7 @@ export default function AyarlarPage() {
           setFirmForm({ name: data.name || "", tax_id: data.tax_id || "", address: data.address || "", phone: data.phone || "", email: data.email || "" });
         }
       })
-      .catch(() => {});
+      .catch((err) => { console.error("Firma yukleme hatasi:", err); setLoadError("Firma bilgileri yuklenemedi."); });
   }, [token]);
 
   // Load members
@@ -81,7 +83,7 @@ export default function AyarlarPage() {
     fetch(`${API_URL}/api/v1/auth/firm/members`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
       .then(setMembers)
-      .catch(() => {});
+      .catch((err) => { console.error("Uyeler yukleme hatasi:", err); setLoadError("Uye listesi yuklenemedi."); });
   }, [token, firm]);
 
   // Load notification preferences
@@ -99,7 +101,7 @@ export default function AyarlarPage() {
           });
         }
       })
-      .catch(() => {});
+      .catch((err) => { console.error("Bildirim tercihleri yukleme hatasi:", err); setLoadError("Bildirim tercihleri yuklenemedi."); });
   }, [token]);
 
   const saveNotifPrefs = useCallback(async () => {
@@ -191,6 +193,13 @@ export default function AyarlarPage() {
   return (
     <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
       {toast && <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg">{toast}</div>}
+
+      {loadError && (
+        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
+          {loadError}
+          <button onClick={() => { setLoadError(null); window.location.reload(); }} className="ml-3 underline">Tekrar dene</button>
+        </div>
+      )}
 
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Ayarlar</h1>

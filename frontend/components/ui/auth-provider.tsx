@@ -35,6 +35,16 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000; // Convert to milliseconds
+    return Date.now() > exp - 60000; // 1 minute buffer
+  } catch {
+    return true;
+  }
+}
+
 const PUBLIC_PATHS = ["/", "/giris", "/kayit"];
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
@@ -64,12 +74,42 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const t = localStorage.getItem("lexora_token");
     if (t) {
+      // Check if token is already expired before fetching user
+      if (isTokenExpired(t)) {
+        localStorage.removeItem("lexora_token");
+        setLoading(false);
+        if (typeof window !== 'undefined' && !PUBLIC_PATHS.includes(window.location.pathname)) {
+          window.location.href = '/giris?expired=1';
+        }
+        return;
+      }
       setToken(t);
       fetchUser(t).finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
   }, [fetchUser]);
+
+  // Periodic token expiry check
+  useEffect(() => {
+    if (!token) return;
+
+    const interval = setInterval(() => {
+      if (isTokenExpired(token)) {
+        localStorage.removeItem("lexora_token");
+        localStorage.removeItem("lexora_search_history");
+        localStorage.removeItem("lexora_dilekce_draft");
+        localStorage.removeItem("lexora_upload_history");
+        setToken(null);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          window.location.href = '/giris?expired=1';
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [token]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

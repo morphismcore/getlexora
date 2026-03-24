@@ -76,6 +76,37 @@ def _log(level: str, message: str):
         logger.info("ingest_log", msg=message)
 
 
+def _make_dedup_key(doc: dict) -> str:
+    """Create dedup key from multiple fields to catch cross-source duplicates."""
+    esas = (doc.get("esas_no") or doc.get("esasNo") or "").strip()
+    karar = (doc.get("karar_no") or doc.get("kararNo") or "").strip()
+    tarih = (doc.get("tarih") or doc.get("karar_tarihi") or "").strip()
+    mahkeme = (doc.get("mahkeme") or "").strip().lower()
+
+    # Also try Bedesten-specific field names
+    if not esas:
+        yil = doc.get("esasNoYil", "")
+        sira = doc.get("esasNoSira", "")
+        if yil and sira:
+            esas = f"{yil}/{sira}"
+    if not karar:
+        yil = doc.get("kararNoYil", "")
+        sira = doc.get("kararNoSira", "")
+        if yil and sira:
+            karar = f"{yil}/{sira}"
+    if not tarih:
+        tarih = (doc.get("kararTarihiStr") or "").strip()
+
+    # If we have structured fields, use them
+    if esas and karar:
+        key = f"{mahkeme}:{esas}:{karar}:{tarih}"
+        return hashlib.md5(key.encode()).hexdigest()
+
+    # Fallback to documentId for unstructured docs
+    doc_id = doc.get("documentId") or doc.get("id") or ""
+    return str(doc_id)
+
+
 class IngestionPipeline:
     """Bedesten API → Chunking → Embedding → Qdrant."""
 
@@ -108,7 +139,7 @@ class IngestionPipeline:
         total_fetched = 0
         total_chunks = 0
         total_embedded = 0
-        seen_doc_ids: set[str] = set()
+        seen_dedup_keys: set[str] = set()
 
         for ct in court_types:
             item_type = ITEM_TYPES.get(ct, "YARGITAYKARARI")
@@ -137,10 +168,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
-                        # Deduplication: aynı run içinde tekrar işleme
-                        if doc_id in seen_doc_ids:
+                        # Multi-field deduplication: catch cross-source duplicates
+                        dedup_key = _make_dedup_key(item)
+                        if dedup_key in seen_dedup_keys:
                             continue
-                        seen_doc_ids.add(doc_id)
+                        seen_dedup_keys.add(dedup_key)
 
                         # Tam metin çek
                         try:
@@ -327,7 +359,7 @@ class IngestionPipeline:
         checkpoint = self._load_checkpoint()
         completed_daireler = set(checkpoint.get("completed_daireler", []))
         total_embedded = 0
-        seen_doc_ids: set[str] = set()
+        seen_dedup_keys: set[str] = set()
 
         for d_id, d_name in daireler.items():
             key = f"{court_type}:{d_id}"
@@ -360,10 +392,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
-                        # Deduplication: aynı run içinde tekrar işleme
-                        if doc_id in seen_doc_ids:
+                        # Multi-field deduplication: catch cross-source duplicates
+                        dedup_key = _make_dedup_key(item)
+                        if dedup_key in seen_dedup_keys:
                             continue
-                        seen_doc_ids.add(doc_id)
+                        seen_dedup_keys.add(dedup_key)
 
                         try:
                             doc = await self.yargi.get_document(doc_id)
@@ -466,7 +499,7 @@ class IngestionPipeline:
 
         total_fetched = 0
         total_embedded = 0
-        seen_doc_ids: set[str] = set()
+        seen_dedup_keys: set[str] = set()
 
         _log("info", f"📅 Tarih bazlı ingestion: {start_date} → {end_date}")
 
@@ -497,10 +530,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
-                        # Deduplication: aynı run içinde tekrar işleme
-                        if doc_id in seen_doc_ids:
+                        # Multi-field deduplication: catch cross-source duplicates
+                        dedup_key = _make_dedup_key(item)
+                        if dedup_key in seen_dedup_keys:
                             continue
-                        seen_doc_ids.add(doc_id)
+                        seen_dedup_keys.add(dedup_key)
 
                         try:
                             doc = await self.yargi.get_document(doc_id)

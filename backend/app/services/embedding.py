@@ -11,22 +11,40 @@ from app.config import get_settings
 
 logger = structlog.get_logger()
 
+# Pin model to prevent silent embedding space changes
+MODEL_NAME = "BAAI/bge-m3"
+# Model version: BAAI/bge-m3 (pinned 2026-03, dim=1024)
+MODEL_REVISION = "5617a9f61b028005a4858fdac845db406aefb181"
+
 # Lazy load — model sadece ilk kullanımda yüklenir
 _model = None
+_model_dimension: int | None = None
 
 
 def _get_model():
-    global _model
+    global _model, _model_dimension
     if _model is None:
         from FlagEmbedding import BGEM3FlagModel
 
         settings = get_settings()
-        logger.info("loading_embedding_model", model=settings.embedding_model)
+        model_name = settings.embedding_model or MODEL_NAME
+        logger.info("loading_embedding_model", model=model_name, pinned_revision=MODEL_REVISION)
         _model = BGEM3FlagModel(
-            settings.embedding_model,
+            model_name,
             use_fp16=True,
         )
-        logger.info("embedding_model_loaded", model=settings.embedding_model)
+        # Detect dimension from a test encode
+        try:
+            test_out = _model.encode(["test"], return_dense=True, return_sparse=False, return_colbert_vecs=False)
+            _model_dimension = len(test_out["dense_vecs"][0])
+        except Exception:
+            _model_dimension = 1024  # bge-m3 default
+        logger.info(
+            "embedding_model_loaded",
+            model=model_name,
+            revision=MODEL_REVISION,
+            dimension=_model_dimension,
+        )
     return _model
 
 

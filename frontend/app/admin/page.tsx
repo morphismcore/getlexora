@@ -325,6 +325,7 @@ export default function AdminPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [systemHealth, setSystemHealth] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const isAdmin = user?.role === "platform_admin";
@@ -347,6 +348,7 @@ export default function AdminPage() {
   const fetchAll = useCallback(async () => {
     if (!token || !isAdmin) return;
     setLoading(true);
+    setFetchError(null);
     try {
       const [usersRes, firmsRes, statsRes, embRes, sysRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/v1/admin/users`, { headers }),
@@ -360,7 +362,10 @@ export default function AdminPage() {
       if (statsRes.status === "fulfilled" && statsRes.value.ok) setStats(await statsRes.value.json());
       if (embRes.status === "fulfilled" && embRes.value.ok) setEmbeddings(await embRes.value.json());
       if (sysRes.status === "fulfilled" && sysRes.value.ok) setSystemHealth(await sysRes.value.json());
-    } catch { /* ignore */ }
+    } catch (err) {
+      setFetchError("Veriler yuklenirken bir hata olustu. Lutfen sayfayi yenileyin.");
+      console.error("Admin fetch error:", err);
+    }
     setLoading(false);
   }, [token, isAdmin, headers]);
 
@@ -425,6 +430,14 @@ export default function AdminPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Fetch error banner */}
+      {fetchError && (
+        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
+          {fetchError}
+          <button onClick={fetchAll} className="ml-3 underline">Tekrar dene</button>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-end justify-between">
