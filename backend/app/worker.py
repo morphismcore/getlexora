@@ -4,10 +4,22 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# Derive Celery broker/backend from REDIS_URL (reuse auth credentials)
+# REDIS_URL format: redis://:password@host:port/0
+# Broker uses db 1, result backend uses db 2
+def _redis_url_with_db(base_url: str, db: int) -> str:
+    """Replace db number in Redis URL."""
+    # Remove trailing /N if present
+    base = base_url.rsplit("/", 1)[0] if base_url.count("/") >= 3 else base_url
+    return f"{base}/{db}"
+
+_broker = _redis_url_with_db(settings.redis_url, 1)
+_backend = _redis_url_with_db(settings.redis_url, 2)
+
 celery_app = Celery(
     "lexora",
-    broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend,
+    broker=_broker,
+    backend=_backend,
 )
 
 celery_app.conf.update(
