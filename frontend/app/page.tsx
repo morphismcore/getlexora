@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuth } from "@/components/ui/auth-provider";
+import { useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -11,18 +12,89 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 /*  Dashboard types & helpers (authenticated view)                     */
 /* ------------------------------------------------------------------ */
 
-interface DashboardData {
-  stats: { total_cases: number; upcoming_deadlines: number; total_searches: number; qdrant_documents: number };
-  upcoming_deadlines: { id: string; title: string; court: string; case_title: string; date: string; deadline_date: string; days_left: number; deadline_type: string }[];
-  recent_searches: { id: string; query: string; search_type: string; result_count: number; created_at: string }[];
-  new_decisions: { karar_id: string; daire: string; esas_no: string; karar_no: string; tarih: string }[];
-  system_health: { backend: string; qdrant: string; redis: string; postgres: string };
+interface DeadlineItem {
+  id: string;
+  title: string;
+  deadline_date: string;
+  deadline_type: string;
+  law_reference: string | null;
+  urgency: string;
+  days_left: number;
+  business_days_left: number;
+  is_completed: boolean;
+  case_id: string;
+  case_title: string;
+  case_type: string;
+  court: string | null;
+  case_number: string | null;
 }
 
-function getUrgencyColor(d: number) {
-  if (d <= 3) return { bar: "bg-[#E5484D]", badge: "bg-[#E5484D]/10 text-[#E5484D]", glow: "shadow-[0_0_12px_rgba(229,72,77,0.2)]" };
-  if (d <= 7) return { bar: "bg-[#FFB224]", badge: "bg-[#FFB224]/10 text-[#FFB224]", glow: "" };
-  return { bar: "bg-[#5C5C5F]", badge: "bg-white/[0.04] text-[#8B8B8E]", glow: "" };
+interface CaseSummary {
+  id: string;
+  title: string;
+  case_type: string;
+  court: string | null;
+  case_number: string | null;
+  opponent: string | null;
+  status: string;
+  updated_at: string;
+  next_deadline: { title: string; deadline_date: string; days_left: number; urgency: string } | null;
+  deadline_count: number;
+  document_count: number;
+}
+
+interface RecentEvent {
+  id: string;
+  event_type: string;
+  event_type_label: string;
+  event_date: string;
+  case_title: string;
+  case_id: string;
+  created_at: string;
+}
+
+interface SavedSearch {
+  id: string;
+  query: string;
+  search_type: string;
+  result_count: number;
+  created_at: string;
+}
+
+interface Decision {
+  karar_id: string;
+  daire: string;
+  esas_no: string;
+  karar_no: string;
+  tarih: string;
+}
+
+interface DashboardData {
+  stats: {
+    total_cases: number;
+    active_cases: number;
+    upcoming_deadlines: number;
+    overdue_deadlines: number;
+    today_deadlines: number;
+    tomorrow_deadlines: number;
+    critical_deadlines: number;
+    total_searches: number;
+    qdrant_documents: number;
+  };
+  deadlines: {
+    overdue: DeadlineItem[];
+    today: DeadlineItem[];
+    this_week: DeadlineItem[];
+    next_week: DeadlineItem[];
+    later: DeadlineItem[];
+  };
+  cases: CaseSummary[];
+  cases_by_type: Record<string, number>;
+  cases_by_status: Record<string, number>;
+  recent_events: RecentEvent[];
+  recent_searches: SavedSearch[];
+  new_decisions: Decision[];
+  system_health: Record<string, any>;
 }
 
 function timeAgo(iso: string) {
@@ -55,7 +127,7 @@ function useCounter(end: number, duration = 1200) {
   return val;
 }
 
-function StatCard({ label, value, color, icon, delay }: { label: string; value: number; color: string; icon: React.ReactNode; delay: number }) {
+function StatCard({ label, value, color, icon, delay, sub }: { label: string; value: number; color: string; icon: React.ReactNode; delay: number; sub?: string }) {
   const count = useCounter(value);
   return (
     <motion.div
@@ -71,6 +143,7 @@ function StatCard({ label, value, color, icon, delay }: { label: string; value: 
       </div>
       <p className={`text-[28px] font-bold tabular-nums ${color}`}>{count.toLocaleString("tr-TR")}</p>
       <p className="text-[12px] text-[#5C5C5F] mt-1">{label}</p>
+      {sub && <p className="text-[10px] text-[#3A3A3F] mt-0.5">{sub}</p>}
     </motion.div>
   );
 }
@@ -82,24 +155,16 @@ function Shimmer({ className }: { className?: string }) {
 function SkeletonDashboard() {
   return (
     <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-8">
-      <div><Shimmer className="h-8 w-40 mb-2" /><Shimmer className="h-4 w-56" /></div>
+      <Shimmer className="h-20 w-full rounded-2xl" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1,2,3,4].map(i => <Shimmer key={i} className="h-[120px]" />)}</div>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 space-y-3"><Shimmer className="h-5 w-36" />{[1,2,3].map(i => <Shimmer key={i} className="h-20" />)}</div>
-        <div className="lg:col-span-2 space-y-3"><Shimmer className="h-5 w-28" />{[1,2,3].map(i => <Shimmer key={i} className="h-16" />)}</div>
+        <div className="lg:col-span-3 space-y-3"><Shimmer className="h-5 w-36" />{[1,2,3,4].map(i => <Shimmer key={i} className="h-20" />)}</div>
+        <div className="lg:col-span-2 space-y-3"><Shimmer className="h-5 w-28" /><Shimmer className="h-[200px]" />{[1,2,3].map(i => <Shimmer key={i} className="h-16" />)}</div>
       </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">{[1,2,3,4,5].map(i => <Shimmer key={i} className="h-24" />)}</div>
     </div>
   );
 }
-
-const quickActions = [
-  { href: "/arama", title: "Yeni Arama", desc: "Ictihat ve karar ara", gradient: "from-[#6C6CFF]/10 to-[#A78BFA]/10", iconColor: "text-[#6C6CFF]",
-    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> },
-  { href: "/dogrulama", title: "Atif Dogrula", desc: "Referanslari kontrol et", gradient: "from-[#3DD68C]/10 to-[#3DD68C]/5", iconColor: "text-[#3DD68C]",
-    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> },
-  { href: "/mevzuat", title: "Mevzuat Tara", desc: "Kanun ve yonetmelik ara", gradient: "from-[#FFB224]/10 to-[#FFB224]/5", iconColor: "text-[#FFB224]",
-    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
-];
 
 /* ------------------------------------------------------------------ */
 /*  Landing page (non-authenticated view)                              */
@@ -503,69 +568,236 @@ function LandingPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Deadline Widget for Dashboard                                       */
+/*  Turkish month/day helpers                                          */
 /* ------------------------------------------------------------------ */
 
-interface UpcomingDeadline {
-  id: string;
-  title: string;
-  court: string;
-  case_title: string;
-  date: string;
-  deadline_date: string;
-  days_left: number;
-  deadline_type: string;
-  case_id?: string;
+const TR_MONTHS = ["Ocak","Subat","Mart","Nisan","Mayis","Haziran","Temmuz","Agustos","Eylul","Ekim","Kasim","Aralik"];
+const TR_MONTHS_SHORT = ["Oca","Sub","Mar","Nis","May","Haz","Tem","Agu","Eyl","Eki","Kas","Ara"];
+const TR_DAYS = ["Pazar","Pazartesi","Sali","Carsamba","Persembe","Cuma","Cumartesi"];
+const TR_DAYS_SHORT = ["Paz","Pzt","Sal","Car","Per","Cum","Cmt"];
+
+function formatTurkishDate(date: Date): string {
+  return `${date.getDate()} ${TR_MONTHS[date.getMonth()]} ${date.getFullYear()}, ${TR_DAYS[date.getDay()]}`;
 }
 
-interface DeadlineWidgetProps {
-  token: string | null;
-  deadlines: UpcomingDeadline[];
+function formatShortDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.getDate()} ${TR_MONTHS_SHORT[d.getMonth()]}`;
 }
 
-function groupDeadlinesByPeriod(deadlines: UpcomingDeadline[]) {
-  const today: UpcomingDeadline[] = [];
-  const thisWeek: UpcomingDeadline[] = [];
-  const nextWeek: UpcomingDeadline[] = [];
-  const past: UpcomingDeadline[] = [];
+/* ------------------------------------------------------------------ */
+/*  Case type color helper                                             */
+/* ------------------------------------------------------------------ */
 
-  deadlines.forEach((dl) => {
-    if (dl.days_left < 0) {
-      past.push(dl);
-    } else if (dl.days_left === 0) {
-      today.push(dl);
-    } else if (dl.days_left <= 7) {
-      thisWeek.push(dl);
-    } else {
-      nextWeek.push(dl);
-    }
+const CASE_TYPE_COLORS: Record<string, string> = {
+  is_hukuku: "#6C6CFF",
+  ceza: "#E5484D",
+  ticaret: "#FFB224",
+  idare: "#A78BFA",
+  aile: "#3DD68C",
+  icra: "#FFB224",
+  vergi: "#E5484D",
+};
+
+function getCaseTypeColor(caseType: string): string {
+  const key = caseType.toLowerCase().replace(/\s+/g, "_");
+  for (const [k, v] of Object.entries(CASE_TYPE_COLORS)) {
+    if (key.includes(k)) return v;
+  }
+  return "#6C6CFF";
+}
+
+/* ------------------------------------------------------------------ */
+/*  Deadline urgency helpers                                           */
+/* ------------------------------------------------------------------ */
+
+function getDeadlineUrgency(daysLeft: number, isOverdue?: boolean) {
+  if (isOverdue || daysLeft < 0) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/[0.03]", border: "border-[#E5484D]/20", label: `${Math.abs(daysLeft)} gun gecti` };
+  if (daysLeft === 0) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/[0.05]", border: "border-[#E5484D]/20", label: "SON GUN" };
+  if (daysLeft <= 3) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/[0.03]", border: "border-[#E5484D]/20", label: `${daysLeft} gun` };
+  if (daysLeft <= 7) return { dot: "bg-[#FFB224]", text: "text-[#FFB224]", bg: "bg-[#FFB224]/[0.03]", border: "border-[#FFB224]/20", label: `${daysLeft} gun` };
+  if (daysLeft <= 14) return { dot: "bg-[#FFB224]", text: "text-[#FFB224]", bg: "bg-[#FFB224]/[0.03]", border: "border-[#FFB224]/20", label: `${daysLeft} gun` };
+  return { dot: "bg-[#5C5C5F]", text: "text-[#5C5C5F]", bg: "bg-white/[0.02]", border: "border-white/[0.06]", label: `${daysLeft} gun` };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mini Calendar Widget                                               */
+/* ------------------------------------------------------------------ */
+
+function MiniCalendar({ deadlines }: { deadlines: DashboardData["deadlines"] }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [tooltip, setTooltip] = useState<{ day: number; items: DeadlineItem[] } | null>(null);
 
-  return { today, thisWeek, nextWeek, past };
+  const allDeadlines = useMemo(() => {
+    return [
+      ...(deadlines.overdue || []),
+      ...(deadlines.today || []),
+      ...(deadlines.this_week || []),
+      ...(deadlines.next_week || []),
+      ...(deadlines.later || []),
+    ];
+  }, [deadlines]);
+
+  const deadlinesByDay = useMemo(() => {
+    const map: Record<string, DeadlineItem[]> = {};
+    allDeadlines.forEach(dl => {
+      if (!dl.deadline_date) return;
+      const d = new Date(dl.deadline_date);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(dl);
+    });
+    return map;
+  }, [allDeadlines]);
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = lastDay.getDate();
+
+  const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
+
+  const cells: { day: number; inMonth: boolean }[] = [];
+  // Previous month days
+  const prevLastDay = new Date(year, month, 0).getDate();
+  for (let i = startDow - 1; i >= 0; i--) {
+    cells.push({ day: prevLastDay - i, inMonth: false });
+  }
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, inMonth: true });
+  }
+  // Next month fill
+  const remaining = 7 - (cells.length % 7);
+  if (remaining < 7) {
+    for (let d = 1; d <= remaining; d++) {
+      cells.push({ day: d, inMonth: false });
+    }
+  }
+
+  return (
+    <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B8B8E" strokeWidth={2}><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <span className="text-[13px] font-semibold text-[#ECECEE]">{TR_MONTHS[month]} {year}</span>
+        <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B8B8E" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {["Pzt","Sal","Car","Per","Cum","Cmt","Paz"].map(d => (
+          <div key={d} className="text-center text-[10px] text-[#3A3A3F] font-medium py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-0.5 relative">
+        {cells.map((cell, i) => {
+          if (!cell.inMonth) {
+            return (
+              <div key={`out-${i}`} className="h-9 flex flex-col items-center justify-center rounded-lg">
+                <span className="text-[11px] text-[#3A3A3F]">{cell.day}</span>
+              </div>
+            );
+          }
+          const dayKey = `${year}-${month}-${cell.day}`;
+          const isToday = dayKey === todayKey;
+          const dayDeadlines = deadlinesByDay[dayKey] || [];
+          const hasDeadline = dayDeadlines.length > 0;
+          const hasCritical = dayDeadlines.some(dl => dl.days_left <= 0 || dl.urgency === "critical");
+
+          return (
+            <button
+              key={`in-${cell.day}`}
+              onClick={() => {
+                if (hasDeadline) {
+                  setTooltip(tooltip?.day === cell.day ? null : { day: cell.day, items: dayDeadlines });
+                } else {
+                  setTooltip(null);
+                }
+              }}
+              className={`h-9 flex flex-col items-center justify-center rounded-lg transition-colors relative
+                ${isToday ? "bg-[#6C6CFF]/20 font-bold" : ""}
+                ${hasCritical && !isToday ? "bg-[#E5484D]/10" : ""}
+                ${hasDeadline ? "cursor-pointer hover:bg-white/[0.06]" : ""}
+              `}
+            >
+              <span className={`text-[11px] ${isToday ? "text-[#6C6CFF] font-bold" : "text-[#ECECEE]"}`}>
+                {cell.day}
+              </span>
+              {hasDeadline && (
+                <div className="flex gap-0.5 mt-0.5">
+                  {dayDeadlines.slice(0, 3).map((dl, idx) => {
+                    const urg = getDeadlineUrgency(dl.days_left);
+                    return <div key={idx} className={`w-1 h-1 rounded-full ${urg.dot}`} />;
+                  })}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 border border-white/[0.08] bg-[#1A1A1F] rounded-xl p-3 space-y-2"
+        >
+          <p className="text-[11px] font-semibold text-[#8B8B8E]">{tooltip.day} {TR_MONTHS[month]}</p>
+          {tooltip.items.map(dl => {
+            const urg = getDeadlineUrgency(dl.days_left);
+            return (
+              <Link key={dl.id} href={`/davalar/${dl.case_id}`} className="flex items-center gap-2 hover:bg-white/[0.04] rounded-md px-1.5 py-1 transition-colors">
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${urg.dot}`} />
+                <span className="text-[11px] text-[#ECECEE] truncate flex-1">{dl.title}</span>
+                <span className={`text-[10px] font-medium ${urg.text}`}>{urg.label}</span>
+              </Link>
+            );
+          })}
+        </motion.div>
+      )}
+    </div>
+  );
 }
 
-function getWidgetUrgency(daysLeft: number) {
-  if (daysLeft < 0) return { dot: "bg-[#5C5C5F]", text: "text-[#5C5C5F]", bg: "bg-[#5C5C5F]/5", border: "border-[#5C5C5F]/20", label: `${Math.abs(daysLeft)} gun gecti` };
-  if (daysLeft === 0) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/5", border: "border-[#E5484D]/20", label: "SON GUN" };
-  if (daysLeft <= 3) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/5", border: "border-[#E5484D]/20", label: `${daysLeft} gun` };
-  if (daysLeft <= 7) return { dot: "bg-[#FFB224]", text: "text-[#FFB224]", bg: "bg-[#FFB224]/5", border: "border-[#FFB224]/20", label: `${daysLeft} gun` };
-  if (daysLeft <= 14) return { dot: "bg-[#F5D90A]", text: "text-[#F5D90A]", bg: "bg-[#F5D90A]/5", border: "border-[#F5D90A]/20", label: `${daysLeft} gun` };
-  return { dot: "bg-[#3DD68C]", text: "text-[#3DD68C]", bg: "bg-[#3DD68C]/5", border: "border-[#3DD68C]/20", label: `${daysLeft} gun` };
-}
+/* ------------------------------------------------------------------ */
+/*  Kritik Sureler Timeline Widget                                     */
+/* ------------------------------------------------------------------ */
 
-function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
+function DeadlineTimeline({ deadlines }: { deadlines: DashboardData["deadlines"] }) {
   const [nextWeekOpen, setNextWeekOpen] = useState(false);
-  const todayStr = new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-  const { today, thisWeek, nextWeek, past } = groupDeadlinesByPeriod(deadlines);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const router = useRouter();
+  const deadlineSectionRef = useRef<HTMLDivElement>(null);
 
-  if (deadlines.length === 0) {
+  const toggleExpand = (key: string) => {
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const totalCount = (deadlines.overdue?.length || 0) + (deadlines.today?.length || 0) + (deadlines.this_week?.length || 0) + (deadlines.next_week?.length || 0) + (deadlines.later?.length || 0);
+
+  if (totalCount === 0) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
-            <span className="text-[12px] text-[#5C5C5F]">{todayStr}</span>
-          </div>
+          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
           <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
         </div>
         <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
@@ -579,9 +811,9 @@ function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
     );
   }
 
-  const renderDeadlineItem = (dl: UpcomingDeadline, elevated: boolean) => {
-    const urg = getWidgetUrgency(dl.days_left);
-    const dateFormatted = dl.deadline_date ? new Date(dl.deadline_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) : dl.date;
+  const renderDeadlineItem = (dl: DeadlineItem, elevated: boolean) => {
+    const urg = getDeadlineUrgency(dl.days_left);
+    const dateFormatted = formatShortDate(dl.deadline_date);
 
     if (elevated) {
       return (
@@ -594,22 +826,26 @@ function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
           <div className="flex items-start gap-3">
             <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${urg.dot}`} />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[13px] font-semibold text-[#ECECEE] truncate">{dl.title}</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${urg.bg} ${urg.text}`}>{urg.label}</span>
               </div>
               <p className="text-[12px] text-[#5C5C5F] mt-1 truncate">
-                {dl.case_title || ""} {dl.court ? `\u00b7 ${dl.court}` : ""}
+                {dl.case_title || ""} {dl.court ? `· ${dl.court}` : ""}
               </p>
+              {dl.law_reference && (
+                <span className="inline-block mt-1 text-[11px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF]">{dl.law_reference}</span>
+              )}
               <div className="flex items-center gap-2 mt-3">
                 <Link
-                  href={dl.case_id ? `/davalar/${dl.case_id}` : "/davalar"}
+                  href={`/davalar/${dl.case_id}`}
                   className="px-2.5 py-1 text-[11px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 rounded-md hover:bg-[#6C6CFF]/20 transition-colors"
                 >
                   Davayi Ac
                 </Link>
               </div>
             </div>
+            <span className="text-[11px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
           </div>
         </motion.div>
       );
@@ -620,60 +856,91 @@ function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
         key={dl.id}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.02] transition-colors"
+        onClick={() => router.push(`/davalar/${dl.case_id}`)}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.02] transition-colors cursor-pointer"
       >
         <div className={`w-2 h-2 rounded-full shrink-0 ${urg.dot}`} />
-        <span className="text-[12px] text-[#ECECEE] truncate flex-1">{dl.title}</span>
+        <div className="flex-1 min-w-0">
+          <span className="text-[12px] text-[#ECECEE] truncate block">{dl.title}</span>
+          <span className="text-[11px] text-[#5C5C5F] truncate block">{dl.case_title}{dl.court ? ` · ${dl.court}` : ""}</span>
+        </div>
+        {dl.law_reference && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF] shrink-0 hidden sm:inline">{dl.law_reference}</span>
+        )}
         <span className="text-[11px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
         <span className={`text-[11px] font-medium shrink-0 ${urg.text}`}>{urg.label}</span>
       </motion.div>
     );
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
-          <span className="text-[12px] text-[#5C5C5F]">{todayStr}</span>
+  const renderSection = (
+    title: string,
+    items: DeadlineItem[],
+    colorClass: string,
+    borderColor: string,
+    sectionKey: string,
+    elevated: boolean,
+    defaultOpen: boolean,
+    pulseDot?: boolean,
+  ) => {
+    if (!items || items.length === 0) return null;
+    const maxVisible = 5;
+    const isExpanded = expandedSections[sectionKey] || false;
+    const visibleItems = isExpanded ? items : items.slice(0, maxVisible);
+    const hasMore = items.length > maxVisible;
+
+    return (
+      <div className="space-y-2" key={sectionKey}>
+        <div className="flex items-center gap-2 px-1">
+          {pulseDot && <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse" />}
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${colorClass}`}>{title}</span>
+          <span className="text-[10px] text-[#5C5C5F]">({items.length})</span>
         </div>
+        <div className={`border-l-2 ${borderColor} pl-3 space-y-2`}>
+          {elevated ? (
+            <div className="space-y-2">
+              {visibleItems.map(dl => renderDeadlineItem(dl, true))}
+            </div>
+          ) : (
+            <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+              {visibleItems.map(dl => renderDeadlineItem(dl, false))}
+            </div>
+          )}
+          {hasMore && !isExpanded && (
+            <button
+              onClick={() => toggleExpand(sectionKey)}
+              className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-3 py-1"
+            >
+              +{items.length - maxVisible} daha...
+            </button>
+          )}
+          {hasMore && isExpanded && (
+            <button
+              onClick={() => toggleExpand(sectionKey)}
+              className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-3 py-1"
+            >
+              Daralt
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4" ref={deadlineSectionRef} id="deadline-section">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
         <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
       </div>
 
-      {/* BUGUN */}
-      {today.length > 0 && (
+      {renderSection("Gecikmis", deadlines.overdue || [], "text-[#E5484D]", "border-[#E5484D]", "overdue", true, true, true)}
+      {renderSection("Bugun", deadlines.today || [], "text-[#E5484D]", "border-[#E5484D]", "today", true, true)}
+      {renderSection("Bu Hafta", deadlines.this_week || [], "text-[#FFB224]", "border-[#FFB224]", "this_week", false, true)}
+
+      {/* Gelecek Hafta — collapsed by default */}
+      {(deadlines.next_week || []).length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#E5484D]">Bugun</span>
-            <span className="text-[10px] text-[#5C5C5F]">({today.length})</span>
-          </div>
-          <div className="space-y-2">
-            {today.map((dl) => renderDeadlineItem(dl, true))}
-          </div>
-        </div>
-      )}
-
-      {/* BU HAFTA */}
-      {thisWeek.length > 0 && (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#FFB224]">Bu Hafta</span>
-            <span className="text-[10px] text-[#5C5C5F]">({thisWeek.length})</span>
-          </div>
-          <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
-            {thisWeek.slice(0, 3).map((dl) => renderDeadlineItem(dl, false))}
-            {thisWeek.length > 3 && (
-              <Link href="/davalar" className="block px-3 py-2 text-[11px] text-[#6C6CFF] hover:bg-white/[0.02] transition-colors">
-                +{thisWeek.length - 3} daha...
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* GELECEK HAFTA */}
-      {nextWeek.length > 0 && (
-        <div className="space-y-1">
           <button
             onClick={() => setNextWeekOpen(!nextWeekOpen)}
             className="flex items-center gap-2 px-1 w-full text-left group"
@@ -685,35 +952,310 @@ function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
               <path d="M9 18l6-6-6-6" />
             </svg>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gelecek Hafta</span>
-            <span className="text-[10px] text-[#3A3A3F]">({nextWeek.length})</span>
+            <span className="text-[10px] text-[#3A3A3F]">({(deadlines.next_week || []).length})</span>
           </button>
           {nextWeekOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] overflow-hidden"
+              className="border-l-2 border-[#5C5C5F] pl-3"
             >
-              {nextWeek.map((dl) => renderDeadlineItem(dl, false))}
+              <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] overflow-hidden">
+                {(deadlines.next_week || []).map(dl => renderDeadlineItem(dl, false))}
+              </div>
             </motion.div>
           )}
-        </div>
-      )}
-
-      {/* GECMIS */}
-      {past.length > 0 && (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gecmis</span>
-            <span className="text-[10px] text-[#3A3A3F]">({past.length})</span>
-          </div>
-          <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] opacity-60">
-            {past.map((dl) => renderDeadlineItem(dl, false))}
-          </div>
         </div>
       )}
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Davalarim (Cases Overview) Widget                                  */
+/* ------------------------------------------------------------------ */
+
+function CasesOverview({ cases, casesByStatus }: { cases: CaseSummary[]; casesByStatus: Record<string, number> }) {
+  const statusTabs = useMemo(() => {
+    const tabs: { key: string; label: string; count: number }[] = [];
+    const statusLabels: Record<string, string> = {
+      aktif: "Aktif",
+      active: "Aktif",
+      beklemede: "Beklemede",
+      pending: "Beklemede",
+      kapanan: "Kapanan",
+      closed: "Kapanan",
+      kazanildi: "Kazanildi",
+      kaybedildi: "Kaybedildi",
+    };
+    if (casesByStatus && Object.keys(casesByStatus).length > 0) {
+      Object.entries(casesByStatus).forEach(([key, count]) => {
+        tabs.push({ key, label: statusLabels[key.toLowerCase()] || key, count });
+      });
+    } else {
+      // Derive from cases
+      const grouped: Record<string, number> = {};
+      cases.forEach(c => {
+        const s = c.status || "aktif";
+        grouped[s] = (grouped[s] || 0) + 1;
+      });
+      Object.entries(grouped).forEach(([key, count]) => {
+        tabs.push({ key, label: statusLabels[key.toLowerCase()] || key, count });
+      });
+    }
+    if (tabs.length === 0) {
+      tabs.push({ key: "all", label: "Tumu", count: cases.length });
+    }
+    return tabs;
+  }, [cases, casesByStatus]);
+
+  const [activeTab, setActiveTab] = useState(statusTabs[0]?.key || "all");
+
+  const filteredCases = useMemo(() => {
+    if (activeTab === "all") return cases;
+    return cases.filter(c => (c.status || "aktif").toLowerCase() === activeTab.toLowerCase());
+  }, [cases, activeTab]);
+
+  const maxVisible = 6;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Davalarim</h2>
+          <span className="text-[12px] text-[#5C5C5F]">{cases.length}</span>
+        </div>
+        <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] border border-[#6C6CFF]/20 rounded-lg px-3 py-1 hover:bg-[#6C6CFF]/10 transition-colors">
+          Yeni Dava
+        </Link>
+      </div>
+
+      {/* Tabs */}
+      {statusTabs.length > 1 && (
+        <div className="flex gap-1 border-b border-white/[0.06]">
+          {statusTabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-3 py-2 text-[12px] font-medium transition-colors relative ${
+                activeTab === tab.key
+                  ? "text-[#ECECEE]"
+                  : "text-[#5C5C5F] hover:text-[#8B8B8E]"
+              }`}
+            >
+              {tab.label} ({tab.count})
+              {activeTab === tab.key && (
+                <motion.div layoutId="case-tab-underline" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#6C6CFF] rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cases */}
+      {filteredCases.length === 0 ? (
+        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
+          <p className="text-[13px] text-[#5C5C5F]">Bu kategoride dava yok</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {filteredCases.slice(0, maxVisible).map((c, i) => {
+            const typeColor = getCaseTypeColor(c.case_type);
+            const hasOverdue = c.next_deadline && c.next_deadline.days_left <= 0;
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+              >
+                <Link
+                  href={`/davalar/${c.id}`}
+                  className="flex items-center gap-3 bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-3 hover:border-white/[0.10] hover:bg-[#16161A] transition-all group"
+                >
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: typeColor }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-[#ECECEE] truncate group-hover:text-[#6C6CFF] transition-colors">{c.title}</p>
+                    <p className="text-[12px] text-[#5C5C5F] truncate">{c.court || c.case_type}{c.case_number ? ` · ${c.case_number}` : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {c.deadline_count > 0 && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                        hasOverdue ? "bg-[#E5484D]/10 text-[#E5484D]" : "bg-white/[0.04] text-[#8B8B8E]"
+                      }`}>
+                        {c.deadline_count} sure
+                      </span>
+                    )}
+                    {c.document_count > 0 && (
+                      <span className="text-[10px] text-[#5C5C5F] px-1.5 py-0.5 rounded bg-white/[0.04]">{c.document_count} belge</span>
+                    )}
+                    <span className="text-[10px] text-[#3A3A3F]">{timeAgo(c.updated_at)}</span>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+          {filteredCases.length > maxVisible && (
+            <Link href="/davalar" className="block text-center text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] py-2 transition-colors">
+              Tum davalari gor ({filteredCases.length})
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dava Tipleri Dagilimi Widget                                       */
+/* ------------------------------------------------------------------ */
+
+function CaseTypeChart({ casesByType }: { casesByType: Record<string, number> }) {
+  const entries = Object.entries(casesByType || {});
+  if (entries.length === 0) return null;
+  const total = entries.reduce((sum, [, v]) => sum + v, 0);
+  if (total === 0) return null;
+
+  const typeLabels: Record<string, string> = {
+    is_hukuku: "Is Hukuku",
+    ceza: "Ceza",
+    ticaret: "Ticaret",
+    idare: "Idare",
+    aile: "Aile",
+    icra: "Icra",
+    vergi: "Vergi",
+  };
+
+  return (
+    <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-4 space-y-3">
+      <h3 className="text-[13px] font-semibold text-[#ECECEE]">Dava Tipleri</h3>
+
+      {/* Stacked bar */}
+      <div className="flex h-2 rounded-full overflow-hidden bg-white/[0.04]">
+        {entries.map(([type, count]) => {
+          const color = getCaseTypeColor(type);
+          const pct = (count / total) * 100;
+          return (
+            <Link
+              key={type}
+              href={`/davalar?type=${encodeURIComponent(type)}`}
+              className="h-full transition-opacity hover:opacity-80"
+              style={{ width: `${pct}%`, backgroundColor: color }}
+              title={`${typeLabels[type] || type}: ${count}`}
+            />
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {entries.map(([type, count]) => {
+          const color = getCaseTypeColor(type);
+          return (
+            <Link key={type} href={`/davalar?type=${encodeURIComponent(type)}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              <span className="text-[11px] text-[#8B8B8E]">{typeLabels[type] || type}</span>
+              <span className="text-[10px] text-[#5C5C5F]">{count}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Son Aramalar Widget                                                */
+/* ------------------------------------------------------------------ */
+
+function RecentSearches({ searches }: { searches: SavedSearch[] }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[13px] font-semibold text-[#ECECEE]">Son Aramalar</h3>
+        <Link href="/arama" className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumu</Link>
+      </div>
+      {searches.length === 0 ? (
+        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-6 text-center">
+          <p className="text-[12px] text-[#5C5C5F]">Henuz arama yapilmamis</p>
+          <Link href="/arama" className="inline-block mt-2 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF]">Arama yap</Link>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {searches.slice(0, 5).map((s, i) => (
+            <motion.div
+              key={s.id}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+            >
+              <Link
+                href={`/arama?q=${encodeURIComponent(s.query)}`}
+                className="block bg-[#111113] border border-white/[0.06] rounded-xl px-3 py-2.5 hover:border-white/[0.10] hover:bg-[#16161A] transition-all group"
+              >
+                <p className="text-[12px] text-[#ECECEE] truncate group-hover:text-[#6C6CFF] transition-colors">{s.query}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.search_type === "ictihat" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "bg-[#3DD68C]/10 text-[#3DD68C]"}`}>
+                    {s.search_type === "ictihat" ? "Ictihat" : s.search_type === "mevzuat" ? "Mevzuat" : s.search_type}
+                  </span>
+                  {s.result_count > 0 && <span className="text-[10px] text-[#5C5C5F]">{s.result_count} sonuc</span>}
+                  <span className="text-[10px] text-[#3A3A3F] ml-auto">{timeAgo(s.created_at)}</span>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Quick Actions (5 cards)                                            */
+/* ------------------------------------------------------------------ */
+
+const quickActionsNew = [
+  {
+    href: "/arama",
+    title: "Yeni Arama",
+    desc: "Ictihat ve karar ara",
+    gradient: "from-[#6C6CFF]/10 to-[#6C6CFF]/5",
+    iconColor: "text-[#6C6CFF]",
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+  },
+  {
+    href: "/dogrulama",
+    title: "Atif Dogrula",
+    desc: "Referanslari kontrol et",
+    gradient: "from-[#3DD68C]/10 to-[#3DD68C]/5",
+    iconColor: "text-[#3DD68C]",
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+  },
+  {
+    href: "/mevzuat",
+    title: "Mevzuat Tara",
+    desc: "Kanun ve yonetmelik ara",
+    gradient: "from-[#FFB224]/10 to-[#FFB224]/5",
+    iconColor: "text-[#FFB224]",
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+  },
+  {
+    href: "/dilekce",
+    title: "Dilekce Olustur",
+    desc: "AI destekli belge hazirla",
+    gradient: "from-[#A78BFA]/10 to-[#A78BFA]/5",
+    iconColor: "text-[#A78BFA]",
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+  },
+  {
+    href: "/davalar",
+    title: "Yeni Dava",
+    desc: "Dava dosyasi olustur",
+    gradient: "from-[#E5484D]/10 to-[#E5484D]/5",
+    iconColor: "text-[#E5484D]",
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>,
+  },
+];
 
 /* ------------------------------------------------------------------ */
 /*  Authenticated Dashboard                                            */
@@ -745,9 +1287,9 @@ function AuthenticatedDashboard() {
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
   const today = new Date();
-  const dateStr = today.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+  const dateStr = formatTurkishDate(today);
   const hour = today.getHours();
-  const greeting = hour < 12 ? "Gunaydin" : hour < 18 ? "Iyi gunler" : "Iyi aksamlar";
+  const greeting = hour >= 6 && hour < 12 ? "Gunaydin" : hour >= 12 && hour < 18 ? "Iyi gunler" : "Iyi aksamlar";
   const firstName = user?.full_name?.split(" ")[0] || "";
 
   if (loading) return <SkeletonDashboard />;
@@ -769,96 +1311,157 @@ function AuthenticatedDashboard() {
     );
   }
 
-  const allHealthy = data.system_health.backend === "ok" && data.system_health.qdrant === "ok" && data.system_health.redis === "ok" && data.system_health.postgres === "ok";
+  // Safe access with defaults
+  const stats = data.stats || { total_cases: 0, active_cases: 0, upcoming_deadlines: 0, overdue_deadlines: 0, today_deadlines: 0, tomorrow_deadlines: 0, critical_deadlines: 0, total_searches: 0, qdrant_documents: 0 };
+  const deadlines = data.deadlines || { overdue: [], today: [], this_week: [], next_week: [], later: [] };
+  const cases = data.cases || [];
+  const casesByType = data.cases_by_type || {};
+  const casesByStatus = data.cases_by_status || {};
+  const recentSearches = data.recent_searches || [];
+  const newDecisions = data.new_decisions || [];
+
+  // Briefing summary parts
+  const briefingParts: string[] = [];
+  if (stats.active_cases > 0) briefingParts.push(`${stats.active_cases} aktif dava`);
+  if (stats.today_deadlines > 0) briefingParts.push(`bugun ${stats.today_deadlines} sure dolacak`);
+  if (stats.overdue_deadlines > 0) briefingParts.push(`${stats.overdue_deadlines} gecikmis islem`);
+  if (stats.tomorrow_deadlines > 0) briefingParts.push(`yarin ${stats.tomorrow_deadlines} sure`);
+  if (briefingParts.length === 0 && stats.upcoming_deadlines > 0) briefingParts.push(`${stats.upcoming_deadlines} yaklasan sure`);
+
+  const scrollToDeadlines = () => {
+    document.getElementById("deadline-section")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Status breakdown string for stat card
+  const statusBreakdown = Object.entries(casesByStatus)
+    .map(([k, v]) => `${v} ${k}`)
+    .join(", ");
 
   return (
-    <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-8">
-      {/* Greeting */}
+    <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
+      {/* 1. Sabah Briefing Banner */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-[24px] font-bold tracking-tight text-[#ECECEE]">
               {greeting}{firstName ? `, ${firstName}` : ""}
             </h1>
             <p className="text-[13px] text-[#5C5C5F] mt-1">{dateStr}</p>
+            {briefingParts.length > 0 && (
+              <p className="text-[13px] text-[#8B8B8E] mt-2">
+                {stats.active_cases > 0 && (
+                  <><span className="text-[#A78BFA] font-medium">{stats.active_cases}</span> aktif dava</>
+                )}
+                {stats.today_deadlines > 0 && (
+                  <>{stats.active_cases > 0 ? " · " : ""}bugun <span className="text-[#E5484D] font-medium">{stats.today_deadlines}</span> sure dolacak</>
+                )}
+                {stats.overdue_deadlines > 0 && (
+                  <>{(stats.active_cases > 0 || stats.today_deadlines > 0) ? " · " : ""}<span className="text-[#E5484D] font-medium">{stats.overdue_deadlines}</span> gecikmis islem</>
+                )}
+                {stats.tomorrow_deadlines > 0 && (
+                  <>{(stats.active_cases > 0 || stats.today_deadlines > 0 || stats.overdue_deadlines > 0) ? " · " : ""}yarin <span className="text-[#FFB224] font-medium">{stats.tomorrow_deadlines}</span> sure</>
+                )}
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${allHealthy ? "bg-[#3DD68C]" : "bg-[#FFB224] animate-pulse"}`} />
-            <span className="text-[11px] text-[#5C5C5F]">{allHealthy ? "Sistem aktif" : "Sorun var"}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {stats.overdue_deadlines > 0 && (
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E5484D]/10 hover:bg-[#E5484D]/20 transition-colors">
+                <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse" />
+                <span className="text-[11px] font-medium text-[#E5484D]">{stats.overdue_deadlines} gecikmis</span>
+              </button>
+            )}
+            {stats.today_deadlines > 0 && (
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
+                <span className="w-2 h-2 rounded-full bg-[#FFB224]" />
+                <span className="text-[11px] font-medium text-[#FFB224]">{stats.today_deadlines} bugun</span>
+              </button>
+            )}
+            {stats.critical_deadlines > 0 && stats.overdue_deadlines === 0 && stats.today_deadlines === 0 && (
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
+                <span className="w-2 h-2 rounded-full bg-[#FFB224]" />
+                <span className="text-[11px] font-medium text-[#FFB224]">{stats.critical_deadlines} kritik</span>
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
 
-      {/* Stats */}
+      {/* 2. Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Toplam Karar" value={data.stats.qdrant_documents} color="text-[#6C6CFF]" delay={0.05}
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
-        <StatCard label="Yaklasan Sure" value={data.stats.upcoming_deadlines} color={data.stats.upcoming_deadlines > 0 ? "text-[#FFB224]" : "text-[#8B8B8E]"} delay={0.1}
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>} />
-        <StatCard label="Kayitli Arama" value={data.stats.total_searches} color="text-[#3DD68C]" delay={0.15}
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>} />
-        <StatCard label="Aktif Dava" value={data.stats.total_cases} color="text-[#A78BFA]" delay={0.2}
-          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>} />
+        <StatCard
+          label="Aktif Dava"
+          value={stats.active_cases}
+          color="text-[#A78BFA]"
+          delay={0.05}
+          sub={statusBreakdown || undefined}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>}
+        />
+        <StatCard
+          label="Yaklasan Sure"
+          value={stats.upcoming_deadlines}
+          color={stats.overdue_deadlines > 0 ? "text-[#E5484D]" : "text-[#FFB224]"}
+          delay={0.1}
+          sub={stats.critical_deadlines > 0 ? `${stats.critical_deadlines} kritik` : undefined}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>}
+        />
+        <StatCard
+          label="Kayitli Arama"
+          value={stats.total_searches}
+          color="text-[#3DD68C]"
+          delay={0.15}
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}
+        />
+        <StatCard
+          label="Toplam Karar"
+          value={stats.qdrant_documents}
+          color="text-[#6C6CFF]"
+          delay={0.2}
+          sub="ictihat veritabani"
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
+        />
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        {/* Deadline Widget */}
-        <div className="lg:col-span-3 space-y-4">
-          <DeadlineWidget token={token} deadlines={data.upcoming_deadlines} />
+      {/* 3. Main Grid: 3/5 + 2/5 */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* LEFT: 3/5 */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Kritik Sureler Timeline */}
+          <DeadlineTimeline deadlines={deadlines} />
+
+          {/* Davalarim */}
+          <CasesOverview cases={cases} casesByStatus={casesByStatus} />
         </div>
 
-        {/* Recent Searches */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-[#ECECEE]">Son Aramalar</h2>
-            <span className="text-[12px] text-[#5C5C5F]">Gecmis</span>
-          </div>
+        {/* RIGHT: 2/5 */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Mini Calendar */}
+          <MiniCalendar deadlines={deadlines} />
 
-          {data.recent_searches.length === 0 ? (
-            <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
-              <p className="text-[13px] text-[#5C5C5F]">Henuz arama yapilmamis</p>
-              <Link href="/arama" className="inline-block mt-3 text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF]">Arama yap &rarr;</Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {data.recent_searches.map((s, i) => (
-                <motion.div
-                  key={s.id}
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Link
-                    href={`/arama?q=${encodeURIComponent(s.query)}`}
-                    className="block bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-3 hover:border-white/[0.10] hover:bg-[#16161A] transition-all group"
-                  >
-                    <p className="text-[13px] text-[#ECECEE] truncate group-hover:text-[#6C6CFF] transition-colors">{s.query}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${s.search_type === "ictihat" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "bg-[#3DD68C]/10 text-[#3DD68C]"}`}>
-                        {s.search_type === "ictihat" ? "Ictihat" : "Mevzuat"}
-                      </span>
-                      {s.result_count > 0 && <span className="text-[10px] text-[#5C5C5F]">{s.result_count} sonuc</span>}
-                      <span className="text-[10px] text-[#5C5C5F] ml-auto">{timeAgo(s.created_at)}</span>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          )}
+          {/* Son Aramalar */}
+          <RecentSearches searches={recentSearches} />
+
+          {/* Dava Tipleri Dagilimi */}
+          <CaseTypeChart casesByType={casesByType} />
         </div>
       </div>
 
-      {/* New Decisions */}
-      {data.new_decisions.length > 0 && (
+      {/* 4. Yeni Kararlar */}
+      {newDecisions.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yeni Kararlar</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {data.new_decisions.map((d, i) => (
-              <motion.div key={d.karar_id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
+            {newDecisions.slice(0, 5).map((d, i) => (
+              <motion.div
+                key={d.karar_id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="min-w-[200px] lg:min-w-0"
+              >
                 <Link
                   href={`/arama?q=${encodeURIComponent(d.esas_no || d.karar_no)}`}
-                  className="block bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.03] transition-all group"
+                  className="block bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.03] transition-all group h-full"
                 >
                   <p className="text-[11px] text-[#6C6CFF] font-medium truncate">{d.daire || "Yargitay"}</p>
                   <p className="text-[12px] text-[#ECECEE] mt-1.5 truncate">E. {d.esas_no}</p>
@@ -871,22 +1474,22 @@ function AuthenticatedDashboard() {
         </div>
       )}
 
-      {/* Quick Actions */}
+      {/* 5. Hizli Erisim */}
       <div className="space-y-4">
         <h2 className="text-[15px] font-semibold text-[#ECECEE]">Hizli Erisim</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {quickActions.map((a, i) => (
-            <motion.div key={a.href} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.05 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {quickActionsNew.map((a, i) => (
+            <motion.div key={a.href + a.title} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
               <Link
                 href={a.href}
-                className={`flex items-center gap-4 bg-gradient-to-br ${a.gradient} border border-white/[0.06] rounded-2xl p-5 hover:border-white/[0.12] transition-all group hover:-translate-y-0.5`}
+                className={`flex flex-col items-center gap-3 bg-gradient-to-br ${a.gradient} border border-white/[0.06] rounded-2xl p-5 hover:border-white/[0.12] transition-all group hover:-translate-y-0.5 text-center`}
               >
                 <div className={`w-12 h-12 rounded-xl bg-[#09090B]/50 flex items-center justify-center shrink-0 ${a.iconColor} group-hover:scale-110 transition-transform`}>
                   {a.icon}
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold text-[#ECECEE] group-hover:text-[#6C6CFF] transition-colors">{a.title}</p>
-                  <p className="text-[12px] text-[#5C5C5F]">{a.desc}</p>
+                  <p className="text-[13px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors">{a.title}</p>
+                  <p className="text-[11px] text-[#5C5C5F] mt-0.5">{a.desc}</p>
                 </div>
               </Link>
             </motion.div>
