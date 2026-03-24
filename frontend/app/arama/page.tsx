@@ -42,6 +42,41 @@ interface KararDetail {
   ozet: string;
 }
 
+interface MevzuatResult {
+  mevzuatNo: string;
+  mevzuatAd: string;
+  mevzuatTur: string;
+  mevzuatTertip?: string;
+  resmiGazeteTarihi?: string;
+  resmiGazeteSayisi?: string;
+  mevzuatId?: string;
+}
+
+interface MevzuatSearchResponse {
+  sonuclar: MevzuatResult[];
+  toplam: number;
+}
+
+interface MevzuatContent {
+  mevzuat_id: string;
+  content: string;
+  html?: string;
+}
+
+interface AIMessage {
+  role: "user" | "assistant";
+  content: string;
+  sources?: IctihatResult[];
+  post_citation_check?: {
+    verified: boolean;
+    citations_found: number;
+    unverified: string[];
+    verified_count: number;
+  };
+  warnings?: string[];
+  timestamp: Date;
+}
+
 /* ─── Constants ─── */
 const STATUS_LABELS: Record<string, string> = {
   active: "Aktif",
@@ -136,8 +171,8 @@ const SUGGESTED_QUERIES = [
 
 const TABS = [
   { key: "ictihat", label: "İçtihat Arama", enabled: true },
-  { key: "mevzuat", label: "Mevzuat", enabled: false },
-  { key: "ai", label: "AI Asistan", enabled: false },
+  { key: "mevzuat", label: "Mevzuat", enabled: true },
+  { key: "ai", label: "AI Asistan", enabled: true },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -498,6 +533,21 @@ export default function AramaPage() {
   const caseDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /* ─── Mevzuat State ─── */
+  const [mevzuatResults, setMevzuatResults] = useState<MevzuatSearchResponse | null>(null);
+  const [selectedMevzuat, setSelectedMevzuat] = useState<MevzuatResult | null>(null);
+  const [mevzuatContent, setMevzuatContent] = useState<MevzuatContent | null>(null);
+  const [mevzuatLoading, setMevzuatLoading] = useState(false);
+  const [kanunNo, setKanunNo] = useState("");
+  const [mevzuatSearchText, setMevzuatSearchText] = useState("");
+
+  /* ─── AI State ─── */
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
+  const [aiStreaming, setAiStreaming] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const aiChatRef = useRef<HTMLDivElement>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null);
+
   const typewriterText = useTypewriter(TYPEWRITER_QUERIES);
 
   /* ─── Derived ─── */
@@ -537,6 +587,13 @@ export default function AramaPage() {
       if (saved) try { setSearchHistory(JSON.parse(saved)); } catch { /* ignore */ }
     }
   }, []);
+
+  // Auto-scroll AI chat
+  useEffect(() => {
+    if (aiChatRef.current) {
+      aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight;
+    }
+  }, [aiMessages, aiStreaming]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -606,10 +663,167 @@ export default function AramaPage() {
     setTimeout(() => setCopied(false), 2000);
   }, []);
 
+  /* ─── Mevzuat Search Handler ─── */
+  const handleMevzuatSearch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setMevzuatResults(null);
+    setSelectedMevzuat(null);
+    setMevzuatContent(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/search/mevzuat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: query.trim(),
+          ...(kanunNo && { kanun_no: kanunNo }),
+        }),
+      });
+      if (!res.ok) throw new Error("Mevzuat araması başarısız");
+      const data = await res.json();
+      setMevzuatResults(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bilinmeyen hata");
+    } finally {
+      setLoading(false);
+    }
+  }, [query, kanunNo]);
+
+  /* ─── Mevzuat Content Loader ─── */
+  const handleSelectMevzuat = useCallback(async (m: MevzuatResult) => {
+    setSelectedMevzuat(m);
+    if (!m.mevzuatId && !m.mevzuatNo) return;
+    setMevzuatLoading(true);
+    setMevzuatContent(null);
+    try {
+      const id = m.mevzuatId || m.mevzuatNo;
+      const res = await fetch(`${API_URL}/api/v1/search/mevzuat/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMevzuatContent(data);
+      }
+    } catch { /* silent */ }
+    setMevzuatLoading(false);
+  }, []);
+
+  /* ─── AI Streaming Handler ─── */
+  const handleAIAsk = useCallback(async () => {
+    const userQuery = query.trim() || aiInput.trim();
+    if (!userQuery) return;
+
+    const userMsg: AIMessage = { role: "user", content: userQuery, timestamp: new Date() };
+    setAiMessages(prev => [...prev, userMsg]);
+    setAiStreaming(true);
+    setAiInput("");
+
+    let assistantContent = "";
+    let sources: IctihatResult[] = [];
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/search/ask/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: userQuery, max_sonuc: 10 }),
+      });
+
+      if (!res.ok) {
+        const fallbackRes = await fetch(`${API_URL}/api/v1/search/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: userQuery, max_sonuc: 10 }),
+        });
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json();
+          const assistantMsg: AIMessage = {
+            role: "assistant",
+            content: data.yanit || data.answer || "Yanıt alınamadı.",
+            sources: data.kaynaklar || data.sources || [],
+            post_citation_check: data.post_citation_check,
+            warnings: data.warnings,
+            timestamp: new Date(),
+          };
+          setAiMessages(prev => [...prev, assistantMsg]);
+        } else {
+          setAiMessages(prev => [...prev, { role: "assistant", content: "AI servisi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.", timestamp: new Date() }]);
+        }
+        setAiStreaming(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const eventData = JSON.parse(line.slice(6));
+                if (eventData.type === "token" || eventData.token) {
+                  assistantContent += eventData.token || eventData.content || "";
+                  setAiMessages(prev => {
+                    const msgs = [...prev];
+                    const last = msgs[msgs.length - 1];
+                    if (last?.role === "assistant") {
+                      msgs[msgs.length - 1] = { ...last, content: assistantContent };
+                    } else {
+                      msgs.push({ role: "assistant", content: assistantContent, timestamp: new Date() });
+                    }
+                    return msgs;
+                  });
+                }
+                if (eventData.type === "sources" || eventData.sources) {
+                  sources = eventData.sources || [];
+                }
+                if (eventData.type === "done" || eventData.done) {
+                  setAiMessages(prev => {
+                    const msgs = [...prev];
+                    const last = msgs[msgs.length - 1];
+                    if (last?.role === "assistant") {
+                      msgs[msgs.length - 1] = {
+                        ...last,
+                        content: assistantContent,
+                        sources,
+                        post_citation_check: eventData.post_citation_check,
+                        warnings: eventData.warnings,
+                      };
+                    }
+                    return msgs;
+                  });
+                }
+              } catch { /* skip invalid JSON */ }
+            }
+          }
+        }
+      }
+    } catch {
+      setAiMessages(prev => [...prev, { role: "assistant", content: "Bağlantı hatası oluştu. Lütfen tekrar deneyin.", timestamp: new Date() }]);
+    } finally {
+      setAiStreaming(false);
+    }
+  }, [query, aiInput]);
+
   const handleSearch = useCallback(async () => {
     if (!query.trim() || loading) return;
     if (query.trim().length < 3) {
       setError("Arama sorgusu en az 3 karakter olmalıdır.");
+      return;
+    }
+
+    if (activeTab === "mevzuat") {
+      await handleMevzuatSearch();
+      return;
+    }
+
+    if (activeTab === "ai") {
+      await handleAIAsk();
       return;
     }
 
@@ -663,7 +877,7 @@ export default function AramaPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, loading]);
+  }, [query, activeTab, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, loading, handleMevzuatSearch, handleAIAsk]);
 
   const handleSelectResult = useCallback(async (result: IctihatResult) => {
     setSelectedResult(result);
@@ -755,7 +969,7 @@ export default function AramaPage() {
                 Doğal dil ile Türk hukuk veritabanında arama yapın
               </p>
             </div>
-            {results && !loading && (
+            {activeTab === "ictihat" && results && !loading && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -765,6 +979,16 @@ export default function AramaPage() {
                 <span>sonuç</span>
                 <span className="text-[#3A3A3F]">·</span>
                 <span>{formatDuration(results.sure_ms)}</span>
+              </motion.div>
+            )}
+            {activeTab === "mevzuat" && mevzuatResults && !loading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-2 text-[12px] text-[#5C5C5F] tabular-nums"
+              >
+                <span className="text-[#ECECEE] font-medium">{mevzuatResults.toplam}</span>
+                <span>mevzuat</span>
               </motion.div>
             )}
           </div>
@@ -793,7 +1017,7 @@ export default function AramaPage() {
                   setSearchFocused(false);
                   setTimeout(() => setShowHistory(false), 200);
                 }}
-                placeholder={query ? undefined : typewriterText + "│"}
+                placeholder={query ? undefined : activeTab === "ai" ? "Hukuki sorunuzu sorun..." : activeTab === "mevzuat" ? "Mevzuat ara... (ör: iş güvenliği)" : typewriterText + "│"}
                 className="w-full bg-[#111113] border-0 rounded-2xl pl-12 pr-28 py-4 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:bg-[#13131A] transition-colors duration-200"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -882,6 +1106,29 @@ export default function AramaPage() {
             </AnimatePresence>
           </div>
 
+          {/* Mevzuat: Kanun No input */}
+          <AnimatePresence>
+            {activeTab === "mevzuat" && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden mb-2"
+              >
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={kanunNo}
+                    onChange={(e) => setKanunNo(e.target.value)}
+                    placeholder="Kanun No (opsiyonel)"
+                    className="w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Tab switcher + Filter toggle */}
           <div className="flex items-center justify-between">
             {/* Tabs */}
@@ -900,11 +1147,6 @@ export default function AramaPage() {
                 >
                   <span className="flex items-center gap-1.5">
                     {tab.label}
-                    {!tab.enabled && tab.key !== "ai" && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-[#6C6CFF]/10 text-[#6C6CFF]/60 rounded-md">
-                        YAKINDA
-                      </span>
-                    )}
                     {tab.key === "ai" && (
                       <span
                         className={`w-2 h-2 rounded-full ${
@@ -935,29 +1177,31 @@ export default function AramaPage() {
               ))}
             </div>
 
-            {/* Filter toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] transition-all ${
-                showFilters
-                  ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
-                  : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
-              }`}
-            >
-              <FilterIcon />
-              Filtreler
-              {activeFilterCount > 0 && (
-                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#6C6CFF] text-[9px] font-bold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
+            {/* Filter toggle — only for ictihat */}
+            {activeTab === "ictihat" && (
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] transition-all ${
+                  showFilters
+                    ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
+                    : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
+                }`}
+              >
+                <FilterIcon />
+                Filtreler
+                {activeFilterCount > 0 && (
+                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#6C6CFF] text-[9px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Filter panel */}
+        {/* Filter panel — ictihat only */}
         <AnimatePresence>
-          {showFilters && (
+          {showFilters && activeTab === "ictihat" && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
@@ -1014,88 +1258,446 @@ export default function AramaPage() {
       {/* ── Main Content ── */}
       <div className="flex-1 flex min-h-0">
 
-        {/* Empty state */}
-        {isEmpty && !mobileShowDetail && (
-          <div className="flex-1 flex items-start justify-center pt-16 md:pt-24">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-center px-4 max-w-lg"
-            >
-              {/* Decorative search icon with glow */}
-              <div className="relative w-16 h-16 mx-auto mb-5">
-                <div className="absolute inset-0 bg-[#6C6CFF]/10 rounded-2xl blur-xl" />
-                <div className="relative w-16 h-16 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center">
-                  <SearchIcon className="w-7 h-7 text-[#6C6CFF]/60" />
-                </div>
-              </div>
+        {/* ═══════ ICTIHAT TAB ═══════ */}
+        {activeTab === "ictihat" && (
+          <>
+            {/* Empty state */}
+            {isEmpty && !mobileShowDetail && (
+              <div className="flex-1 flex items-start justify-center pt-16 md:pt-24">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center px-4 max-w-lg"
+                >
+                  <div className="relative w-16 h-16 mx-auto mb-5">
+                    <div className="absolute inset-0 bg-[#6C6CFF]/10 rounded-2xl blur-xl" />
+                    <div className="relative w-16 h-16 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center">
+                      <SearchIcon className="w-7 h-7 text-[#6C6CFF]/60" />
+                    </div>
+                  </div>
 
-              <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
-                Hukuk veritabanında arama yapın
-              </h2>
-              <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
-                Doğal dil ile içtihat arayın. AI destekli semantik arama ile en alakalı kararları bulun.
-              </p>
-
-              {/* Suggested queries */}
-              <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTED_QUERIES.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => handleSuggestedQuery(q)}
-                    className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#6C6CFF]/30 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.04] transition-all duration-200"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Results panel */}
-        {(loading || results || error) && (
-          <div
-            className={`overflow-y-auto transition-all duration-200 ${
-              mobileShowDetail ? "hidden md:block" : "flex-1 md:flex-none"
-            } ${
-              selectedResult ? "md:w-[44%] md:shrink-0 md:border-r md:border-white/[0.06]" : "flex-1"
-            }`}
-          >
-            <div className="p-3 md:p-4 space-y-2.5">
-
-              {/* Status bar */}
-              {results && !loading && (
-                <div className="flex items-center justify-between px-1 mb-1">
-                  <p className="text-[12px] text-[#5C5C5F] tabular-nums">
-                    <span className="text-[#8B8B8E] font-medium">{results.toplam_bulunan}</span> sonuç bulundu
-                    <span className="text-[#3A3A3F] mx-1.5">·</span>
-                    {formatDuration(results.sure_ms)}
+                  <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
+                    Hukuk veritabanında arama yapın
+                  </h2>
+                  <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
+                    Doğal dil ile içtihat arayın. AI destekli semantik arama ile en alakalı kararları bulun.
                   </p>
-                  {results.sonuclar.length > 0 && (
-                    <button
-                      onClick={handleDownloadResults}
-                      className="flex items-center gap-1.5 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {SUGGESTED_QUERIES.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => handleSuggestedQuery(q)}
+                        className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#6C6CFF]/30 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.04] transition-all duration-200"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Results panel */}
+            {(loading || results || error) && (
+              <div
+                className={`overflow-y-auto transition-all duration-200 ${
+                  mobileShowDetail ? "hidden md:block" : "flex-1 md:flex-none"
+                } ${
+                  selectedResult ? "md:w-[44%] md:shrink-0 md:border-r md:border-white/[0.06]" : "flex-1"
+                }`}
+              >
+                <div className="p-3 md:p-4 space-y-2.5">
+
+                  {/* Status bar */}
+                  {results && !loading && (
+                    <div className="flex items-center justify-between px-1 mb-1">
+                      <p className="text-[12px] text-[#5C5C5F] tabular-nums">
+                        <span className="text-[#8B8B8E] font-medium">{results.toplam_bulunan}</span> sonuç bulundu
+                        <span className="text-[#3A3A3F] mx-1.5">·</span>
+                        {formatDuration(results.sure_ms)}
+                      </p>
+                      {results.sonuclar.length > 0 && (
+                        <button
+                          onClick={handleDownloadResults}
+                          className="flex items-center gap-1.5 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+                        >
+                          <DownloadIcon />
+                          İndir
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Loading skeletons */}
+                  {loading && (
+                    <div className="space-y-2.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <SkeletonCard key={i} delay={i} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Error state */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-[#E5484D]/[0.06] border border-[#E5484D]/15 rounded-2xl p-4"
                     >
-                      <DownloadIcon />
-                      İndir
-                    </button>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[13px] font-medium text-[#E5484D]">{error}</p>
+                          <p className="text-[12px] text-[#E5484D]/60 mt-1">Farklı anahtar kelimeler deneyebilir veya filtreleri değiştirebilirsiniz.</p>
+                        </div>
+                        <button onClick={() => setError(null)} className="shrink-0 text-[#E5484D]/40 hover:text-[#E5484D] transition-colors">
+                          <CloseIcon size={16} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleSearch}
+                        className="mt-3 px-4 py-1.5 text-[12px] font-medium text-white bg-[#E5484D] hover:bg-[#D13438] rounded-lg transition-colors"
+                      >
+                        Tekrar Dene
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {/* Results list */}
+                  {hasResults && (
+                    <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
+                      {results.sonuclar.map((result) => (
+                        <SearchResultCard
+                          key={result.karar_id}
+                          result={result}
+                          isSelected={selectedResult?.karar_id === result.karar_id}
+                          query={query}
+                          onSelect={handleSelectResult}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {/* No results */}
+                  {results && results.sonuclar.length === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col items-center justify-center py-16 text-center"
+                    >
+                      <div className="w-12 h-12 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-[14px] text-[#8B8B8E] font-medium mb-1">Sonuç bulunamadı</p>
+                      <p className="text-[12px] text-[#5C5C5F] max-w-xs leading-relaxed mb-4">
+                        Farklı anahtar kelimeler deneyin veya filtrelerinizi genişletin.
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-1.5">
+                        {SUGGESTED_QUERIES.slice(0, 4).map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleSuggestedQuery(q)}
+                            className="px-2.5 py-1 text-[11px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] rounded-md hover:bg-[#6C6CFF]/10 transition-colors"
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Loading skeletons */}
-              {loading && (
-                <div className="space-y-2.5">
+            {/* ── Right panel: Document viewer ── */}
+            <AnimatePresence mode="wait">
+              {selectedResult ? (
+                <motion.div
+                  key="detail"
+                  className="flex-1 overflow-y-auto bg-[#0C0C0E]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="p-4 md:p-6 max-w-[760px]">
+
+                    {/* Mobile back */}
+                    <button
+                      onClick={() => { setMobileShowDetail(false); setSelectedResult(null); setKararDetail(null); }}
+                      className="md:hidden flex items-center gap-1.5 text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
+                    >
+                      <ArrowLeftIcon />
+                      Sonuçlara Dön
+                    </button>
+
+                    {/* Detail header */}
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2.5 mb-3">
+                        {(() => {
+                          const court = getCourtStyle(selectedResult.mahkeme);
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} border border-current/10`}>
+                              {court.label || selectedResult.mahkeme}
+                            </span>
+                          );
+                        })()}
+                        {selectedResult.daire && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
+                            {selectedResult.daire}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2.5 text-[13px]">
+                        <span className="font-mono text-[#ECECEE]">
+                          <span className="text-[#5C5C5F] text-[11px]">Esas </span>
+                          {selectedResult.esas_no}
+                        </span>
+                        <span className="text-[#3A3A3F]">/</span>
+                        <span className="font-mono text-[#ECECEE]">
+                          <span className="text-[#5C5C5F] text-[11px]">Karar </span>
+                          {selectedResult.karar_no}
+                        </span>
+                        <span className="text-[#3A3A3F]">/</span>
+                        <span className="text-[#5C5C5F] tabular-nums">{selectedResult.tarih}</span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 mb-6 flex-wrap">
+                      {kararDetail && (
+                        <>
+                          <button
+                            onClick={() => handleCopyText(kararDetail.tam_metin)}
+                            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                          >
+                            {copied ? <CheckIcon /> : <CopyIcon />}
+                            {copied ? "Kopyalandı" : "Metni Kopyala"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              const ref = `${selectedResult.mahkeme} ${selectedResult.daire}, ${selectedResult.esas_no} E., ${selectedResult.karar_no} K.`;
+                              localStorage.setItem("lexora_cite_to_dilekce", ref);
+                              window.open("/dilekce", "_blank");
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border border-[#6C6CFF]/15 rounded-xl hover:bg-[#6C6CFF]/10 hover:border-[#6C6CFF]/30 transition-all"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                            </svg>
+                            Dilekçeye Ekle
+                          </button>
+                          <button
+                            onClick={() => {
+                              const text = kararDetail.ozet || kararDetail.tam_metin.slice(0, 1000);
+                              localStorage.setItem("lexora_verify_text", text);
+                              window.open("/dogrulama", "_blank");
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#3DD68C] bg-[#3DD68C]/[0.06] border border-[#3DD68C]/15 rounded-xl hover:bg-[#3DD68C]/10 hover:border-[#3DD68C]/30 transition-all"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Doğrula
+                          </button>
+
+                          {/* Davaya Kaydet */}
+                          <div className="relative" ref={caseDropdownRef}>
+                            <button
+                              onClick={() => {
+                                if (!showCaseDropdown) { setShowCaseDropdown(true); fetchCases(); } else { setShowCaseDropdown(false); }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#FFB224] bg-[#FFB224]/[0.06] border border-[#FFB224]/15 rounded-xl hover:bg-[#FFB224]/10 hover:border-[#FFB224]/30 transition-all"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                <path d="M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" />
+                                <path d="M16 2v4M8 2v4M4 10h16" strokeLinecap="round" />
+                              </svg>
+                              Davaya Kaydet
+                            </button>
+                            <AnimatePresence>
+                              {showCaseDropdown && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                                  transition={{ duration: 0.12 }}
+                                  className="absolute left-0 top-full mt-1.5 w-72 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl z-50 overflow-hidden"
+                                >
+                                  {casesLoading && (
+                                    <div className="flex items-center justify-center py-5">
+                                      <div className="w-4 h-4 border-2 border-[#FFB224]/30 border-t-[#FFB224] rounded-full animate-spin" />
+                                    </div>
+                                  )}
+                                  {casesError && (
+                                    <div className="px-3 py-3 text-[12px] text-[#E5484D]">{casesError}</div>
+                                  )}
+                                  {!casesLoading && !casesError && cases.length === 0 && (
+                                    <div className="px-3 py-3 text-[12px] text-[#5C5C5F]">Henüz dava dosyanız yok</div>
+                                  )}
+                                  {!casesLoading && !casesError && cases.length > 0 && (
+                                    <>
+                                      <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#5C5C5F] border-b border-white/[0.06]">
+                                        Dava Seçin
+                                      </div>
+                                      <div className="max-h-52 overflow-y-auto">
+                                        {cases.map((c) => (
+                                          <button
+                                            key={c.id}
+                                            onClick={() => handleSaveToCase(c.id)}
+                                            className="w-full text-left px-3 py-2.5 hover:bg-[#FFB224]/[0.06] transition-colors border-b border-white/[0.04] last:border-0"
+                                          >
+                                            <div className="text-[13px] text-[#ECECEE] truncate">{c.title}</div>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                              {c.court && <span className="text-[11px] text-[#5C5C5F]">{c.court}</span>}
+                                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide ${
+                                                c.status === "active" ? "bg-[#3DD68C]/10 text-[#3DD68C]" :
+                                                c.status === "closed" ? "bg-[#E5484D]/10 text-[#E5484D]" :
+                                                "bg-[#FFB224]/10 text-[#FFB224]"
+                                              }`}>
+                                                {STATUS_LABELS[c.status] || c.status}
+                                              </span>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </>
+                                  )}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => { setSelectedResult(null); setKararDetail(null); }}
+                        className="ml-auto px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
+                      >
+                        <CloseIcon size={12} />
+                        Kapat
+                      </button>
+                    </div>
+
+                    {/* Detail body */}
+                    {detailLoading ? (
+                      <SkeletonDetail />
+                    ) : kararDetail ? (
+                      <div className="space-y-6">
+                        {/* Summary card */}
+                        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />
+                            <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Özet</h3>
+                          </div>
+                          <p className="text-[13px] text-[#ECECEE] leading-[1.7]">
+                            {highlightText(kararDetail.ozet, query)}
+                          </p>
+                        </div>
+
+                        {/* Full text */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
+                            <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
+                          </div>
+                          <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
+                            {kararDetail.tam_metin
+                              .split(/\n\s*\n/)
+                              .filter((p) => p.trim())
+                              .map((paragraph, i) => (
+                                <p key={i} className="whitespace-pre-wrap">
+                                  {paragraph.trim()}
+                                </p>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </motion.div>
+              ) : (
+                hasResults && (
+                  <div className="hidden lg:flex flex-1 items-center justify-center bg-[#0C0C0E]">
+                    <div className="text-center">
+                      <div className="w-14 h-14 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-[13px] text-[#5C5C5F]">
+                        Karar metnini görüntülemek için<br />
+                        <span className="text-[#8B8B8E]">bir sonuç seçin</span>
+                      </p>
+                    </div>
+                  </div>
+                )
+              )}
+            </AnimatePresence>
+          </>
+        )}
+
+        {/* ═══════ MEVZUAT TAB ═══════ */}
+        {activeTab === "mevzuat" && (
+          <>
+            {/* Mevzuat empty state */}
+            {!loading && !mevzuatResults && !error && (
+              <div className="flex-1 flex items-start justify-center pt-16 md:pt-24">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center px-4 max-w-lg"
+                >
+                  <div className="relative w-16 h-16 mx-auto mb-5">
+                    <div className="absolute inset-0 bg-[#A78BFA]/10 rounded-2xl blur-xl" />
+                    <div className="relative w-16 h-16 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center">
+                      <svg className="w-7 h-7 text-[#A78BFA]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
+                    Mevzuat Arama
+                  </h2>
+                  <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
+                    Kanun, yönetmelik ve tüzük metinlerine erişin. Kanun numarası ile de arayabilirsiniz.
+                  </p>
+
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {["İş Kanunu", "Türk Borçlar Kanunu", "Türk Ceza Kanunu", "Medeni Kanun", "İdari Yargılama", "Vergi Usul"].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => { setQuery(q); inputRef.current?.focus(); }}
+                        className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#A78BFA]/30 hover:text-[#ECECEE] hover:bg-[#A78BFA]/[0.04] transition-all duration-200"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Mevzuat loading */}
+            {loading && (
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-3 md:p-4 space-y-2.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <SkeletonCard key={i} delay={i} />
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Error state */}
-              {error && (
+            {/* Mevzuat error */}
+            {error && !loading && (
+              <div className="flex-1 overflow-y-auto p-3 md:p-4">
                 <motion.div
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1104,7 +1706,7 @@ export default function AramaPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[13px] font-medium text-[#E5484D]">{error}</p>
-                      <p className="text-[12px] text-[#E5484D]/60 mt-1">Farklı anahtar kelimeler deneyebilir veya filtreleri değiştirebilirsiniz.</p>
+                      <p className="text-[12px] text-[#E5484D]/60 mt-1">Farklı anahtar kelimeler deneyebilirsiniz.</p>
                     </div>
                     <button onClick={() => setError(null)} className="shrink-0 text-[#E5484D]/40 hover:text-[#E5484D] transition-colors">
                       <CloseIcon size={16} />
@@ -1117,282 +1719,496 @@ export default function AramaPage() {
                     Tekrar Dene
                   </button>
                 </motion.div>
-              )}
+              </div>
+            )}
 
-              {/* Results list */}
-              {hasResults && (
-                <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
-                  {results.sonuclar.map((result) => (
-                    <SearchResultCard
-                      key={result.karar_id}
-                      result={result}
-                      isSelected={selectedResult?.karar_id === result.karar_id}
-                      query={query}
-                      onSelect={handleSelectResult}
-                    />
-                  ))}
-                </motion.div>
-              )}
-
-              {/* No results */}
-              {results && results.sonuclar.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-16 text-center"
+            {/* Mevzuat results */}
+            {!loading && !error && mevzuatResults && (
+              <>
+                {/* Left: list */}
+                <div
+                  className={`overflow-y-auto transition-all duration-200 ${
+                    selectedMevzuat ? "hidden md:block md:w-[44%] md:shrink-0 md:border-r md:border-white/[0.06]" : "flex-1"
+                  }`}
                 >
-                  <div className="w-12 h-12 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center mb-3">
-                    <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-[14px] text-[#8B8B8E] font-medium mb-1">Sonuç bulunamadı</p>
-                  <p className="text-[12px] text-[#5C5C5F] max-w-xs leading-relaxed mb-4">
-                    Farklı anahtar kelimeler deneyin veya filtrelerinizi genişletin.
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-1.5">
-                    {SUGGESTED_QUERIES.slice(0, 4).map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => handleSuggestedQuery(q)}
-                        className="px-2.5 py-1 text-[11px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] rounded-md hover:bg-[#6C6CFF]/10 transition-colors"
+                  <div className="p-3 md:p-4 space-y-2.5">
+                    <div className="flex items-center justify-between px-1 mb-1">
+                      <p className="text-[12px] text-[#5C5C5F] tabular-nums">
+                        <span className="text-[#8B8B8E] font-medium">{mevzuatResults.toplam}</span> mevzuat bulundu
+                      </p>
+                    </div>
+
+                    {mevzuatResults.sonuclar.length === 0 && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center py-16 text-center"
                       >
-                        {q}
-                      </button>
-                    ))}
+                        <div className="w-12 h-12 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center mb-3">
+                          <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-[14px] text-[#8B8B8E] font-medium mb-1">Mevzuat bulunamadı</p>
+                        <p className="text-[12px] text-[#5C5C5F] max-w-xs leading-relaxed">
+                          Farklı anahtar kelimeler veya kanun numarası deneyin.
+                        </p>
+                      </motion.div>
+                    )}
+
+                    {mevzuatResults.sonuclar.length > 0 && (
+                      <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
+                        {mevzuatResults.sonuclar.map((m, idx) => {
+                          const isSelected = selectedMevzuat?.mevzuatNo === m.mevzuatNo && selectedMevzuat?.mevzuatAd === m.mevzuatAd;
+                          return (
+                            <motion.button
+                              key={`${m.mevzuatNo}-${idx}`}
+                              variants={listItem}
+                              onClick={() => handleSelectMevzuat(m)}
+                              className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 ${
+                                isSelected
+                                  ? "border-[#A78BFA]/30 bg-[#A78BFA]/[0.04] shadow-[0_0_0_1px_rgba(167,139,250,0.15)]"
+                                  : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
+                              }`}
+                            >
+                              {/* Top row: type badge + number */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA]">
+                                  {m.mevzuatTur || "Mevzuat"}
+                                </span>
+                                {m.mevzuatNo && (
+                                  <span className="text-[11px] font-mono text-[#8B8B8E]">
+                                    No: {m.mevzuatNo}
+                                  </span>
+                                )}
+                                {m.mevzuatTertip && (
+                                  <span className="text-[10px] text-[#5C5C5F]">
+                                    {m.mevzuatTertip}. Tertip
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Title */}
+                              <p className="text-[13px] text-[#ECECEE] font-medium leading-relaxed mb-2 group-hover:text-white transition-colors">
+                                {m.mevzuatAd}
+                              </p>
+
+                              {/* Bottom row: RG date + number */}
+                              <div className="flex items-center gap-3 text-[11px] text-[#5C5C5F]">
+                                {m.resmiGazeteTarihi && (
+                                  <span className="flex items-center gap-1">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                                      <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    RG: {m.resmiGazeteTarihi}
+                                  </span>
+                                )}
+                                {m.resmiGazeteSayisi && (
+                                  <span>Sayı: {m.resmiGazeteSayisi}</span>
+                                )}
+                              </div>
+                            </motion.button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: content viewer */}
+                <AnimatePresence mode="wait">
+                  {selectedMevzuat ? (
+                    <motion.div
+                      key="mevzuat-detail"
+                      className="flex-1 overflow-y-auto bg-[#0C0C0E]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="p-4 md:p-6 max-w-[760px]">
+                        {/* Mobile back */}
+                        <button
+                          onClick={() => { setSelectedMevzuat(null); setMevzuatContent(null); }}
+                          className="md:hidden flex items-center gap-1.5 text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
+                        >
+                          <ArrowLeftIcon />
+                          Sonuçlara Dön
+                        </button>
+
+                        {/* Header */}
+                        <div className="mb-6">
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
+                              {selectedMevzuat.mevzuatTur || "Mevzuat"}
+                            </span>
+                            {selectedMevzuat.mevzuatNo && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
+                                No: {selectedMevzuat.mevzuatNo}
+                              </span>
+                            )}
+                          </div>
+                          <h2 className="text-[16px] font-semibold text-[#ECECEE] leading-relaxed mb-2">
+                            {selectedMevzuat.mevzuatAd}
+                          </h2>
+                          <div className="flex items-center gap-3 text-[12px] text-[#5C5C5F]">
+                            {selectedMevzuat.resmiGazeteTarihi && (
+                              <span>RG Tarihi: {selectedMevzuat.resmiGazeteTarihi}</span>
+                            )}
+                            {selectedMevzuat.resmiGazeteSayisi && (
+                              <span>RG Sayısı: {selectedMevzuat.resmiGazeteSayisi}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 mb-6 flex-wrap">
+                          {mevzuatContent && (
+                            <button
+                              onClick={() => handleCopyText(mevzuatContent.content)}
+                              className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                            >
+                              {copied ? <CheckIcon /> : <CopyIcon />}
+                              {copied ? "Kopyalandı" : "Metni Kopyala"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => { setSelectedMevzuat(null); setMevzuatContent(null); }}
+                            className="ml-auto px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
+                          >
+                            <CloseIcon size={12} />
+                            Kapat
+                          </button>
+                        </div>
+
+                        {/* Content body */}
+                        {mevzuatLoading ? (
+                          <SkeletonDetail />
+                        ) : mevzuatContent ? (
+                          <div className="space-y-6">
+                            {/* Search within text */}
+                            <div className="relative">
+                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C5C5F]" />
+                              <input
+                                type="text"
+                                value={mevzuatSearchText}
+                                onChange={(e) => setMevzuatSearchText(e.target.value)}
+                                placeholder="Metin içinde ara..."
+                                className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-9 pr-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#A78BFA]/40 transition-all"
+                              />
+                            </div>
+
+                            {/* Full text */}
+                            {mevzuatContent.html ? (
+                              <div
+                                className="text-[14px] text-[#ECECEE]/90 leading-[1.8] prose prose-invert prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: mevzuatContent.html }}
+                              />
+                            ) : (
+                              <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
+                                {mevzuatContent.content
+                                  .split(/\n\s*\n/)
+                                  .filter((p) => p.trim())
+                                  .map((paragraph, i) => {
+                                    if (mevzuatSearchText.trim().length >= 2) {
+                                      return (
+                                        <p key={i} className="whitespace-pre-wrap">
+                                          {highlightText(paragraph.trim(), mevzuatSearchText)}
+                                        </p>
+                                      );
+                                    }
+                                    return (
+                                      <p key={i} className="whitespace-pre-wrap">
+                                        {paragraph.trim()}
+                                      </p>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <p className="text-[13px] text-[#5C5C5F]">Mevzuat içeriği yüklenemedi.</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    mevzuatResults.sonuclar.length > 0 && (
+                      <div className="hidden lg:flex flex-1 items-center justify-center bg-[#0C0C0E]">
+                        <div className="text-center">
+                          <div className="w-14 h-14 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          </div>
+                          <p className="text-[13px] text-[#5C5C5F]">
+                            İçeriği görüntülemek için<br />
+                            <span className="text-[#8B8B8E]">bir mevzuat seçin</span>
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ═══════ AI ASISTAN TAB ═══════ */}
+        {activeTab === "ai" && (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* AI Header bar */}
+            <div className="shrink-0 px-4 md:px-6 py-3 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative w-8 h-8 bg-[#6C6CFF]/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#6C6CFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-semibold text-[#ECECEE]">AI Hukuk Asistanı</h3>
+                  <div className="flex items-center gap-2 text-[11px] text-[#5C5C5F]">
+                    <span>LLM: Claude</span>
+                    <span className="text-[#3A3A3F]">·</span>
+                    <span className="flex items-center gap-1">
+                      Durum:
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          llmStatus === "ok" ? "bg-[#3DD68C]" : llmStatus === "error" ? "bg-[#E5484D]" : "bg-[#F5A623] animate-pulse"
+                        }`}
+                      />
+                      <span className={llmStatus === "ok" ? "text-[#3DD68C]" : llmStatus === "error" ? "text-[#E5484D]" : "text-[#F5A623]"}>
+                        {llmStatus === "ok" ? "Aktif" : llmStatus === "error" ? "Bağlantı yok" : "Kontrol ediliyor..."}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {aiMessages.length > 0 && (
+                <button
+                  onClick={() => { setAiMessages([]); setAiInput(""); }}
+                  className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                  </svg>
+                  Yeni Sohbet
+                </button>
+              )}
+            </div>
+
+            {/* Chat messages area */}
+            <div ref={aiChatRef} className="flex-1 overflow-y-auto px-4 md:px-6 py-4 space-y-4">
+              {/* Empty state */}
+              {aiMessages.length === 0 && !aiStreaming && (
+                <div className="flex items-center justify-center h-full">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-center max-w-md"
+                  >
+                    <div className="relative w-16 h-16 mx-auto mb-5">
+                      <div className="absolute inset-0 bg-[#6C6CFF]/10 rounded-2xl blur-xl" />
+                      <div className="relative w-16 h-16 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center">
+                        <svg className="w-7 h-7 text-[#6C6CFF]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
+                      Hukuki Sorunuzu Sorun
+                    </h2>
+                    <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
+                      AI asistan, içtihat veritabanındaki kararlara dayanarak sorularınızı yanıtlar. Kaynakları doğrulanır.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {[
+                        "İş kazasında zamanaşımı süresi nedir?",
+                        "Kıdem tazminatı nasıl hesaplanır?",
+                        "Boşanmada mal paylaşımı kuralları",
+                        "Haksız fesihte işçi hakları",
+                      ].map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => { setAiInput(q); aiInputRef.current?.focus(); }}
+                          className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#6C6CFF]/30 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.04] transition-all duration-200 text-left"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Messages */}
+              {aiMessages.map((msg, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user"
+                        ? "bg-[#6C6CFF]/10 border border-[#6C6CFF]/20"
+                        : "bg-[#111113] border border-white/[0.06]"
+                    }`}
+                  >
+                    {/* Message content */}
+                    <div className={`text-[14px] leading-[1.7] whitespace-pre-wrap ${
+                      msg.role === "user" ? "text-[#ECECEE]" : "text-[#ECECEE]/90"
+                    }`}>
+                      {msg.content}
+                      {/* Streaming cursor */}
+                      {msg.role === "assistant" && aiStreaming && idx === aiMessages.length - 1 && (
+                        <span className="inline-block w-2 h-4 bg-[#6C6CFF] animate-pulse ml-0.5 rounded-sm align-middle" />
+                      )}
+                    </div>
+
+                    {/* Sources */}
+                    {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                        <p className="text-[11px] font-semibold text-[#5C5C5F] uppercase tracking-wider mb-2">Kaynaklar</p>
+                        <div className="space-y-1.5">
+                          {msg.sources.map((s, si) => {
+                            const court = getCourtStyle(s.mahkeme);
+                            return (
+                              <button
+                                key={si}
+                                onClick={() => {
+                                  setActiveTab("ictihat");
+                                  setQuery(`${s.esas_no}`);
+                                }}
+                                className="flex items-center gap-2 w-full text-left group/src"
+                              >
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold ${court.bg} ${court.text}`}>
+                                  {court.label || s.mahkeme}
+                                </span>
+                                <span className="text-[12px] text-[#6C6CFF] group-hover/src:text-[#8B8BFF] transition-colors truncate">
+                                  {s.esas_no} E. / {s.karar_no} K.
+                                </span>
+                                {s.tarih && (
+                                  <span className="text-[10px] text-[#5C5C5F] ml-auto shrink-0">{s.tarih}</span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Citation check */}
+                    {msg.role === "assistant" && msg.post_citation_check && (
+                      <div className="mt-2.5">
+                        {msg.post_citation_check.verified ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {msg.post_citation_check.verified_count}/{msg.post_citation_check.citations_found} atıf doğrulandı
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#FFB224]/10 text-[#FFB224]">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {msg.post_citation_check.verified_count}/{msg.post_citation_check.citations_found} atıf doğrulandı
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Warnings */}
+                    {msg.role === "assistant" && msg.warnings && msg.warnings.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {msg.warnings.map((w, wi) => (
+                          <p key={wi} className="text-[11px] text-[#FFB224]/80 flex items-start gap-1.5">
+                            <svg className="w-3 h-3 shrink-0 mt-0.5" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                              <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            {w}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    <p className={`text-[10px] mt-2 ${msg.role === "user" ? "text-[#6C6CFF]/40 text-right" : "text-[#5C5C5F]/60"}`}>
+                      {msg.timestamp.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Streaming placeholder when no assistant message yet */}
+              {aiStreaming && (aiMessages.length === 0 || aiMessages[aiMessages.length - 1]?.role === "user") && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="bg-[#111113] border border-white/[0.06] rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-[#6C6CFF] rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-[#6C6CFF] rounded-full animate-pulse" style={{ animationDelay: "0.15s" }} />
+                      <div className="w-2 h-2 bg-[#6C6CFF] rounded-full animate-pulse" style={{ animationDelay: "0.3s" }} />
+                    </div>
                   </div>
                 </motion.div>
               )}
             </div>
+
+            {/* AI Input bar */}
+            <div className="shrink-0 px-4 md:px-6 py-3 border-t border-white/[0.06] bg-[#09090B]">
+              <div className="relative">
+                <input
+                  ref={aiInputRef}
+                  type="text"
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (aiInput.trim() && !aiStreaming) {
+                        handleAIAsk();
+                      }
+                    }
+                  }}
+                  placeholder="Takip sorusu sorun..."
+                  disabled={aiStreaming}
+                  className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-4 pr-14 py-3.5 text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#13131A] transition-all disabled:opacity-50"
+                />
+                <button
+                  onClick={() => {
+                    if (aiInput.trim() && !aiStreaming) {
+                      handleAIAsk();
+                    }
+                  }}
+                  disabled={!aiInput.trim() || aiStreaming}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-white transition-all duration-150 active:scale-[0.95]"
+                >
+                  {aiStreaming ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <p className="text-[10px] text-[#5C5C5F]/60 mt-1.5 text-center">
+                AI yanıtları hukuki tavsiye niteliği taşımaz. Kaynakları her zaman doğrulayın.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* ── Right panel: Document viewer ── */}
-        <AnimatePresence mode="wait">
-          {selectedResult ? (
-            <motion.div
-              key="detail"
-              className="flex-1 overflow-y-auto bg-[#0C0C0E]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="p-4 md:p-6 max-w-[760px]">
-
-                {/* Mobile back */}
-                <button
-                  onClick={() => { setMobileShowDetail(false); setSelectedResult(null); setKararDetail(null); }}
-                  className="md:hidden flex items-center gap-1.5 text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
-                >
-                  <ArrowLeftIcon />
-                  Sonuçlara Dön
-                </button>
-
-                {/* Detail header */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    {(() => {
-                      const court = getCourtStyle(selectedResult.mahkeme);
-                      return (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} border border-current/10`}>
-                          {court.label || selectedResult.mahkeme}
-                        </span>
-                      );
-                    })()}
-                    {selectedResult.daire && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
-                        {selectedResult.daire}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2.5 text-[13px]">
-                    <span className="font-mono text-[#ECECEE]">
-                      <span className="text-[#5C5C5F] text-[11px]">Esas </span>
-                      {selectedResult.esas_no}
-                    </span>
-                    <span className="text-[#3A3A3F]">/</span>
-                    <span className="font-mono text-[#ECECEE]">
-                      <span className="text-[#5C5C5F] text-[11px]">Karar </span>
-                      {selectedResult.karar_no}
-                    </span>
-                    <span className="text-[#3A3A3F]">/</span>
-                    <span className="text-[#5C5C5F] tabular-nums">{selectedResult.tarih}</span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center gap-2 mb-6 flex-wrap">
-                  {kararDetail && (
-                    <>
-                      <button
-                        onClick={() => handleCopyText(kararDetail.tam_metin)}
-                        className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
-                      >
-                        {copied ? <CheckIcon /> : <CopyIcon />}
-                        {copied ? "Kopyalandı" : "Metni Kopyala"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const ref = `${selectedResult.mahkeme} ${selectedResult.daire}, ${selectedResult.esas_no} E., ${selectedResult.karar_no} K.`;
-                          localStorage.setItem("lexora_cite_to_dilekce", ref);
-                          window.open("/dilekce", "_blank");
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border border-[#6C6CFF]/15 rounded-xl hover:bg-[#6C6CFF]/10 hover:border-[#6C6CFF]/30 transition-all"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                          <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                        </svg>
-                        Dilekçeye Ekle
-                      </button>
-                      <button
-                        onClick={() => {
-                          const text = kararDetail.ozet || kararDetail.tam_metin.slice(0, 1000);
-                          localStorage.setItem("lexora_verify_text", text);
-                          window.open("/dogrulama", "_blank");
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#3DD68C] bg-[#3DD68C]/[0.06] border border-[#3DD68C]/15 rounded-xl hover:bg-[#3DD68C]/10 hover:border-[#3DD68C]/30 transition-all"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Doğrula
-                      </button>
-
-                      {/* Davaya Kaydet */}
-                      <div className="relative" ref={caseDropdownRef}>
-                        <button
-                          onClick={() => {
-                            if (!showCaseDropdown) { setShowCaseDropdown(true); fetchCases(); } else { setShowCaseDropdown(false); }
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#FFB224] bg-[#FFB224]/[0.06] border border-[#FFB224]/15 rounded-xl hover:bg-[#FFB224]/10 hover:border-[#FFB224]/30 transition-all"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                            <path d="M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" />
-                            <path d="M16 2v4M8 2v4M4 10h16" strokeLinecap="round" />
-                          </svg>
-                          Davaya Kaydet
-                        </button>
-                        <AnimatePresence>
-                          {showCaseDropdown && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -4, scale: 0.97 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                              transition={{ duration: 0.12 }}
-                              className="absolute left-0 top-full mt-1.5 w-72 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl z-50 overflow-hidden"
-                            >
-                              {casesLoading && (
-                                <div className="flex items-center justify-center py-5">
-                                  <div className="w-4 h-4 border-2 border-[#FFB224]/30 border-t-[#FFB224] rounded-full animate-spin" />
-                                </div>
-                              )}
-                              {casesError && (
-                                <div className="px-3 py-3 text-[12px] text-[#E5484D]">{casesError}</div>
-                              )}
-                              {!casesLoading && !casesError && cases.length === 0 && (
-                                <div className="px-3 py-3 text-[12px] text-[#5C5C5F]">Henüz dava dosyanız yok</div>
-                              )}
-                              {!casesLoading && !casesError && cases.length > 0 && (
-                                <>
-                                  <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#5C5C5F] border-b border-white/[0.06]">
-                                    Dava Seçin
-                                  </div>
-                                  <div className="max-h-52 overflow-y-auto">
-                                    {cases.map((c) => (
-                                      <button
-                                        key={c.id}
-                                        onClick={() => handleSaveToCase(c.id)}
-                                        className="w-full text-left px-3 py-2.5 hover:bg-[#FFB224]/[0.06] transition-colors border-b border-white/[0.04] last:border-0"
-                                      >
-                                        <div className="text-[13px] text-[#ECECEE] truncate">{c.title}</div>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          {c.court && <span className="text-[11px] text-[#5C5C5F]">{c.court}</span>}
-                                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wide ${
-                                            c.status === "active" ? "bg-[#3DD68C]/10 text-[#3DD68C]" :
-                                            c.status === "closed" ? "bg-[#E5484D]/10 text-[#E5484D]" :
-                                            "bg-[#FFB224]/10 text-[#FFB224]"
-                                          }`}>
-                                            {STATUS_LABELS[c.status] || c.status}
-                                          </span>
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => { setSelectedResult(null); setKararDetail(null); }}
-                    className="ml-auto px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
-                  >
-                    <CloseIcon size={12} />
-                    Kapat
-                  </button>
-                </div>
-
-                {/* Detail body */}
-                {detailLoading ? (
-                  <SkeletonDetail />
-                ) : kararDetail ? (
-                  <div className="space-y-6">
-                    {/* Summary card */}
-                    <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />
-                        <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Özet</h3>
-                      </div>
-                      <p className="text-[13px] text-[#ECECEE] leading-[1.7]">
-                        {highlightText(kararDetail.ozet, query)}
-                      </p>
-                    </div>
-
-                    {/* Full text */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
-                        <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
-                      </div>
-                      <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
-                        {kararDetail.tam_metin
-                          .split(/\n\s*\n/)
-                          .filter((p) => p.trim())
-                          .map((paragraph, i) => (
-                            <p key={i} className="whitespace-pre-wrap">
-                              {paragraph.trim()}
-                            </p>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </motion.div>
-          ) : (
-            hasResults && (
-              <div className="hidden lg:flex flex-1 items-center justify-center bg-[#0C0C0E]">
-                <div className="text-center">
-                  <div className="w-14 h-14 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-6 h-6 text-[#5C5C5F]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-[13px] text-[#5C5C5F]">
-                    Karar metnini görüntülemek için<br />
-                    <span className="text-[#8B8B8E]">bir sonuç seçin</span>
-                  </p>
-                </div>
-              </div>
-            )
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ── Toast ── */}
