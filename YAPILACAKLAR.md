@@ -332,24 +332,36 @@ Bu büyük bir iş — OPTIMIZATION_ROADMAP.md dosyasında detaylı plan var.
 
 ---
 
-## ÖNCELİK SIRASI (Önerilen)
+## ÖNCELİK SIRASI (Güncellenmiş — 24 Mart 2026)
 
-### 🔴 Acil (Bu Hafta)
-1. Mevzuat + AYM + AİHM ingestion başlat
-2. Daha fazla içtihat çek (50,000+ hedef)
-3. Arama sayfası yeniden yazımı
+### ✅ Tamamlanan (Bu Oturumda)
+- ~~Arama sayfası yeniden yazımı~~ ✅ (typewriter, 3 tab, glow, Danıştay filtreleri)
+- ~~Dilekçe auto-save~~ ✅ (30s interval + 10 built-in şablon + PDF/DOCX export)
+- ~~Süre takvim görünümü~~ ✅ (mini takvim, countdown, iş günü, Sürelerim tab)
+- ~~İstatistik SVG chart'lar~~ ✅ (donut, bar, line, circular progress — pure SVG)
+- ~~Belge sayfası iyileştirme~~ ✅ (drag&drop, progress bar, entity card, upload history)
+- ~~Shared component'ler~~ ✅ (badge outline/gradient, confidence glow, empty-state motion, skeleton dual-layer)
+- ~~Celery worker mimarisi~~ ✅ (worker.py, tasks/, beat, docker-compose)
+- ~~Monitoring & CI/CD~~ ✅ (admin monitoring dashboard, CI/CD tam çalışıyor)
+- ~~Kayıt 80+ baro~~ ✅ (81 il, aranabilir dropdown)
+- ~~Landing page~~ ✅ (veri kaynakları, güven unsurları, CTA, footer)
+- ~~27 kritik fix~~ ✅ (güvenlik, backend, frontend, DevOps, AI/Search)
 
-### 🟡 Önemli (Bu Ay)
-4. Dilekçe auto-save
-5. Süre takvim görünümü
-6. İstatistik SVG chart'lar
-7. Belge sayfası iyileştirme
-8. Shared component'ler (badge, empty-state, skeleton)
-9. Şifre sıfırlama akışı
+### ✅ Tamamlanan (Oturum 2 — 24 Mart 2026)
+- ~~Admin panelden ingestion tetikle~~ ✅ (batch + daire bazlı + tarih bazlı butonlar, gelişmiş ingestion paneli)
+- ~~Mevzuat ingestion~~ ✅ (24 temel kanun, ingest_mevzuat(), mevzuat_embeddings koleksiyonu)
+- ~~AYM + AİHM ingestion~~ ✅ (ingest_batch() ile entegre, Celery task'lar)
+- ~~İçtihat sistematik çekme~~ ✅ (daire bazlı, tarih bazlı, konu bazlı parametreler)
+- ~~E-posta hatırlatma sistemi~~ ✅ (SMTP servisi, HTML template, Celery Beat 08:00, bildirim tercihleri)
+- ~~Şifre sıfırlama akışı~~ ✅ (token bazlı, rate limited, 2 yeni sayfa)
+- ~~RAG/AI asistan durumu~~ ✅ (/health/llm endpoint, AI tab'da durum badge)
+- ~~50+ dilekçe şablonu~~ ✅ (10 → 55 şablon, 8 kategori, doğru kanun atıfları)
+- ~~Cross-encoder reranking~~ ✅ (ms-marco-MiniLM-L-6-v2, config ile açılıp kapanabilir)
+- ~~Query expansion~~ ✅ (65+ hukuk kısaltması, 35+ eş anlamlı terim grubu)
 
 ### 🟢 Planlı (Gelecek Ay)
-10. Celery worker mimarisi
-11. Bildirim sistemi
-12. İşbirliği özellikleri
-13. Monitoring & CI/CD
-14. Mobil uygulama / PWA
+1. ColBERT vector desteği
+2. Bildirim sistemi (in-app + push)
+3. İşbirliği özellikleri
+4. UYAP Portal entegrasyonu
+5. Mobil uygulama / PWA

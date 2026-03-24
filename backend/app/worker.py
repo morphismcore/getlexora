@@ -42,6 +42,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.scheduled_tasks.daily_incremental",
         "schedule": crontab(hour=3, minute=0),
     },
+    "daily-deadline-reminders": {
+        "task": "app.tasks.scheduled_tasks.check_deadline_reminders",
+        "schedule": crontab(hour=8, minute=0),  # Her gun sabah 08:00'de
+    },
 }
 
 celery_app.autodiscover_tasks(["app.tasks"])

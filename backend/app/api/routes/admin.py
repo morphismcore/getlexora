@@ -24,6 +24,10 @@ from app.tasks.ingestion_tasks import (
     ingest_topics_task,
     ingest_aym_task,
     ingest_aihm_task,
+    ingest_mevzuat_task,
+    ingest_batch_task,
+    ingest_daire_task,
+    ingest_date_range_task,
     REDIS_CHANNEL,
 )
 
@@ -254,22 +258,89 @@ async def trigger_mevzuat_ingest(
     admin: User = Depends(require_platform_admin),
 ):
     """Mevzuat embedding ingestion baslat (Celery worker)."""
-    mevzuat_topics = [
-        "iş kanunu", "türk ceza kanunu", "türk borçlar kanunu", "türk medeni kanunu",
-        "hukuk muhakemeleri kanunu", "ceza muhakemesi kanunu", "icra iflas kanunu",
-        "idari yargılama usulü kanunu", "ticaret kanunu", "tüketicinin korunması kanunu",
-        "kişisel verilerin korunması kanunu", "anayasa", "avukatlık kanunu",
-        "noterlik kanunu", "tapu kanunu", "kat mülkiyeti kanunu",
-    ]
-
-    result = ingest_topics_task.delay(topics=mevzuat_topics, pages_per_topic=3)
+    result = ingest_mevzuat_task.delay()
 
     return {
         "status": "started",
         "type": "mevzuat",
         "task_id": result.id,
-        "topics": len(mevzuat_topics),
-        "pages_per_topic": 3,
+    }
+
+
+@router.post("/ingest/batch")
+async def trigger_batch_ingest(
+    admin: User = Depends(require_platform_admin),
+):
+    """Toplu ingestion — ictihat + mevzuat + AYM + AIHM sirayla (Celery worker)."""
+    result = ingest_batch_task.delay(
+        include_ictihat=True,
+        include_mevzuat=True,
+        include_aym=True,
+        include_aihm=True,
+    )
+
+    return {
+        "status": "started",
+        "type": "batch",
+        "task_id": result.id,
+        "sources": ["ictihat", "mevzuat", "aym", "aihm"],
+    }
+
+
+class DaireIngestRequest(BaseModel):
+    court_type: str = "yargitay"
+    daire_id: str | None = None
+    pages: int = 10
+
+
+@router.post("/ingest/daire")
+async def trigger_daire_ingest(
+    body: DaireIngestRequest,
+    admin: User = Depends(require_platform_admin),
+):
+    """Daire bazli sistematik ictihat ingestion (Celery worker)."""
+    result = ingest_daire_task.delay(
+        court_type=body.court_type,
+        daire_id=body.daire_id,
+        pages=body.pages,
+    )
+
+    return {
+        "status": "started",
+        "type": "daire",
+        "task_id": result.id,
+        "court_type": body.court_type,
+        "daire_id": body.daire_id,
+        "pages": body.pages,
+    }
+
+
+class DateRangeIngestRequest(BaseModel):
+    start_date: str
+    end_date: str
+    court_types: list[str] | None = None
+    max_pages: int = 50
+
+
+@router.post("/ingest/date-range")
+async def trigger_date_range_ingest(
+    body: DateRangeIngestRequest,
+    admin: User = Depends(require_platform_admin),
+):
+    """Tarih bazli sistematik ictihat ingestion (Celery worker)."""
+    result = ingest_date_range_task.delay(
+        start_date=body.start_date,
+        end_date=body.end_date,
+        court_types=body.court_types,
+        max_pages=body.max_pages,
+    )
+
+    return {
+        "status": "started",
+        "type": "date_range",
+        "task_id": result.id,
+        "start_date": body.start_date,
+        "end_date": body.end_date,
     }
 
 

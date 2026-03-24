@@ -90,17 +90,17 @@ export default function AdminPage() {
 
   const approveUser = async (id: string) => {
     await fetch(`${API_URL}/api/v1/admin/users/${id}/approve`, { method: "POST", headers });
-    setToast("Kullanıcı onaylandı");
+    setToast("Kullanici onaylandi");
     fetchAll();
   };
   const rejectUser = async (id: string) => {
     await fetch(`${API_URL}/api/v1/admin/users/${id}/reject`, { method: "POST", headers });
-    setToast("Kullanıcı reddedildi");
+    setToast("Kullanici reddedildi");
     fetchAll();
   };
   const changeRole = async (id: string, role: string) => {
     await fetch(`${API_URL}/api/v1/admin/users/${id}/role`, { method: "PUT", headers, body: JSON.stringify({ role }) });
-    setToast("Rol güncellendi");
+    setToast("Rol guncellendi");
     fetchAll();
   };
   if (!user) {
@@ -126,17 +126,17 @@ export default function AdminPage() {
       {/* Header */}
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Admin Panel</h1>
-        <p className="text-[12px] text-[#5C5C5F] mt-0.5">Platform yönetimi</p>
+        <p className="text-[12px] text-[#5C5C5F] mt-0.5">Platform yonetimi</p>
       </div>
 
       {/* Stats cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: "Kullanıcı", value: stats.users.total, sub: `${stats.users.pending} beklemede` },
+            { label: "Kullanici", value: stats.users.total, sub: `${stats.users.pending} beklemede` },
             { label: "Firma", value: stats.firms },
             { label: "Dava", value: stats.cases },
-            { label: "Süre", value: stats.deadlines },
+            { label: "Sure", value: stats.deadlines },
             { label: "Embedding", value: embeddings?.total || 0 },
           ].map((s, i) => (
             <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4">
@@ -152,7 +152,7 @@ export default function AdminPage() {
       <div className="flex gap-1 bg-[#111113] border border-white/[0.06] rounded-lg p-1 w-fit flex-wrap">
         {(["users", "firms", "system", "embedding", "monitoring"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors ${tab === t ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
-            {{ users: "Kullanıcılar", firms: "Firmalar", system: "Sistem", embedding: "Embedding", monitoring: "Monitoring" }[t]}
+            {{ users: "Kullanicilar", firms: "Firmalar", system: "Sistem", embedding: "Embedding", monitoring: "Monitoring" }[t]}
           </button>
         ))}
       </div>
@@ -181,7 +181,7 @@ export default function AdminPage() {
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden">
           <table className="w-full text-[13px]">
             <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[11px] uppercase tracking-wider">
-              <th className="text-left p-3">Kullanıcı</th><th className="text-left p-3">E-posta</th><th className="text-left p-3">Baro</th><th className="text-left p-3">Rol</th><th className="text-left p-3">Durum</th>
+              <th className="text-left p-3">Kullanici</th><th className="text-left p-3">E-posta</th><th className="text-left p-3">Baro</th><th className="text-left p-3">Rol</th><th className="text-left p-3">Durum</th>
             </tr></thead>
             <tbody>
               {users.map((u) => (
@@ -210,12 +210,12 @@ export default function AdminPage() {
       {tab === "firms" && (
         <div className="space-y-2">
           {firms.length === 0 ? (
-            <p className="text-[13px] text-[#5C5C5F] text-center py-8">Henüz firma yok</p>
+            <p className="text-[13px] text-[#5C5C5F] text-center py-8">Henuz firma yok</p>
           ) : firms.map((f) => (
             <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
-                <p className="text-[12px] text-[#5C5C5F]">{f.email || "—"} · {f.member_count}/{f.max_users} üye</p>
+                <p className="text-[12px] text-[#5C5C5F]">{f.email || "—"} · {f.member_count}/{f.max_users} uye</p>
               </div>
               <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                 {f.is_active ? "Aktif" : "Pasif"}
@@ -256,11 +256,27 @@ export default function AdminPage() {
 }
 
 const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  yargitay: { label: "Yargıtay", color: "#6C6CFF", bg: "bg-[#6C6CFF]" },
-  danistay: { label: "Danıştay", color: "#A78BFA", bg: "bg-[#A78BFA]" },
+  yargitay: { label: "Yargitay", color: "#6C6CFF", bg: "bg-[#6C6CFF]" },
+  danistay: { label: "Danistay", color: "#A78BFA", bg: "bg-[#A78BFA]" },
   aym: { label: "AYM", color: "#E5484D", bg: "bg-[#E5484D]" },
-  aihm: { label: "AİHM", color: "#3DD68C", bg: "bg-[#3DD68C]" },
+  aihm: { label: "AIHM", color: "#3DD68C", bg: "bg-[#3DD68C]" },
   mevzuat: { label: "Mevzuat", color: "#FFB224", bg: "bg-[#FFB224]" },
+};
+
+// Yargitay daireleri — admin'de daire secimi icin
+const YARGITAY_DAIRELERI: Record<string, string> = {
+  "1": "1. Hukuk Dairesi", "2": "2. Hukuk Dairesi", "3": "3. Hukuk Dairesi",
+  "4": "4. Hukuk Dairesi", "5": "5. Hukuk Dairesi", "6": "6. Hukuk Dairesi",
+  "7": "7. Hukuk Dairesi", "8": "8. Hukuk Dairesi", "9": "9. Hukuk Dairesi",
+  "10": "10. Hukuk Dairesi", "11": "11. Hukuk Dairesi", "12": "12. Hukuk Dairesi",
+  "13": "13. Hukuk Dairesi", "14": "14. Hukuk Dairesi", "15": "15. Hukuk Dairesi",
+  "17": "17. Hukuk Dairesi", "HGK": "Hukuk Genel Kurulu",
+  "C1": "1. Ceza Dairesi", "C2": "2. Ceza Dairesi", "C3": "3. Ceza Dairesi",
+  "C4": "4. Ceza Dairesi", "C5": "5. Ceza Dairesi", "C6": "6. Ceza Dairesi",
+  "C7": "7. Ceza Dairesi", "C8": "8. Ceza Dairesi", "C9": "9. Ceza Dairesi",
+  "C10": "10. Ceza Dairesi", "C11": "11. Ceza Dairesi", "C12": "12. Ceza Dairesi",
+  "C13": "13. Ceza Dairesi", "C14": "14. Ceza Dairesi", "C15": "15. Ceza Dairesi",
+  "C16": "16. Ceza Dairesi", "CGK": "Ceza Genel Kurulu",
 };
 
 function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; apiUrl: string; onToast: (msg: string) => void }) {
@@ -272,6 +288,20 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
   const [elapsed, setElapsed] = useState("");
   const [topicsExpanded, setTopicsExpanded] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
+
+  // Daire ingestion state
+  const [daireCourtType, setDaireCourtType] = useState("yargitay");
+  const [daireId, setDaireId] = useState("");
+  const [dairePages, setDairePages] = useState(10);
+
+  // Date range ingestion state
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [dateCourtTypes, setDateCourtTypes] = useState<string[]>(["yargitay", "danistay"]);
+  const [dateMaxPages, setDateMaxPages] = useState(50);
+
+  // Advanced panel toggle
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Fetch breakdown on mount
   const fetchBreakdown = useCallback(async () => {
@@ -347,10 +377,47 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
   const triggerIngest = async (endpoint: string, label: string) => {
     try {
       const r = await fetch(`${apiUrl}/api/v1/admin/ingest${endpoint}`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
-      if (r.ok) onToast(`${label} ingestion başlatıldı`);
-      else if (r.status === 409) onToast("Bir ingestion zaten çalışıyor");
-      else onToast("Başlatma başarısız");
-    } catch { onToast("Bağlantı hatası"); }
+      if (r.ok) onToast(`${label} ingestion baslatildi`);
+      else if (r.status === 409) onToast("Bir ingestion zaten calisiyor");
+      else onToast("Baslatma basarisiz");
+    } catch { onToast("Baglanti hatasi"); }
+  };
+
+  const triggerDaireIngest = async () => {
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/daire`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          court_type: daireCourtType,
+          daire_id: daireId || null,
+          pages: dairePages,
+        }),
+      });
+      if (r.ok) onToast(`Daire ingestion baslatildi`);
+      else onToast("Baslatma basarisiz");
+    } catch { onToast("Baglanti hatasi"); }
+  };
+
+  const triggerDateRangeIngest = async () => {
+    if (!dateFrom || !dateTo) {
+      onToast("Tarih araligi secin");
+      return;
+    }
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/date-range`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start_date: dateFrom,
+          end_date: dateTo,
+          court_types: dateCourtTypes,
+          max_pages: dateMaxPages,
+        }),
+      });
+      if (r.ok) onToast(`Tarih bazli ingestion baslatildi`);
+      else onToast("Baslatma basarisiz");
+    } catch { onToast("Baglanti hatasi"); }
   };
 
   const maxCount = breakdown ? Math.max(...Object.values(breakdown.sources), breakdown.mevzuat, 1) : 1;
@@ -368,7 +435,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
       {/* Source Breakdown */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Veri Kaynakları</h3>
+          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Veri Kaynaklari</h3>
           <button onClick={() => { fetchBreakdown(); fetchProgress(); }} className="text-[11px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Yenile</button>
         </div>
         <div className="space-y-3">
@@ -394,14 +461,14 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
                   <button
                     onClick={() => {
                       if (key === "aym") triggerIngest("/aym", "AYM");
-                      else if (key === "aihm") triggerIngest("/aihm", "AİHM");
+                      else if (key === "aihm") triggerIngest("/aihm", "AIHM");
                       else if (key === "mevzuat") triggerIngest("/mevzuat", "Mevzuat");
-                      else triggerIngest("", "İçtihat");
+                      else triggerIngest("", "Ictihat");
                     }}
                     className="text-[10px] px-2 py-1 rounded-md border transition-colors shrink-0"
                     style={{ color: cfg.color, borderColor: `${cfg.color}40`, backgroundColor: `${cfg.color}10` }}
                   >
-                    Çek
+                    Cek
                   </button>
                 )}
               </div>
@@ -419,7 +486,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${state?.running ? "bg-[#3DD68C] animate-pulse" : "bg-[#5C5C5F]"}`} />
-            <span className="text-[13px] font-semibold text-[#ECECEE]">{state?.running ? "Çalışıyor" : "Beklemede"}</span>
+            <span className="text-[13px] font-semibold text-[#ECECEE]">{state?.running ? "Calisiyor" : "Beklemede"}</span>
           </div>
           {state?.running && elapsed && (
             <span className="text-[12px] font-mono text-[#8B8B8E]">{elapsed}</span>
@@ -456,7 +523,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#09090B] rounded-lg p-3 text-center">
                 <p className="text-[16px] font-semibold text-[#6C6CFF]">{state.fetched}</p>
-                <p className="text-[10px] text-[#5C5C5F] mt-0.5">Çekilen</p>
+                <p className="text-[10px] text-[#5C5C5F] mt-0.5">Cekilen</p>
               </div>
               <div className="bg-[#09090B] rounded-lg p-3 text-center">
                 <p className="text-[16px] font-semibold text-[#3DD68C]">{state.embedded}</p>
@@ -471,8 +538,8 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
         ) : (
           <p className="text-[12px] text-[#5C5C5F]">
             {progress?.last_update
-              ? `Son güncelleme: ${new Date(progress.last_update as string).toLocaleString("tr-TR")}`
-              : "Henüz ingestion çalıştırılmadı"}
+              ? `Son guncelleme: ${new Date(progress.last_update as string).toLocaleString("tr-TR")}`
+              : "Henuz ingestion calistirilmadi"}
           </p>
         )}
       </div>
@@ -480,33 +547,177 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
       {/* Control Buttons */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => triggerIngest("", "İçtihat")}
+          onClick={() => triggerIngest("", "Ictihat")}
           disabled={state?.running}
           className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
         >
-          {state?.running && state.source === "bedesten" ? "Çalışıyor..." : "İçtihat Çek"}
+          {state?.running && state.source === "bedesten" ? "Calisiyor..." : "Ictihat Cek"}
         </button>
         <button
           onClick={() => triggerIngest("/aym", "AYM")}
           disabled={state?.running}
           className="px-4 py-2 bg-[#E5484D] hover:bg-[#D13438] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
         >
-          {state?.running && state.source === "aym" ? "Çalışıyor..." : "AYM Çek"}
+          {state?.running && state.source === "aym" ? "Calisiyor..." : "AYM Cek"}
         </button>
         <button
-          onClick={() => triggerIngest("/aihm", "AİHM")}
+          onClick={() => triggerIngest("/aihm", "AIHM")}
           disabled={state?.running}
           className="px-4 py-2 bg-[#3DD68C] hover:bg-[#2CC67C] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
         >
-          {state?.running && state.source === "aihm" ? "Çalışıyor..." : "AİHM Çek"}
+          {state?.running && state.source === "aihm" ? "Calisiyor..." : "AIHM Cek"}
         </button>
         <button
-          onClick={async () => { await fetch(`${apiUrl}/api/v1/admin/ingest/mevzuat`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }); onToast("Mevzuat ingestion başlatıldı"); }}
+          onClick={() => triggerIngest("/mevzuat", "Mevzuat")}
           disabled={state?.running}
           className="px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
         >
-          {state?.running && state.source === "mevzuat" ? "Çalışıyor..." : "Mevzuat Çek"}
+          {state?.running && state.source === "mevzuat" ? "Calisiyor..." : "Mevzuat Cek"}
         </button>
+        <button
+          onClick={() => triggerIngest("/batch", "Toplu")}
+          disabled={state?.running}
+          className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#3DD68C] hover:from-[#5B5BEE] hover:to-[#2CC67C] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+        >
+          {state?.running && state.source === "batch" ? "Calisiyor..." : "Toplu Cek"}
+        </button>
+      </div>
+
+      {/* Advanced Ingestion Controls */}
+      <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors"
+        >
+          <span className="text-[13px] font-semibold text-[#ECECEE]">Gelismis Ingestion</span>
+          <svg
+            className={`w-4 h-4 text-[#5C5C5F] transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showAdvanced && (
+          <div className="px-5 pb-5 space-y-5 border-t border-white/[0.06] pt-4">
+            {/* Daire Bazli Ingestion */}
+            <div className="space-y-3">
+              <h4 className="text-[12px] font-semibold text-[#A78BFA]">Daire Bazli Ingestion</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Mahkeme</label>
+                  <select
+                    value={daireCourtType}
+                    onChange={(e) => setDaireCourtType(e.target.value)}
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                  >
+                    <option value="yargitay">Yargitay</option>
+                    <option value="danistay">Danistay</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Daire</label>
+                  <select
+                    value={daireId}
+                    onChange={(e) => setDaireId(e.target.value)}
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                  >
+                    <option value="">Tum Daireler</option>
+                    {Object.entries(YARGITAY_DAIRELERI).map(([id, name]) => (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Sayfa Sayisi</label>
+                  <input
+                    type="number"
+                    value={dairePages}
+                    onChange={(e) => setDairePages(parseInt(e.target.value) || 10)}
+                    min={1}
+                    max={100}
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={triggerDaireIngest}
+                    disabled={state?.running}
+                    className="w-full px-4 py-2 bg-[#A78BFA] hover:bg-[#9678E5] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+                  >
+                    Daire Cek
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tarih Bazli Ingestion */}
+            <div className="space-y-3">
+              <h4 className="text-[12px] font-semibold text-[#FFB224]">Tarih Bazli Ingestion</h4>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Baslangic (GG.AA.YYYY)</label>
+                  <input
+                    type="text"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    placeholder="01.01.2024"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Bitis (GG.AA.YYYY)</label>
+                  <input
+                    type="text"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    placeholder="31.12.2024"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Mahkemeler</label>
+                  <div className="flex gap-2 mt-1">
+                    {["yargitay", "danistay"].map((ct) => (
+                      <label key={ct} className="flex items-center gap-1 text-[11px] text-[#8B8B8E]">
+                        <input
+                          type="checkbox"
+                          checked={dateCourtTypes.includes(ct)}
+                          onChange={(e) => {
+                            if (e.target.checked) setDateCourtTypes([...dateCourtTypes, ct]);
+                            else setDateCourtTypes(dateCourtTypes.filter((c) => c !== ct));
+                          }}
+                          className="accent-[#6C6CFF] w-3 h-3"
+                        />
+                        {ct === "yargitay" ? "Yargitay" : "Danistay"}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Max Sayfa</label>
+                  <input
+                    type="number"
+                    value={dateMaxPages}
+                    onChange={(e) => setDateMaxPages(parseInt(e.target.value) || 50)}
+                    min={1}
+                    max={200}
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={triggerDateRangeIngest}
+                    disabled={state?.running || !dateFrom || !dateTo}
+                    className="w-full px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+                  >
+                    Tarih Cek
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Live Terminal */}
@@ -518,7 +729,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
               <div className="w-2.5 h-2.5 rounded-full bg-[#FFB224]/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#3DD68C]/60" />
             </div>
-            <span className="text-[11px] font-medium text-[#5C5C5F]">Canlı Log</span>
+            <span className="text-[11px] font-medium text-[#5C5C5F]">Canli Log</span>
             {state?.running && <span className="w-1.5 h-1.5 rounded-full bg-[#3DD68C] animate-pulse" />}
           </div>
           <div className="flex gap-1">
@@ -526,7 +737,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
               onClick={() => setLogFilter("all")}
               className={`px-2 py-0.5 text-[10px] rounded ${logFilter === "all" ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}
             >
-              Tümü
+              Tumu
             </button>
             <button
               onClick={() => setLogFilter("errors")}
@@ -539,7 +750,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
         <div ref={terminalRef} className="bg-[#09090B] p-3 h-[300px] overflow-y-auto font-mono text-[11px] leading-[1.7] scrollbar-thin">
           {filteredLogs.length === 0 ? (
             <div className="text-[#5C5C5F] text-center py-12">
-              {logFilter === "errors" ? "Hata yok" : "Henüz log yok. Ingestion başlatın."}
+              {logFilter === "errors" ? "Hata yok" : "Henuz log yok. Ingestion baslatin."}
             </div>
           ) : (
             filteredLogs.map((entry, i) => (

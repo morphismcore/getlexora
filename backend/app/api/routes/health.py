@@ -95,6 +95,43 @@ async def health_details():
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
 
 
+@router.get("/health/llm")
+async def health_llm():
+    """Claude API key kontrolu — AI Asistan durumu."""
+    settings = get_settings()
+    t0 = time.monotonic()
+
+    if not settings.anthropic_api_key:
+        return {
+            "status": "unavailable",
+            "error": "ANTHROPIC_API_KEY not configured",
+            "response_time_ms": 0,
+        }
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.anthropic.com/v1/models",
+                headers={
+                    "x-api-key": settings.anthropic_api_key,
+                    "anthropic-version": "2023-06-01",
+                },
+            )
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            if resp.status_code == 200:
+                return {"status": "ok", "response_time_ms": elapsed}
+            else:
+                return {
+                    "status": "error",
+                    "http_status": resp.status_code,
+                    "response_time_ms": elapsed,
+                }
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        return {"status": "error", "error": str(e), "response_time_ms": elapsed}
+
+
 @router.get("/health/cache")
 async def health_cache():
     """Redis cache istatistikleri."""

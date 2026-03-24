@@ -237,3 +237,59 @@ class Deadline(Base):
 
     def __repr__(self) -> str:
         return f"<Deadline {self.title} @ {self.deadline_date}>"
+
+
+class PasswordResetToken(Base):
+    """Şifre sıfırlama token tablosu."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship()
+
+    def __repr__(self) -> str:
+        return f"<PasswordResetToken user_id={self.user_id}>"
+
+
+class NotificationPreference(Base):
+    """Kullanıcı bildirim tercihleri tablosu."""
+
+    __tablename__ = "notification_preferences"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    email_deadline_reminder: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_case_update: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_weekly_summary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reminder_days_before: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (Index("ix_notification_preferences_user_id", "user_id"),)
+
+    def __repr__(self) -> str:
+        return f"<NotificationPreference user_id={self.user_id}>"

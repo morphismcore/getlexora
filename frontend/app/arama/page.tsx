@@ -420,6 +420,7 @@ export default function AramaPage() {
   const [copied, setCopied] = useState(false);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
+  const [llmStatus, setLlmStatus] = useState<"ok" | "error" | "loading">("loading");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -448,6 +449,14 @@ export default function AramaPage() {
   const isEmpty = !loading && !results && !error;
 
   /* ─── Effects ─── */
+  // Check LLM status
+  useEffect(() => {
+    fetch(`${API_URL}/health/llm`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setLlmStatus(data?.status === "ok" ? "ok" : "error"))
+      .catch(() => setLlmStatus("error"));
+  }, []);
+
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(null), 3000);
@@ -815,10 +824,28 @@ export default function AramaPage() {
                 >
                   <span className="flex items-center gap-1.5">
                     {tab.label}
-                    {!tab.enabled && (
+                    {!tab.enabled && tab.key !== "ai" && (
                       <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-[#6C6CFF]/10 text-[#6C6CFF]/60 rounded-md">
                         YAKINDA
                       </span>
+                    )}
+                    {tab.key === "ai" && (
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          llmStatus === "loading"
+                            ? "bg-[#F5A623] animate-pulse"
+                            : llmStatus === "ok"
+                            ? "bg-[#3DD68C]"
+                            : "bg-[#E5484D]"
+                        }`}
+                        title={
+                          llmStatus === "ok"
+                            ? "LLM baglantisi aktif"
+                            : llmStatus === "error"
+                            ? "LLM baglantisi yok"
+                            : "Kontrol ediliyor..."
+                        }
+                      />
                     )}
                   </span>
                   {activeTab === tab.key && (

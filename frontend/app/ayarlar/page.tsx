@@ -17,7 +17,7 @@ const ROLES = [
 
 export default function AyarlarPage() {
   const { user, token, logout } = useAuth();
-  const [tab, setTab] = useState<"profil" | "guvenlik" | "firma" | "uyeler">("profil");
+  const [tab, setTab] = useState<"profil" | "guvenlik" | "firma" | "uyeler" | "bildirimler">("profil");
   const [toast, setToast] = useState<string | null>(null);
 
   // Profile state
@@ -39,6 +39,15 @@ export default function AyarlarPage() {
   const [members, setMembers] = useState<FirmMember[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
+
+  // Notification preferences state
+  const [notifPrefs, setNotifPrefs] = useState({
+    email_deadline_reminder: true,
+    email_case_update: true,
+    email_weekly_summary: false,
+    reminder_days_before: 3,
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
 
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
@@ -74,6 +83,34 @@ export default function AyarlarPage() {
       .then(setMembers)
       .catch(() => {});
   }, [token, firm]);
+
+  // Load notification preferences
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_URL}/api/v1/notifications/preferences`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setNotifPrefs({
+            email_deadline_reminder: data.email_deadline_reminder,
+            email_case_update: data.email_case_update,
+            email_weekly_summary: data.email_weekly_summary,
+            reminder_days_before: data.reminder_days_before,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const saveNotifPrefs = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/notifications/preferences`, { method: "PUT", headers, body: JSON.stringify(notifPrefs) });
+      if (!res.ok) throw new Error("Kaydetme basarisiz");
+      setToast("Bildirim tercihleri guncellendi");
+    } catch { setToast("Hata olustu"); }
+    setNotifLoading(false);
+  }, [notifPrefs, headers]);
 
   const saveProfile = useCallback(async () => {
     setProfileLoading(true);
@@ -165,6 +202,7 @@ export default function AyarlarPage() {
         {([
           { id: "profil", label: "Profil" },
           { id: "guvenlik", label: "Güvenlik" },
+          { id: "bildirimler", label: "Bildirimler" },
           { id: "firma", label: "Firma" },
           ...(firm ? [{ id: "uyeler", label: "Üyeler" }] : []),
         ] as { id: typeof tab; label: string }[]).map(t => (
@@ -224,6 +262,82 @@ export default function AyarlarPage() {
           {pwError && <p className="text-[13px] text-[#E5484D]">{pwError}</p>}
           <button onClick={changePassword} disabled={pwLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
             {pwLoading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
+          </button>
+        </div>
+      )}
+
+      {/* Bildirimler */}
+      {tab === "bildirimler" && (
+        <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-5 max-w-lg">
+          <div>
+            <h3 className="text-[13px] font-semibold text-[#ECECEE]">E-posta Bildirimleri</h3>
+            <p className="text-[11px] text-[#5C5C5F] mt-0.5">Hangi durumlarda e-posta almak istediginizi secin.</p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Deadline reminder toggle */}
+            <label className="flex items-center justify-between cursor-pointer group">
+              <div>
+                <p className="text-[13px] text-[#ECECEE]">Sure Hatirlatmalari</p>
+                <p className="text-[11px] text-[#5C5C5F]">Yaklasan hak dusurucusu ve durusma tarihleri</p>
+              </div>
+              <div
+                onClick={() => setNotifPrefs(p => ({ ...p, email_deadline_reminder: !p.email_deadline_reminder }))}
+                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_deadline_reminder ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_deadline_reminder ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </label>
+
+            {/* Case update toggle */}
+            <label className="flex items-center justify-between cursor-pointer group">
+              <div>
+                <p className="text-[13px] text-[#ECECEE]">Dava Guncellemeleri</p>
+                <p className="text-[11px] text-[#5C5C5F]">Dava durumu degisiklikleri hakkinda bildirim</p>
+              </div>
+              <div
+                onClick={() => setNotifPrefs(p => ({ ...p, email_case_update: !p.email_case_update }))}
+                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_case_update ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_case_update ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </label>
+
+            {/* Weekly summary toggle */}
+            <label className="flex items-center justify-between cursor-pointer group">
+              <div>
+                <p className="text-[13px] text-[#ECECEE]">Haftalik Ozet</p>
+                <p className="text-[11px] text-[#5C5C5F]">Her pazartesi dava ve sure ozeti</p>
+              </div>
+              <div
+                onClick={() => setNotifPrefs(p => ({ ...p, email_weekly_summary: !p.email_weekly_summary }))}
+                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_weekly_summary ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_weekly_summary ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </label>
+          </div>
+
+          {/* Reminder days before */}
+          {notifPrefs.email_deadline_reminder && (
+            <div>
+              <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">
+                Kac gun once hatirlatilsin?
+              </label>
+              <select
+                value={notifPrefs.reminder_days_before}
+                onChange={e => setNotifPrefs(p => ({ ...p, reminder_days_before: parseInt(e.target.value) }))}
+                className={inputCls + " w-32"}
+              >
+                {[1, 2, 3, 5, 7, 14].map(d => (
+                  <option key={d} value={d}>{d} gun</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button onClick={saveNotifPrefs} disabled={notifLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
+            {notifLoading ? "Kaydediliyor..." : "Tercihleri Kaydet"}
           </button>
         </div>
       )}

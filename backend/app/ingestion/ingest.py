@@ -821,6 +821,200 @@ class IngestionPipeline:
         _log("success", f"✅ AİHM tamamlandı — {total_embedded} embedding")
         return summary
 
+    async def ingest_mevzuat(
+        self,
+        mevzuat_list: list[tuple[str, str]] | None = None,
+    ) -> dict:
+        """
+        Mevzuat ingestion — Bedesten mevzuat API'den kanun metinlerini çeker,
+        madde bazlı chunk'lar, embed eder, mevzuat_embeddings koleksiyonuna yükler.
+        """
+        from app.services.mevzuat import MevzuatService
+        from app.services.cache import CacheService
+
+        if mevzuat_list is None:
+            mevzuat_list = DEFAULT_MEVZUAT
+
+        cache = CacheService(self.settings.redis_url)
+        mevzuat_svc = MevzuatService(cache=cache)
+
+        total_fetched = 0
+        total_embedded = 0
+        total_chunks_count = 0
+
+        _log("info", f"📜 Mevzuat ingestion başladı — {len(mevzuat_list)} kanun")
+        _update_state(
+            running=True, source="mevzuat", task="Mevzuat",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=len(mevzuat_list), completed_topics=0,
+        )
+
+        try:
+            for idx, (kanun_no, kanun_adi) in enumerate(mevzuat_list, 1):
+                _update_state(task=f"{kanun_adi} ({kanun_no})", completed_topics=idx - 1)
+                _log("info", f"📖 {kanun_adi} ({kanun_no}) çekiliyor...")
+
+                try:
+                    # Kanunu ara
+                    search_result = await mevzuat_svc.search(
+                        keyword="",
+                        mevzuat_no=kanun_no,
+                        page_size=5,
+                    )
+
+                    items = search_result.get("sonuclar", [])
+                    if not items:
+                        _log("info", f"⚠️ {kanun_adi} ({kanun_no}) bulunamadı")
+                        _update_state(errors=_ingest_state["errors"] + 1)
+                        continue
+
+                    mevzuat_id = items[0].get("mevzuat_id", "")
+                    if not mevzuat_id:
+                        _log("info", f"⚠️ {kanun_adi} mevzuat_id yok")
+                        continue
+
+                    total_fetched += 1
+                    _update_state(fetched=total_fetched)
+
+                    # Tam metni çek
+                    doc = await mevzuat_svc.get_content(mevzuat_id)
+                    content_text = doc.get("content", "")
+
+                    if not content_text or len(content_text) < 100:
+                        _log("info", f"⚠️ {kanun_adi} içerik boş veya çok kısa")
+                        continue
+
+                    clean = clean_legal_html(content_text)
+
+                    # Metadata
+                    metadata = {
+                        "mevzuat_id": mevzuat_id,
+                        "kanun_no": kanun_no,
+                        "kanun_adi": kanun_adi,
+                        "tur": items[0].get("tur", "Kanun"),
+                        "resmi_gazete_tarihi": items[0].get("resmi_gazete_tarihi", ""),
+                        "kaynak": "bedesten_mevzuat",
+                    }
+
+                    # Madde bazlı chunk'la
+                    chunks = self.chunker.chunk_mevzuat(clean, metadata)
+                    if not chunks:
+                        chunks = self.chunker.chunk_generic(clean, metadata)
+
+                    if not chunks:
+                        _log("info", f"⚠️ {kanun_adi} chunk üretilemedi")
+                        continue
+
+                    total_chunks_count += len(chunks)
+
+                    # Embed et
+                    texts = [c["text"] for c in chunks]
+                    embeddings = await self.embedding.embed_texts_async(texts)
+
+                    # Qdrant'a yükle — mevzuat_embeddings koleksiyonuna
+                    points = []
+                    for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+                        point_id = self._generate_id(
+                            f"mevzuat_{kanun_no}_{i}"
+                        )
+                        points.append({
+                            "id": point_id,
+                            "dense_vector": emb["dense_vector"],
+                            "sparse_vector": emb.get("sparse_vector"),
+                            "payload": {
+                                **chunk["metadata"],
+                                "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                "ozet": chunk["text"][:500],
+                            },
+                        })
+
+                    await self.vector_store.upsert_points(
+                        collection=self.settings.qdrant_collection_mevzuat,
+                        points=points,
+                    )
+                    total_embedded += len(points)
+                    _update_state(embedded=total_embedded, completed_topics=idx)
+
+                    _log("info", f"✅ {kanun_adi} — {len(chunks)} madde, {len(points)} embedding")
+
+                    await asyncio.sleep(3.0)
+
+                except Exception as e:
+                    logger.error("mevzuat_ingest_error", kanun_no=kanun_no, error=str(e))
+                    _log("error", f"❌ {kanun_adi} hatası: {str(e)}")
+                    _update_state(errors=_ingest_state["errors"] + 1)
+                    continue
+        finally:
+            await mevzuat_svc.close()
+            _update_state(running=False, source=None, task=None)
+
+        summary = {
+            "source": "mevzuat",
+            "total_fetched": total_fetched,
+            "total_chunks": total_chunks_count,
+            "total_embedded": total_embedded,
+        }
+        _log("success", f"🎉 Mevzuat tamamlandı — {total_embedded} embedding ({total_fetched} kanun)")
+        return summary
+
+    async def ingest_batch(
+        self,
+        include_ictihat: bool = True,
+        include_mevzuat: bool = True,
+        include_aym: bool = True,
+        include_aihm: bool = True,
+        pages_per_topic: int = 3,
+        aym_pages: int = 10,
+        aihm_max: int = 500,
+    ) -> dict:
+        """
+        Tüm kaynakları sırayla çalıştır: ictihat + mevzuat + AYM + AİHM.
+        Batch ingestion tek çağrıyla tüm pipeline'ı tetikler.
+        """
+        results = {}
+
+        _log("info", "🚀 Toplu ingestion başladı")
+
+        try:
+            if include_ictihat:
+                _log("info", "📋 İçtihat ingestion başlatılıyor...")
+                ictihat_result = await self.ingest_topics(
+                    topics=DEFAULT_TOPICS,
+                    pages_per_topic=pages_per_topic,
+                )
+                results["ictihat"] = ictihat_result
+
+            if include_mevzuat:
+                _log("info", "📜 Mevzuat ingestion başlatılıyor...")
+                mevzuat_result = await self.ingest_mevzuat()
+                results["mevzuat"] = mevzuat_result
+
+            if include_aym:
+                _log("info", "⚖️ AYM ingestion başlatılıyor...")
+                aym_result = await self.ingest_aym(pages=aym_pages)
+                results["aym"] = aym_result
+
+            if include_aihm:
+                _log("info", "🌍 AİHM ingestion başlatılıyor...")
+                aihm_result = await self.ingest_aihm(max_results=aihm_max)
+                results["aihm"] = aihm_result
+
+        except Exception as e:
+            _log("error", f"❌ Toplu ingestion hatası: {str(e)}")
+            results["error"] = str(e)
+
+        total_embedded = sum(
+            r.get("total_embedded", 0) for r in results.values() if isinstance(r, dict)
+        )
+        _log("success", f"🎉 Toplu ingestion tamamlandı — toplam {total_embedded} embedding")
+
+        return {
+            "batch": True,
+            "results": results,
+            "total_embedded": total_embedded,
+        }
+
     async def get_progress(self) -> dict:
         """Ingestion ilerleme durumunu döndür."""
         checkpoint = self._load_checkpoint()
@@ -978,4 +1172,33 @@ DEFAULT_TOPICS = [
     "müdahalenin meni",
     "kat mülkiyeti uyuşmazlık",
     "önalım hakkı",
+]
+
+
+# ── Temel mevzuat listesi (kanun numarası → kısa ad) ─────────
+DEFAULT_MEVZUAT = [
+    ("2709", "Anayasa"),
+    ("5237", "Türk Ceza Kanunu"),
+    ("6098", "Türk Borçlar Kanunu"),
+    ("4721", "Türk Medeni Kanunu"),
+    ("6100", "Hukuk Muhakemeleri Kanunu"),
+    ("5271", "Ceza Muhakemesi Kanunu"),
+    ("2004", "İcra ve İflas Kanunu"),
+    ("6102", "Türk Ticaret Kanunu"),
+    ("4857", "İş Kanunu"),
+    ("2577", "İdari Yargılama Usulü Kanunu"),
+    ("6502", "Tüketicinin Korunması Hakkında Kanun"),
+    ("6698", "Kişisel Verilerin Korunması Kanunu"),
+    ("1136", "Avukatlık Kanunu"),
+    ("5510", "Sosyal Sigortalar ve Genel Sağlık Sigortası Kanunu"),
+    ("634", "Kat Mülkiyeti Kanunu"),
+    ("2942", "Kamulaştırma Kanunu"),
+    ("3194", "İmar Kanunu"),
+    ("657", "Devlet Memurları Kanunu"),
+    ("5235", "Adli Yargı İlk Derece Mahkemeleri Kuruluş Kanunu"),
+    ("7201", "Tebligat Kanunu"),
+    ("6706", "Cezai Konularda Uluslararası Adli İş Birliği Kanunu"),
+    ("7036", "İş Mahkemeleri Kanunu"),
+    ("6325", "Hukuk Uyuşmazlıklarında Arabuluculuk Kanunu"),
+    ("5326", "Kabahatler Kanunu"),
 ]

@@ -322,7 +322,7 @@ export default function GirisPage() {
                   Beni hatirla
                 </span>
               </label>
-              <a href="#" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              <a href="/sifremi-unuttum" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Sifremi unuttum
               </a>
             </div>

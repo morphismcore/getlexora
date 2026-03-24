@@ -14,8 +14,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models.database import User, Firm
+from app.models.database import User, Firm, PasswordResetToken
 from app.models.db import get_db
+from app.services.email_service import send_email, build_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -228,6 +229,120 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def me(current_user: User = Depends(get_current_user)):
     """Mevcut kullanıcı bilgilerini getir."""
     return current_user
+
+
+# ── Şifre Sıfırlama ───────────────────────────────────────────────
+
+import secrets
+import time as _time
+
+_reset_attempts: dict[str, tuple[int, float]] = {}  # email -> (count, first_time)
+
+
+def _check_reset_rate_limit(email: str) -> bool:
+    """30 dakikada max 3 şifre sıfırlama talebi."""
+    if email in _reset_attempts:
+        count, first_time = _reset_attempts[email]
+        if _time.time() - first_time > 1800:
+            del _reset_attempts[email]
+            return False
+        return count >= 3
+    return False
+
+
+def _record_reset_attempt(email: str):
+    if email in _reset_attempts:
+        count, first_time = _reset_attempts[email]
+        _reset_attempts[email] = (count + 1, first_time)
+    else:
+        _reset_attempts[email] = (1, _time.time())
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@router.post("/forgot-password")
+async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Şifre sıfırlama e-postası gönder."""
+    # Rate limit
+    if _check_reset_rate_limit(body.email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Cok fazla sifirlama talebi. 30 dakika sonra tekrar deneyin.",
+        )
+
+    _record_reset_attempt(body.email)
+
+    # Kullanıcı var mı kontrol et — güvenlik için her zaman aynı mesajı dön
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if user and user.is_active:
+        # Eski kullanılmamış token'ları iptal et
+        old_tokens = await db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.id,
+                PasswordResetToken.used == False,
+            )
+        )
+        for old_token in old_tokens.scalars().all():
+            old_token.used = True
+
+        # Yeni token oluştur
+        raw_token = secrets.token_urlsafe(48)
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=raw_token,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        db.add(reset_token)
+        await db.flush()
+
+        # E-posta gönder
+        reset_url = f"{settings.frontend_url}/sifre-sifirla?token={raw_token}"
+        html = build_password_reset_email(reset_url, user.full_name)
+        await send_email(user.email, "Lexora - Sifre Sifirlama", html)
+
+    return {"message": "Eger bu e-posta adresine ait bir hesap varsa, sifirlama linki gonderildi."}
+
+
+@router.post("/reset-password")
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Token ile şifre sıfırla."""
+    result = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token == body.token,
+            PasswordResetToken.used == False,
+        )
+    )
+    token_obj = result.scalar_one_or_none()
+
+    if not token_obj:
+        raise HTTPException(status_code=400, detail="Gecersiz veya kullanilmis sifirlama linki")
+
+    if token_obj.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        token_obj.used = True
+        await db.flush()
+        raise HTTPException(status_code=400, detail="Sifirlama linkinin suresi dolmus. Yeni bir talep olusturun.")
+
+    # Kullanıcıyı bul ve şifreyi güncelle
+    user_result = await db.execute(select(User).where(User.id == token_obj.user_id))
+    user = user_result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Kullanici bulunamadi")
+
+    user.hashed_password = hash_password(body.new_password)
+    token_obj.used = True
+    await db.flush()
+
+    return {"message": "Sifreniz basariyla degistirildi. Giris yapabilirsiniz."}
 
 
 # ── Profil & Güvenlik ─────────────────────────────────────

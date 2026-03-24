@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
 
 from app.config import get_settings
-from app.api.routes import health, search, ingest, auth, cases, deadlines, statistics, dashboard, upload, templates, export, admin
+from app.api.routes import health, search, ingest, auth, cases, deadlines, statistics, dashboard, upload, templates, export, admin, notifications
 from app.api.deps import get_vector_store, cleanup
 from app.models.db import init_db
 from app.scheduler import start_scheduler, stop_scheduler
@@ -172,6 +172,7 @@ app.include_router(upload.router, prefix="/api/v1")
 app.include_router(templates.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 
 
 @app.get("/")

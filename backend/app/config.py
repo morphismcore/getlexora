@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     rag_rerank_top_k: int = 5
     rag_min_relevance: float = 0.4
 
+    # Reranking (cross-encoder)
+    reranking_enabled: bool = True
+    reranking_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+    # Query expansion
+    query_expansion_enabled: bool = True
+
     # Ingestion thresholds
     min_karar_chars: int = 300
     max_payload_text_chars: int = 3000
@@ -64,6 +71,16 @@ class Settings(BaseSettings):
 
     # Upload
     max_upload_size_mb: int = 20
+
+    # SMTP
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@lexora.app"
+
+    # Frontend URL (for password reset links etc.)
+    frontend_url: str = "http://localhost:3000"
 
     # CORS
     cors_origins: str = "http://localhost:3000,http://localhost:5173"

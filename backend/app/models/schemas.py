@@ -52,6 +52,7 @@ class IctihatResult(BaseModel):
     ozet: str
     anahtar_ilke: str | None = None
     relevance_score: float
+    rerank_score: float | None = None
     verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
     tam_metin: str | None = None
     kaynak_url: str | None = None

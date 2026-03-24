@@ -12,6 +12,8 @@ from app.services.mevzuat import MevzuatService
 from app.services.vector_store import VectorStoreService
 from app.services.embedding import EmbeddingService
 from app.services.citation_verifier import CitationVerifierService
+from app.services.query_expansion import QueryExpansionService
+from app.services.reranker import RerankerService
 from app.models.schemas import (
     SearchRequest,
     SearchResponse,
@@ -39,6 +41,8 @@ class RAGPipeline:
         embedding: EmbeddingService,
         verifier: CitationVerifierService,
         llm=None,  # opsiyonel
+        query_expander: QueryExpansionService | None = None,
+        reranker: RerankerService | None = None,
     ):
         self.yargi = yargi
         self.mevzuat = mevzuat
@@ -46,6 +50,8 @@ class RAGPipeline:
         self.embedding = embedding
         self.verifier = verifier
         self.llm = llm
+        self.query_expander = query_expander
+        self.reranker = reranker
         self.settings = get_settings()
 
     @property
@@ -55,11 +61,26 @@ class RAGPipeline:
     async def search(self, request: SearchRequest) -> SearchResponse:
         """
         İçtihat arama. LLM GEREKTIRMEZ.
-        1. Bedesten API'de keyword arama
-        2. Vector DB'de semantic search (varsa)
-        3. Sonuçları birleştir
+        1. Query expansion (kısaltma açma + eş anlamlı)
+        2. Bedesten API'de keyword arama
+        3. Vector DB'de semantic search (varsa)
+        4. Sonuçları birleştir
+        5. Cross-encoder reranking (etkinse)
         """
         start = time.monotonic()
+
+        # 0. Query expansion
+        search_query = request.query
+        expansion_info = None
+        if self.query_expander and self.settings.query_expansion_enabled:
+            expansion_info = self.query_expander.expand_query(request.query)
+            search_query = expansion_info["expanded"]
+            logger.debug(
+                "query_expansion_applied",
+                original=request.query,
+                expanded=search_query,
+                synonyms=expansion_info["synonyms"][:5],
+            )
 
         # Mahkeme filtresi
         court_types = ["yargitay"]
@@ -75,13 +96,27 @@ class RAGPipeline:
 
         daire = request.daire if hasattr(request, "daire") and request.daire else None
 
-        # 1. Bedesten API'de doğrudan arama
+        # 1. Bedesten API'de doğrudan arama (genişletilmiş sorgu ile)
         api_results = await self.yargi.search_unified(
-            keyword=request.query,
+            keyword=search_query,
             court_types=court_types,
             daire=daire,
             max_results=request.max_sonuc,
         )
+
+        # 1b. Eş anlamlı terimlerle ek arama (varsa, ilk 2 synonym)
+        if expansion_info and expansion_info["synonyms"]:
+            for syn_query in expansion_info["expanded_queries"][1:3]:
+                try:
+                    syn_results = await self.yargi.search_unified(
+                        keyword=syn_query,
+                        court_types=court_types,
+                        daire=daire,
+                        max_results=5,
+                    )
+                    api_results.extend(syn_results)
+                except Exception:
+                    pass
 
         # 2. Vector DB'de semantic search (koleksiyon doluysa)
         vector_results = []
@@ -107,6 +142,22 @@ class RAGPipeline:
 
         # 3. Sonuçları birleştir
         results = self._merge_results(api_results, vector_results, request.max_sonuc)
+
+        # 4. Cross-encoder reranking
+        if self.reranker and self.settings.reranking_enabled and len(results) > 1:
+            try:
+                results = self.reranker.rerank_ictihat(
+                    query=request.query,
+                    results=results,
+                    top_k=self.settings.rag_rerank_top_k or request.max_sonuc,
+                )
+                logger.debug(
+                    "reranking_applied",
+                    query=request.query[:50],
+                    result_count=len(results),
+                )
+            except Exception as e:
+                logger.warning("reranking_skip", error=str(e))
 
         elapsed = int((time.monotonic() - start) * 1000)
 

@@ -61,3 +61,86 @@ def daily_incremental(self):
     except Exception as exc:
         logger.error("daily_incremental_error", task_id=task_id, error=str(exc))
         raise
+
+
+@celery_app.task(bind=True, name="app.tasks.scheduled_tasks.check_deadline_reminders")
+def check_deadline_reminders(self):
+    """Yaklasan sure hatirlatmalarini kontrol et ve e-posta gonder."""
+    task_id = self.request.id
+    logger.info("check_deadline_reminders_start", task_id=task_id)
+
+    async def _run():
+        from datetime import date, timedelta
+        from sqlalchemy import select
+        from app.models.db import async_session
+        from app.models.database import User, Deadline, Case, NotificationPreference
+        from app.services.email_service import send_email, build_deadline_reminder_email
+
+        async with async_session() as session:
+            today = date.today()
+
+            # Bildirim tercihi acik olan kullanicilari bul
+            pref_result = await session.execute(
+                select(NotificationPreference).where(
+                    NotificationPreference.email_deadline_reminder == True
+                )
+            )
+            preferences = pref_result.scalars().all()
+
+            sent_count = 0
+            for pref in preferences:
+                reminder_window = today + timedelta(days=pref.reminder_days_before)
+
+                # Bu kullanicinin yaklasan surelerini bul
+                deadlines_result = await session.execute(
+                    select(Deadline, Case.title.label("case_title"))
+                    .join(Case, Deadline.case_id == Case.id)
+                    .where(
+                        Case.user_id == pref.user_id,
+                        Deadline.deadline_date >= today,
+                        Deadline.deadline_date <= reminder_window,
+                        Deadline.is_completed == False,
+                    )
+                    .order_by(Deadline.deadline_date.asc())
+                )
+                upcoming = deadlines_result.all()
+
+                if not upcoming:
+                    continue
+
+                # Kullaniciyi bul
+                user_result = await session.execute(
+                    select(User).where(User.id == pref.user_id)
+                )
+                user = user_result.scalar_one_or_none()
+                if not user or not user.is_active:
+                    continue
+
+                # E-posta icerigi olustur
+                deadline_list = [
+                    {
+                        "title": dl.title,
+                        "case_title": case_title,
+                        "deadline_date": dl.deadline_date.strftime("%d.%m.%Y"),
+                    }
+                    for dl, case_title in upcoming
+                ]
+
+                html = build_deadline_reminder_email(user.full_name, deadline_list)
+                success = await send_email(
+                    user.email,
+                    f"Lexora - {len(deadline_list)} yaklasan sure hatirlatmasi",
+                    html,
+                )
+                if success:
+                    sent_count += 1
+
+            return {"sent_count": sent_count, "users_checked": len(preferences)}
+
+    try:
+        result = asyncio.run(_run())
+        logger.info("check_deadline_reminders_done", task_id=task_id, **result)
+        return result
+    except Exception as exc:
+        logger.error("check_deadline_reminders_error", task_id=task_id, error=str(exc))
+        raise

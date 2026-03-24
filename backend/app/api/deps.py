@@ -20,6 +20,8 @@ from app.services.mevzuat import MevzuatService
 from app.services.vector_store import VectorStoreService
 from app.services.embedding import EmbeddingService
 from app.services.citation_verifier import CitationVerifierService
+from app.services.query_expansion import QueryExpansionService
+from app.services.reranker import RerankerService
 from app.ingestion.ingest import IngestionPipeline
 
 logger = structlog.get_logger()
@@ -32,6 +34,8 @@ _vector_store: VectorStoreService | None = None
 _embedding: EmbeddingService | None = None
 _llm = None
 _verifier: CitationVerifierService | None = None
+_query_expander: QueryExpansionService | None = None
+_reranker: RerankerService | None = None
 _rag: RAGPipeline | None = None
 _ingestion: IngestionPipeline | None = None
 
@@ -102,6 +106,39 @@ def get_citation_verifier() -> CitationVerifierService:
     return _verifier
 
 
+def get_query_expander() -> QueryExpansionService:
+    """Türkçe hukuk query expansion servisi."""
+    global _query_expander
+    if _query_expander is None:
+        settings = get_settings()
+        if settings.query_expansion_enabled:
+            _query_expander = QueryExpansionService()
+            logger.info("query_expander_initialized")
+        else:
+            logger.info("query_expansion_disabled")
+    return _query_expander
+
+
+def get_reranker() -> RerankerService | None:
+    """Cross-encoder reranking servisi — devre dışıysa None döner."""
+    global _reranker
+    if _reranker is None:
+        settings = get_settings()
+        if settings.reranking_enabled:
+            try:
+                _reranker = RerankerService(
+                    model_name=settings.reranking_model,
+                    enabled=True,
+                )
+                logger.info("reranker_initialized", model=settings.reranking_model)
+            except Exception as e:
+                logger.warning("reranker_init_failed", error=str(e))
+                _reranker = None
+        else:
+            logger.info("reranking_disabled")
+    return _reranker
+
+
 def get_rag_pipeline() -> RAGPipeline:
     global _rag
     if _rag is None:
@@ -112,6 +149,8 @@ def get_rag_pipeline() -> RAGPipeline:
             embedding=get_embedding_service(),
             verifier=get_citation_verifier(),
             llm=get_llm_service(),  # None olabilir
+            query_expander=get_query_expander(),
+            reranker=get_reranker(),
         )
     return _rag
 
