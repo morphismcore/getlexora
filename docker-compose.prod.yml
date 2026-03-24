@@ -18,6 +18,12 @@ services:
       - NEXT_PUBLIC_API_URL=
       - NODE_ENV=production
     restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
@@ -38,6 +44,11 @@ services:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ingestion_data:/app/data
     deploy:
@@ -49,7 +60,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.worker worker --loglevel=info --concurrency=1 --pool=solo
+    command: celery -A app.worker worker --loglevel=info --concurrency=2 --pool=threads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       resources:
         limits:

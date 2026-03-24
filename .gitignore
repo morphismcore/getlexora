@@ -5,7 +5,10 @@ __pycache__/
 .venv/
 .env
 .env.local
+.env.production
 *.log
+*.key
+deploy_key
 .vscode/
 .idea/
 .DS_Store

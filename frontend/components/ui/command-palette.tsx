@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface CommandItem {
@@ -103,7 +103,18 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
     setActiveIndex(0);
   }, [query]);
 
-  let flatIndex = 0;
+  // Pre-compute a map of item id -> flat index so we don't rely on a mutable
+  // variable that breaks across React re-renders.
+  const flatIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let idx = 0;
+    for (const group of filteredGroups) {
+      for (const item of group.items) {
+        map.set(item.id, idx++);
+      }
+    }
+    return map;
+  }, [filteredGroups]);
 
   return (
     <AnimatePresence>
@@ -176,7 +187,7 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
                       </span>
                     </div>
                     {group.items.map((item) => {
-                      const currentIndex = flatIndex++;
+                      const currentIndex = flatIndexMap.get(item.id) ?? 0;
                       const isActive = currentIndex === activeIndex;
 
                       return (

@@ -54,9 +54,10 @@ class Settings(BaseSettings):
     # Celery (future)
     celery_broker_url: str = "redis://redis:6379/1"
     celery_result_backend: str = "redis://redis:6379/2"
+    use_celery: bool = False
 
     # Ingestion tuning
-    ingestion_batch_size: int = 8
+    ingestion_batch_size: int = 32
     ingestion_concurrent_fetches: int = 5
     ingestion_rate_limit: float = 0.5
     ingestion_page_delay: float = 2.0

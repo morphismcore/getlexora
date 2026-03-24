@@ -53,19 +53,21 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
+  const isAdmin = user?.role === "platform_admin";
+
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
-  // Guard: only platform_admin
+  // Guard: redirect non-admins
   useEffect(() => {
-    if (user && user.role !== "platform_admin") {
+    if (user && !isAdmin) {
       router.push("/");
     }
-  }, [user, router]);
+  }, [user, isAdmin, router]);
 
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 
   const fetchAll = useCallback(async () => {
-    if (!token) return;
+    if (!token || !isAdmin) return;
     setLoading(true);
     try {
       const [usersRes, firmsRes, statsRes, embRes, sysRes] = await Promise.allSettled([
@@ -101,7 +103,14 @@ export default function AdminPage() {
     setToast("Rol güncellendi");
     fetchAll();
   };
-  if (user?.role !== "platform_admin") return null;
+  if (!user) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#09090B]">
+        <div className="w-6 h-6 border-2 border-[#6C6CFF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!isAdmin) return null;
 
   const pendingUsers = users.filter((u) => !u.is_active);
 

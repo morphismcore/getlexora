@@ -116,3 +116,14 @@ deploy-logs:
 # Sunucu durumu
 deploy-status:
 	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml ps"
+
+# === Backup ===
+backup-postgres:
+	ssh root@204.168.136.223 "docker exec lexora-postgres-1 pg_dump -U lexora lexora | gzip > /opt/backups/lexora-$$(date +%Y%m%d-%H%M%S).sql.gz && echo 'Backup complete'"
+
+backup-qdrant:
+	ssh root@204.168.136.223 "docker exec lexora-qdrant-1 curl -s http://localhost:6333/collections/ictihat_embeddings/snapshots -X POST | python3 -m json.tool && echo 'Qdrant snapshot created'"
+
+restore-postgres:
+	@echo "Usage: make restore-postgres FILE=/opt/backups/lexora-YYYYMMDD-HHMMSS.sql.gz"
+	ssh root@204.168.136.223 "gunzip -c $(FILE) | docker exec -i lexora-postgres-1 psql -U lexora lexora"

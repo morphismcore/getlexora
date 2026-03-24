@@ -29,6 +29,11 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     """Startup ve shutdown olayları."""
     settings = get_settings()
+
+    if settings.env == "production" and settings.jwt_secret == "lexora-dev-secret-change-in-production":
+        logger.error("FATAL: JWT_SECRET must be changed in production!")
+        raise RuntimeError("JWT_SECRET not configured for production")
+
     logger.info("starting_lexora", env=settings.env)
 
     # Veritabanı tablolarını oluştur
@@ -46,8 +51,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("qdrant_init_error", error=str(e))
 
-    # Scheduler baslat
-    await start_scheduler()
+    # Scheduler baslat (skip if Celery Beat handles scheduling)
+    if not settings.use_celery:
+        await start_scheduler()
+    else:
+        logger.info("apscheduler_skipped", reason="USE_CELERY=true, Celery Beat handles scheduling")
 
     yield
 
@@ -57,15 +65,21 @@ async def lifespan(app: FastAPI):
     logger.info("lexora_shutdown")
 
 
+_settings = get_settings()
+
 app = FastAPI(
     title="Lexora API",
     description="Türk avukatları için AI destekli hukuk araştırma asistanı",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if _settings.env != "production" else None,
+    redoc_url="/redoc" if _settings.env != "production" else None,
+    openapi_url="/openapi.json" if _settings.env != "production" else None,
 )
 
 # Request metrics (module-level counters for monitoring)
 import threading
+from collections import deque
 
 class _RequestMetrics:
     """Thread-safe request metrics collector."""
@@ -74,7 +88,7 @@ class _RequestMetrics:
         self.total = 0
         self.errors = 0
         self.total_duration_ms = 0.0
-        self._recent: list[tuple[float, float]] = []  # (timestamp, duration_ms)
+        self._recent: deque[tuple[float, float]] = deque(maxlen=500)  # (timestamp, duration_ms)
 
     def record(self, duration_ms: float, is_error: bool):
         with self._lock:
@@ -84,9 +98,6 @@ class _RequestMetrics:
                 self.errors += 1
             now = time.time()
             self._recent.append((now, duration_ms))
-            # Keep only last 5 minutes of data
-            cutoff = now - 300
-            self._recent = [(t, d) for t, d in self._recent if t > cutoff]
 
     @property
     def requests_per_minute(self) -> float:

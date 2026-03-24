@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import AuthProvider from "./auth-provider";
 import Sidebar from "./sidebar";
 import CommandPaletteProvider from "./command-palette-provider";
+import ErrorBoundary from "./error-boundary";
 
 const AUTH_PAGES = ["/giris", "/kayit"];
 
@@ -21,7 +22,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-full">
           <Sidebar />
           <main className="flex-1 min-w-0 overflow-auto">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
         </div>
       )}

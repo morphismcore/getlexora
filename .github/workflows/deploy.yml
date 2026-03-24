@@ -148,6 +148,15 @@ jobs:
             echo "Deploy successful!"
           DEPLOY
 
+      - name: Setup backup cron
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'BACKUP'
+            mkdir -p /opt/backups
+            # Add cron job if not exists
+            (crontab -l 2>/dev/null | grep -v "lexora-backup" ; echo "0 */6 * * * docker exec lexora-postgres-1 pg_dump -U lexora lexora | gzip > /opt/backups/lexora-\$(date +\%Y\%m\%d-\%H\%M\%S).sql.gz && find /opt/backups -mtime +7 -delete # lexora-backup") | crontab -
+            echo "Backup cron configured"
+          BACKUP
+
       - name: Verify deployment
         run: |
           sleep 5

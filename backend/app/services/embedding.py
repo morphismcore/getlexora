@@ -132,9 +132,13 @@ class EmbeddingService:
         if not weights:
             return {"indices": [], "values": []}
 
+        # Filter out low-weight tokens (noise)
+        MIN_SPARSE_WEIGHT = 0.1
+        filtered = {k: v for k, v in weights.items() if v >= MIN_SPARSE_WEIGHT}
+
         indices = []
         values = []
-        for token_id, weight in weights.items():
+        for token_id, weight in filtered.items():
             idx = int(token_id) if isinstance(token_id, str) else token_id
             indices.append(idx)
             values.append(float(weight))

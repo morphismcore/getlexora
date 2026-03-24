@@ -71,7 +71,12 @@ def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
         return await pipeline.ingest_topics(topics=topics, pages_per_topic=pages_per_topic)
 
     try:
-        result = asyncio.run(_run())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
         _publish_progress({
             "task_id": task_id,
             "state": "SUCCESS",
@@ -114,7 +119,12 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
         return await pipeline.ingest_aym(pages=pages, ihlal_only=ihlal_only)
 
     try:
-        result = asyncio.run(_run())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
         _publish_progress({
             "task_id": task_id,
             "state": "SUCCESS",
@@ -157,7 +167,12 @@ def ingest_aihm_task(self, max_results: int = 500):
         return await pipeline.ingest_aihm(max_results=max_results, turkish_only=False)
 
     try:
-        result = asyncio.run(_run())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
         _publish_progress({
             "task_id": task_id,
             "state": "SUCCESS",

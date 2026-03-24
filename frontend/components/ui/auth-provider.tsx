@@ -103,6 +103,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem("lexora_token");
+    localStorage.removeItem("lexora_search_history");
+    localStorage.removeItem("lexora_dilekce_draft");
+    localStorage.removeItem("lexora_upload_history");
     setToken(null);
     setUser(null);
     router.push("/giris");

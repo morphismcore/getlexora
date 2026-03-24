@@ -9,7 +9,7 @@ import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,35 @@ from app.models.db import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
 settings = get_settings()
+
+
+# ── Login Rate Limiting ──────────────────────────────────────────────
+
+_login_attempts: dict[str, tuple[int, float]] = {}  # email -> (count, first_attempt_time)
+
+
+def _check_lockout(email: str) -> bool:
+    import time
+    if email in _login_attempts:
+        count, first_time = _login_attempts[email]
+        if time.time() - first_time > 1800:  # 30 min reset
+            del _login_attempts[email]
+            return False
+        return count >= 5
+    return False
+
+
+def _record_failed_login(email: str):
+    import time
+    if email in _login_attempts:
+        count, first_time = _login_attempts[email]
+        _login_attempts[email] = (count + 1, first_time)
+    else:
+        _login_attempts[email] = (1, time.time())
+
+
+def _clear_login_attempts(email: str):
+    _login_attempts.pop(email, None)
 
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────
@@ -35,6 +64,17 @@ class RegisterRequest(BaseModel):
     account_type: str = "bireysel"  # "bireysel" veya "firma"
     firma_adi: str | None = None
     firma_vergi_no: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Şifre en az 8 karakter olmalıdır")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Şifre en az bir büyük harf içermelidir")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Şifre en az bir rakam içermelidir")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -157,10 +197,18 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Giriş yap, JWT token al."""
+    # Lockout kontrolü
+    if _check_lockout(body.email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Hesap geçici olarak kilitlendi. 30 dakika sonra tekrar deneyin.",
+        )
+
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(body.password, user.hashed_password):
+        _record_failed_login(body.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-posta veya şifre hatalı",
@@ -172,6 +220,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="Hesap devre dışı bırakılmış",
         )
 
+    _clear_login_attempts(body.email)
     return TokenResponse(access_token=create_access_token(user.id))
 
 

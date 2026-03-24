@@ -46,11 +46,15 @@ async def require_platform_admin(current_user: User = Depends(get_current_user))
 
 @router.get("/users")
 async def list_users(
+    limit: int = 100,
+    offset: int = 0,
     admin: User = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Tüm kullanıcıları listele."""
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    """Tüm kullanıcıları listele (sayfalı)."""
+    result = await db.execute(
+        select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
+    )
     users = result.scalars().all()
     return [
         {

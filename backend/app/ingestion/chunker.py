@@ -196,4 +196,13 @@ class LegalChunker:
         if current.strip():
             chunks.append(current.strip())
 
+        # Overlap: önceki chunk'ın son kısmını sonraki chunk'a ekle
+        if len(chunks) > 1:
+            overlapped = [chunks[0]]
+            for i in range(1, len(chunks)):
+                prev_tail = chunks[i - 1][-150:]  # last 150 chars of previous
+                overlap_text = "..." + prev_tail + "\n" + chunks[i]
+                overlapped.append(overlap_text)
+            chunks = overlapped
+
         return chunks

@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import threading
 import traceback
 from datetime import datetime
 
@@ -26,6 +27,7 @@ logger = structlog.get_logger()
 CHECKPOINT_FILE = "/app/data/ingestion_checkpoint.json"
 
 # ── In-memory log buffer (son 200 satır) ──────────────────
+_state_lock = threading.Lock()
 _ingest_logs: list[dict] = []
 _ingest_running = False
 MAX_LOG_LINES = 200
@@ -46,25 +48,27 @@ _ingest_state = {
 
 
 def _update_state(**kwargs):
-    """Ingestion state guncelle — last_update ve progress_pct otomatik."""
+    """Ingestion state guncelle — last_update ve progress_pct otomatik. Thread-safe."""
     global _ingest_state
-    _ingest_state.update(kwargs)
-    _ingest_state["last_update"] = datetime.now().isoformat()
-    total = _ingest_state.get("total_topics", 0)
-    completed = _ingest_state.get("completed_topics", 0)
-    _ingest_state["progress_pct"] = round((completed / total) * 100) if total > 0 else 0
+    with _state_lock:
+        _ingest_state.update(kwargs)
+        _ingest_state["last_update"] = datetime.now().isoformat()
+        total = _ingest_state.get("total_topics", 0)
+        completed = _ingest_state.get("completed_topics", 0)
+        _ingest_state["progress_pct"] = round((completed / total) * 100) if total > 0 else 0
 
 
 def _log(level: str, message: str):
-    """Log buffer'a ekle."""
+    """Log buffer'a ekle. Thread-safe."""
     global _ingest_logs
-    _ingest_logs.append({
-        "ts": datetime.now().isoformat(),
-        "level": level,
-        "msg": message,
-    })
-    if len(_ingest_logs) > MAX_LOG_LINES:
-        _ingest_logs = _ingest_logs[-MAX_LOG_LINES:]
+    with _state_lock:
+        _ingest_logs.append({
+            "ts": datetime.now().isoformat(),
+            "level": level,
+            "msg": message,
+        })
+        if len(_ingest_logs) > MAX_LOG_LINES:
+            _ingest_logs = _ingest_logs[-MAX_LOG_LINES:]
     # Ayrıca structlog'a da yaz
     if level == "error":
         logger.error("ingest_log", msg=message, stack=traceback.format_exc() if "Error" in message or "error" in message else None)
@@ -104,6 +108,7 @@ class IngestionPipeline:
         total_fetched = 0
         total_chunks = 0
         total_embedded = 0
+        seen_doc_ids: set[str] = set()
 
         for ct in court_types:
             item_type = ITEM_TYPES.get(ct, "YARGITAYKARARI")
@@ -132,6 +137,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
+                        # Deduplication: aynı run içinde tekrar işleme
+                        if doc_id in seen_doc_ids:
+                            continue
+                        seen_doc_ids.add(doc_id)
+
                         # Tam metin çek
                         try:
                             doc = await self.yargi.get_document(doc_id)
@@ -150,14 +160,19 @@ class IngestionPipeline:
 
                         esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
                         karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+                        mahkeme = ct.lower().strip()
+                        daire = item.get("birimAdi", "").strip()
+                        tarih = item.get("kararTarihiStr", "")
+                        yil = int(tarih.split(".")[-1]) if tarih and "." in tarih else None
 
                         metadata = {
                             "karar_id": doc_id,
-                            "mahkeme": ct,
-                            "daire": item.get("birimAdi", ""),
+                            "mahkeme": mahkeme,
+                            "daire": daire,
                             "esas_no": esas_no,
                             "karar_no": karar_no,
-                            "tarih": item.get("kararTarihiStr", ""),
+                            "tarih": tarih,
+                            "yil": yil,
                             "kaynak": "bedesten",
                         }
 
@@ -312,6 +327,7 @@ class IngestionPipeline:
         checkpoint = self._load_checkpoint()
         completed_daireler = set(checkpoint.get("completed_daireler", []))
         total_embedded = 0
+        seen_doc_ids: set[str] = set()
 
         for d_id, d_name in daireler.items():
             key = f"{court_type}:{d_id}"
@@ -344,6 +360,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
+                        # Deduplication: aynı run içinde tekrar işleme
+                        if doc_id in seen_doc_ids:
+                            continue
+                        seen_doc_ids.add(doc_id)
+
                         try:
                             doc = await self.yargi.get_document(doc_id)
                             content = doc.get("data", {}).get("decoded_content", "")
@@ -360,14 +381,19 @@ class IngestionPipeline:
 
                         esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
                         karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+                        mahkeme = court_type.lower().strip()
+                        daire = d_name.strip()
+                        tarih = item.get("kararTarihiStr", "")
+                        yil = int(tarih.split(".")[-1]) if tarih and "." in tarih else None
 
                         metadata = {
                             "karar_id": doc_id,
-                            "mahkeme": court_type,
-                            "daire": d_name,
+                            "mahkeme": mahkeme,
+                            "daire": daire,
                             "esas_no": esas_no,
                             "karar_no": karar_no,
-                            "tarih": item.get("kararTarihiStr", ""),
+                            "tarih": tarih,
+                            "yil": yil,
                             "kaynak": "bedesten",
                         }
 
@@ -440,6 +466,7 @@ class IngestionPipeline:
 
         total_fetched = 0
         total_embedded = 0
+        seen_doc_ids: set[str] = set()
 
         _log("info", f"📅 Tarih bazlı ingestion: {start_date} → {end_date}")
 
@@ -470,6 +497,11 @@ class IngestionPipeline:
                         if not doc_id:
                             continue
 
+                        # Deduplication: aynı run içinde tekrar işleme
+                        if doc_id in seen_doc_ids:
+                            continue
+                        seen_doc_ids.add(doc_id)
+
                         try:
                             doc = await self.yargi.get_document(doc_id)
                             content = doc.get("data", {}).get("decoded_content", "")
@@ -485,14 +517,19 @@ class IngestionPipeline:
 
                         esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
                         karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+                        mahkeme = ct.lower().strip()
+                        daire = item.get("birimAdi", "").strip()
+                        tarih = item.get("kararTarihiStr", "")
+                        yil = int(tarih.split(".")[-1]) if tarih and "." in tarih else None
 
                         metadata = {
                             "karar_id": doc_id,
-                            "mahkeme": ct,
-                            "daire": item.get("birimAdi", ""),
+                            "mahkeme": mahkeme,
+                            "daire": daire,
                             "esas_no": esas_no,
                             "karar_no": karar_no,
-                            "tarih": item.get("kararTarihiStr", ""),
+                            "tarih": tarih,
+                            "yil": yil,
                             "kaynak": "bedesten",
                         }
 
