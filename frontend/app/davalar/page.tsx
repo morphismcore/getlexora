@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -290,32 +291,52 @@ export default function DavalarPage() {
             </div>
           ) : (
             <div className="p-3 space-y-2">
-              {filteredCases.map((c) => (
-                <motion.button
+              {filteredCases.map((c) => {
+                const criticalDeadlines = c.deadlines?.filter((d) => !d.is_completed && new Date(d.deadline_date) <= new Date(Date.now() + 3 * 86400000)) || [];
+                const hasCritical = criticalDeadlines.length > 0;
+                return (
+                <motion.div
                   key={c.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onClick={() => fetchCaseDetail(c.id)}
-                  className={`w-full text-left bg-[#111113] border rounded-xl p-3.5 transition-all duration-150 ${
-                    selectedCase?.id === c.id
-                      ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04]"
-                      : "border-white/[0.06] hover:border-white/[0.10]"
-                  }`}
+                  className="flex gap-0"
                 >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
-                      {c.status === "aktif" ? "Aktif" : c.status === "beklemede" ? "Beklemede" : "Kapandı"}
-                    </span>
-                    <span className="text-[10px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
-                  </div>
-                  <h3 className="text-[13px] font-medium text-[#ECECEE] line-clamp-1">{c.title}</h3>
-                  <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#5C5C5F]">
-                    {c.court && <span>{c.court}</span>}
-                    {c.case_number && <span>E. {c.case_number}</span>}
-                    {c.opponent && <span>vs. {c.opponent}</span>}
-                  </div>
-                </motion.button>
-              ))}
+                  <button
+                    onClick={() => fetchCaseDetail(c.id)}
+                    className={`flex-1 text-left bg-[#111113] border rounded-l-xl p-3.5 transition-all duration-150 ${
+                      selectedCase?.id === c.id
+                        ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04]"
+                        : "border-white/[0.06] hover:border-white/[0.10]"
+                    } ${!selectedCase ? "rounded-r-xl" : "border-r-0"}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {hasCritical && <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse shrink-0" title="Kritik sure" />}
+                      <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+                        {c.status === "aktif" ? "Aktif" : c.status === "beklemede" ? "Beklemede" : "Kapandi"}
+                      </span>
+                      <span className="text-[10px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
+                    </div>
+                    <h3 className="text-[13px] font-medium text-[#ECECEE] line-clamp-1">{c.title}</h3>
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#5C5C5F]">
+                      {c.court && <span>{c.court}</span>}
+                      {c.case_number && <span>E. {c.case_number}</span>}
+                      {c.opponent && <span>vs. {c.opponent}</span>}
+                    </div>
+                  </button>
+                  <Link
+                    href={`/davalar/${c.id}`}
+                    className={`shrink-0 w-10 bg-[#111113] border border-l-0 rounded-r-xl flex items-center justify-center text-[#5C5C5F] hover:text-[#6C6CFF] hover:bg-[#6C6CFF]/[0.03] transition-colors ${
+                      selectedCase?.id === c.id
+                        ? "border-[#6C6CFF]/30"
+                        : "border-white/[0.06]"
+                    } ${!selectedCase ? "hidden" : ""}`}
+                    title="Detay sayfasina git"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+                  </Link>
+                </motion.div>
+                );
+              })}
             </div>
           )}
         </div>

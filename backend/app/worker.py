@@ -20,6 +20,10 @@ celery_app = Celery(
     "lexora",
     broker=_broker,
     backend=_backend,
+    include=[
+        "app.tasks.ingestion_tasks",
+        "app.tasks.scheduled_tasks",
+    ],
 )
 
 celery_app.conf.update(
@@ -48,4 +52,4 @@ celery_app.conf.beat_schedule = {
     },
 }
 
-celery_app.autodiscover_tasks(["app.tasks"])
+# autodiscover replaced with explicit include in Celery() constructor

@@ -28,20 +28,18 @@ const navGroups: NavGroup[] = [
   {
     label: "Araclar",
     items: [
-      { label: "Sure Hesapla", href: "/sureler", shortcut: "5",
-        icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg> },
-      { label: "Istatistik", href: "/istatistik", shortcut: "6",
+      { label: "Istatistik", href: "/istatistik", shortcut: "5",
         icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><rect x="3" y="12" width="4" height="9" rx="1" /><rect x="10" y="7" width="4" height="14" rx="1" /><rect x="17" y="3" width="4" height="18" rx="1" /></svg> },
-      { label: "Dilekce", href: "/dilekce", shortcut: "7",
+      { label: "Dilekce", href: "/dilekce", shortcut: "6",
         icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg> },
-      { label: "Belge Analiz", href: "/belge", shortcut: "8",
+      { label: "Belge Analiz", href: "/belge", shortcut: "7",
         icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> },
     ],
   },
   {
     label: "Dosyalar",
     items: [
-      { label: "Dava Dosyalari", href: "/davalar", shortcut: "9",
+      { label: "Dava Dosyalari", href: "/davalar", shortcut: "8",
         icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg> },
     ],
   },

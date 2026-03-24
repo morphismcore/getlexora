@@ -38,7 +38,7 @@ def _create_pipeline():
     from app.ingestion.ingest import IngestionPipeline
 
     settings = get_settings()
-    cache = CacheService(settings.redis_url)
+    cache = CacheService()
     yargi = YargiService(cache=cache)
     vector_store = VectorStoreService()
     embedding = EmbeddingService()

@@ -2,6 +2,21 @@
 
 > **Temel İlke:** Her aşamada "bir sonraki aşamaya geçmeden önce bu aşamada öğrenmemiz gereken tek şey ne?" sorusunu yanıtla. Öğrenmeden ölçekleme yapma.
 
+> **Son Güncelleme:** 24 Mart 2026 — Canlı ortam aktif (204.168.136.223), embedding ingestion çalışıyor.
+
+---
+
+## GÜNCEL DURUM ÖZETİ
+
+| Aşama | İlerleme | Açıklama |
+|-------|----------|----------|
+| POC (Hafta 1-4) | **%85** | Altyapı+search+RAG tamam, embedding 4,735+ (hedef 10K), ingestion aktif |
+| Alpha (Hafta 5-8) | **%65** | Auth+dilekçe+deadline tamam, ajan orkestrasyonu+analytics eksik |
+| Closed Beta (Ay 3-4) | **%25** | DocumentReader+email tamam, strateji/UYAP/trend analizi eksik |
+| Public Beta (Ay 5-6) | **%0** | Başlanmadı |
+| V1.0 (Ay 7-9) | **%0** | Başlanmadı |
+| Scale (Ay 10-12) | **%0** | Başlanmadı |
+
 ---
 
 ## AŞAMA 1: PROOF OF CONCEPT (Hafta 1-4)
@@ -12,78 +27,56 @@ Tek bir avukatla çalışan, sadece içtihat arama + citation doğrulama yapan m
 ### Hafta 1: Altyapı Kurulumu
 
 **Ne inşa edilecek:**
-- [ ] Geliştirme ortamı: Docker Compose (Qdrant + PostgreSQL + Redis + FastAPI)
-- [ ] yargi-mcp ve mevzuat-mcp bağlantısı kurulması ve test edilmesi
-- [ ] İlk veri ingestion: 10,000 Yargıtay kararı (iş hukuku odaklı) vector DB'ye yükleme
-- [ ] Temel chunking pipeline: Karar bazlı chunking implementasyonu
-- [ ] bge-m3 embedding pipeline kurulumu
+- [x] Geliştirme ortamı: Docker Compose (Qdrant + PostgreSQL + Redis + FastAPI)
+- [x] Bedesten API entegrasyonu (yargi-mcp yerine doğrudan Bedesten API kullanıldı)
+- [ ] İlk veri ingestion: 10,000 Yargıtay kararı — **4,735+ yüklendi, ingestion devam ediyor (24 Mart 2026)**
+- [x] Temel chunking pipeline: Karar bazlı chunking implementasyonu (`ingestion/chunker.py`)
+- [x] bge-m3 embedding pipeline kurulumu (`services/embedding.py`, 1024 boyutlu dense vektörler)
 
-**Kim ne yapacak:**
-| Kişi | Görev | Süre |
-|------|-------|------|
-| Backend dev 1 | Docker ortamı + FastAPI skeleton | 3 gün |
-| Backend dev 2 | yargi-mcp entegrasyonu + veri ingestion | 4 gün |
-| ML engineer | Embedding pipeline + Qdrant setup | 4 gün |
-| Hukuk uzmanı | İlk 100 test sorusu hazırlama | 5 gün |
+**Gerçekleşen mimari:**
+- yargi-mcp yerine doğrudan **Bedesten API** (`services/yargi.py`) kullanıldı
+- mevzuat-mcp yerine doğrudan **mevzuat.gov.tr** (`services/mevzuat.py`, 24 kanun)
+- **Celery worker/beat** ile asenkron ingestion pipeline kuruldu
+- **AYM** (`services/aym.py`) ve **AİHM/HUDOC** (`services/hudoc.py`) servisleri eklendi
 
-**Devreye giren ajanlar:** Hiçbiri (henüz ajan yok, ham pipeline)
-
-**Başarı metriği:** yargi-mcp'den 10K karar çekildi, Qdrant'a yüklendi, basit bir sorguda sonuç dönüyor
+**Başarı metriği:** ~~10K~~ 4,735+ karar Qdrant'a yüklendi, sorgularda sonuç dönüyor. Hedef 10K'ya ingestion ile ulaşılacak.
 
 ### Hafta 2: RAG Pipeline v1
 
 **Ne inşa edilecek:**
-- [ ] Hybrid search: Dense (bge-m3) + Sparse (BM25) + RRF füzyonu
-- [ ] Claude API entegrasyonu: Basit prompt ile arama sonuçlarını özetleme
-- [ ] İlk UI: Minimal chat arayüzü (Next.js)
-- [ ] Reference extraction regex'leri
-- [ ] Temel logging (LangSmith)
+- [x] Hybrid search: Dense (bge-m3) + Sparse (BM25) + RRF füzyonu (`services/vector_store.py`)
+- [x] Claude API entegrasyonu: RAG pipeline (`core/rag.py`, `/search/ask` endpoint)
+- [x] İlk UI: Arama arayüzü (Next.js) — 3 tab (İçtihat, Mevzuat, Danıştay), typewriter efekt, typeahead
+- [x] Reference extraction regex'leri (`services/citation_verifier.py`)
+- [ ] Temel logging (LangSmith) — **yapılmadı, structlog ile basit logging mevcut**
 
-**Kim ne yapacak:**
-| Kişi | Görev |
-|------|-------|
-| Backend dev 1 | Hybrid search implementasyonu |
-| Backend dev 2 | Claude API entegrasyonu + prompt mühendisliği |
-| Frontend dev | Chat UI + streaming response |
-| Hukuk uzmanı | Search sonuçları kalite kontrolü (günlük 20 sorgu test) |
-
-**Başarı metriği:** Doğal dil sorgusuna ilgili 5+ içtihat dönüyor, Precision@10 > 0.6
+**Ek olarak yapılan:**
+- Query expansion servisi: 65+ hukuk kısaltması + 35+ eş anlamlı grup (`services/query_expansion.py`)
+- Cross-encoder reranking (`services/reranker.py`, ms-marco-MiniLM-L-6-v2)
+- Streaming RAG response (`/search/ask/stream`)
 
 ### Hafta 3: Citation Verification v1
 
 **Ne inşa edilecek:**
-- [ ] CitationVerifierAgent v1: Regex extraction + yargi-mcp doğrulama
-- [ ] MevzuatSearchAgent v1: mevzuat-mcp entegrasyonu
-- [ ] Güven skoru v1 (basit: doğrulanan referans / toplam referans)
-- [ ] UI'da doğrulama göstergesi (✓/✗/⚠)
-
-**Kim ne yapacak:**
-| Kişi | Görev |
-|------|-------|
-| Backend dev 1 | Citation extraction + verification pipeline |
-| Backend dev 2 | Mevzuat-mcp entegrasyonu |
-| Frontend dev | Verification UI göstergeleri |
-| Hukuk uzmanı | 50 cevaptaki referansları manuel doğrulama (ground truth) |
-
-**Başarı metriği:** Hallücinasyon tespit oranı >90%, false positive <10%
+- [x] Citation verification: Regex extraction + Bedesten API doğrulama (`services/citation_verifier.py`)
+- [x] Mevzuat arama: 24 temel kanun entegrasyonu (`services/mevzuat.py`)
+- [ ] Güven skoru v1 — **kısmi, citation sayısı dönüyor ama skor hesaplaması yok**
+- [ ] UI'da doğrulama göstergesi (✓/✗/⚠) — **yapılmadı**
 
 ### Hafta 4: POC Test ve Ölçüm
 
 **Ne inşa edilecek:**
-- [ ] 1 avukat ile gerçek kullanım testi (founder avukat)
-- [ ] Hallücinasyon oranı ölçümü (100 sorgu → kaç tane hatalı referans)
-- [ ] Arama kalitesi ölçümü (avukat 1-5 arası skorluyor)
-- [ ] Yanıt süresi ölçümü (p50, p95, p99)
-- [ ] İlk product-market fit sinyalleri
-
-**Başarı metriği:**
-- Hallücinasyon oranı < %5 (ilk hedef)
-- Avukat 10 sorudan 7'sinde "faydalı" diyor
-- Ortalama yanıt süresi < 5 saniye
+- [ ] 1 avukat ile gerçek kullanım testi — **yapılmadı (2 avukat + 2 yazılımcı denetim yapıldı)**
+- [ ] Hallücinasyon oranı ölçümü — **sistematik ölçüm yapılmadı**
+- [ ] Arama kalitesi ölçümü — **uzman denetimlerinde 7.6/10 ve 7.8/10 alındı**
+- [ ] Yanıt süresi ölçümü (p50, p95, p99) — **yapılmadı**
+- [ ] İlk product-market fit sinyalleri — **uzman geri bildirimleri toplandı**
 
 **Bu aşamada öğrenmemiz gereken tek şey:** RAG pipeline'ı Türkçe hukuk metni için yeterli kalitede çalışıyor mu? Hallücinasyon oranı kabul edilebilir mi?
 
 **Bir sonraki aşamaya geçiş koşulu:** Hallücinasyon oranı <%5, avukat "tekrar kullanırım" diyor
+
+**Durum:** Aşama büyük ölçüde tamamlandı. Embedding sayısı hedefin altında ama aktif olarak artıyor. Sistematik test/ölçüm yapılması gerekiyor.
 
 ---
 
@@ -95,46 +88,42 @@ Tek bir avukatla çalışan, sadece içtihat arama + citation doğrulama yapan m
 ### Hafta 5-6: Dilekçe Yazım v1
 
 **Ne inşa edilecek:**
-- [ ] DilekceWriterAgent v1: İşe iade dilekçesi + cevap dilekçesi (ilk 2 şablon)
-- [ ] LangGraph kurulumu: OrchestratorAgent + IctihatSearchAgent + MevzuatSearchAgent + DilekceWriterAgent
-- [ ] Otomatik içtihat yerleştirme (arama → referans seçimi → dilekçeye yerleştirme)
-- [ ] ContradictionCheckerAgent v1
+- [x] Dilekçe şablon sistemi: 50+ şablon, 8 kategori (`services/template_engine.py`)
+- [ ] LangGraph kurulumu: OrchestratorAgent — **ajan orkestrasyonu implement edilmedi, düz RAG mevcut**
+- [ ] Otomatik içtihat yerleştirme — **yapılmadı**
+- [ ] ContradictionCheckerAgent v1 — **yapılmadı**
 
-**Kim ne yapacak:**
-| Kişi | Görev |
-|------|-------|
-| Backend dev 1 | LangGraph orchestration kurulumu |
-| Backend dev 2 | DilekceWriterAgent + prompt engineering |
-| ML engineer | Contradiction detection prototipi |
-| Frontend dev | Dilekçe editor UI (rich text, split panel) |
-| Hukuk uzmanı | Dilekçe şablonları hazırlama, kalite kontrolü |
-
-**Devreye giren ajanlar:** OrchestratorAgent, DilekceWriterAgent, ContradictionCheckerAgent
+**Ek olarak yapılan (roadmap dışı):**
+- [x] PDF/DOCX export (`services/document_export.py`, `/export/pdf`, `/export/docx`)
+- [x] Dilekçe UI: Auto-save (30sn), şablon kütüphanesi, arama (`dilekce/page.tsx`)
+- [x] Belge yükleme: Drag&drop, progress, OCR (`services/document_processor.py`, `belge/page.tsx`)
 
 ### Hafta 7-8: Alpha Açılış ve Veri Toplama
 
 **Ne inşa edilecek:**
-- [ ] Multi-tenancy v1 (5 kullanıcı izolasyonu)
-- [ ] Auth sistemi (NextAuth + baro numarası doğrulaması)
-- [ ] Usage analytics (PostHog veya custom)
-- [ ] Feedback mekanizması (her cevaba 👍/👎 + yorum)
-- [ ] Günlük hallüsinasyon raporu (otomatik)
-- [ ] DeadlineTrackerAgent v1 (basit süre hesaplama)
+- [x] Auth sistemi: JWT + 81 baro + rol bazlı erişim (user/firm_admin/platform_admin)
+- [x] Kayıt: Baro numarası doğrulama, e-posta/telefon onayı
+- [x] Şifre sıfırlama: Token bazlı, zaman sınırlı
+- [ ] Usage analytics (PostHog veya custom) — **yapılmadı**
+- [ ] Feedback mekanizması (👍/👎 + yorum) — **yapılmadı**
+- [ ] Günlük hallüsinasyon raporu — **yapılmadı**
+- [x] Deadline takip: İş günü hesaplama, yasal süre hesaplayıcı (`services/deadline_calculator.py`)
+- [x] Deadline UI: Mini takvim, geri sayım, iş günü gösterimi (`sureler/page.tsx`)
 
-**5 avukatla test:**
-- Her biri farklı hukuk alanı (iş, ticaret, ceza, idare, aile)
-- Haftalık 30 dakika feedback görüşmesi
-- Günlük kullanım metrikleri takibi
+**Ek olarak yapılan (roadmap dışı):**
+- [x] Admin paneli: Kullanıcı yönetimi, sistem sağlık kontrolü, ingestion tetikleme, SSE stream
+- [x] İstatistik sayfası: SVG grafikler (donut, bar, line), mahkeme bazlı analizler
+- [x] E-posta servisi: SMTP + HTML şablonlar (şifre sıfırlama, süre hatırlatma, firma daveti)
+- [x] Dashboard: Kullanıcı özet verileri
+- [x] Bildirim sistemi: Bildirim tercihleri, uygulama içi bildirimler
+- [x] Dava yönetimi: Oluşturma, güncelleme, listeleme (`davalar/page.tsx`)
 
 **Başarı metriği:**
-- 5 avukatın 4'ü haftalık aktif kullanıcı
-- Hallücinasyon oranı <%3'e düştü
-- Dilekçe taslağı kabul oranı >%60
-- "Bu özellik olsaydı süper olurdu" geri bildirimleri toplandı
+- 5 avukatın 4'ü haftalık aktif kullanıcı — **henüz test edilmedi**
+- Hallücinasyon oranı <%3'e düştü — **ölçülmedi**
+- Dilekçe taslağı kabul oranı >%60 — **ölçülmedi**
 
-**Bu aşamada öğrenmemiz gereken tek şey:** Avukatlar bunu gerçekten günlük iş akışlarında kullanıyor mu? Hangi özellik "must-have", hangisi "nice-to-have"?
-
-**Geçiş koşulu:** 5 avukatın en az 3'ü "bunu kullanmaya devam etmek istiyorum" diyor
+**Durum:** Teknik altyapı büyük ölçüde hazır. Kullanıcı testi ve geri bildirim döngüsü kurulmadı. Ajan sistemi eksik.
 
 ---
 
@@ -146,51 +135,25 @@ Tek bir avukatla çalışan, sadece içtihat arama + citation doğrulama yapan m
 ### Ay 3: Strateji ve UYAP
 
 **Ne inşa edilecek:**
-- [ ] CaseStrategyAgent v1: Güçlü/zayıf analizi + kazanma olasılığı (basit)
+- [ ] CaseStrategyAgent v1: Güçlü/zayıf analizi + kazanma olasılığı
 - [ ] JudgeProfileAgent v1: Mahkeme bazlı istatistikler
-- [ ] UYAP browser extension v1 (Chrome): Dava listesi + duruşma takvimi okuma
-- [ ] DocumentReaderAgent v1: PDF + DOCX okuma + OCR
-- [ ] Sabah briefing v1 (günlük e-mail özeti)
-- [ ] 3 hukuk alanına genişleme: İş + Ticaret + Ceza hukuku ajan konfigürasyonları
-
-**Kim ne yapacak:**
-| Kişi | Görev |
-|------|-------|
-| Backend dev 1 | CaseStrategyAgent + JudgeProfileAgent |
-| Backend dev 2 | DocumentReaderAgent + OCR pipeline |
-| Frontend dev | UYAP extension geliştirme |
-| ML engineer | Mahkeme istatistik motoru |
-| Hukuk uzmanı (İş) | İş hukuku test setleri ve kalite kontrolü |
-| Hukuk uzmanı (Ceza) | Ceza hukuku şablonları ve test setleri |
-
-**Devreye giren ajanlar:** CaseStrategyAgent, JudgeProfileAgent, DocumentReaderAgent, DeadlineTrackerAgent (gelişmiş)
+- [ ] UYAP browser extension v1 (Chrome)
+- [x] DocumentReaderAgent v1: PDF + DOCX okuma + OCR (`services/document_processor.py`)
+- [ ] Sabah briefing v1 (günlük e-mail özeti) — **e-posta servisi hazır, briefing mantığı yok**
+- [ ] 3 hukuk alanına genişleme — **template'ler 8 kategori kapsıyor ama ajan konfig yok**
 
 ### Ay 4: Beta Cilalama
 
 **Ne inşa edilecek:**
 - [ ] EmsalAnalysisAgent v1: Trend analizi
 - [ ] FreshnessCheckerAgent v1: Bozma/güncellik kontrolü
-- [ ] Dilekçe çeşitliliği artırma: İstinaf, temyiz, ihtarname, arabuluculuk tutanağı
-- [ ] ContractAnalysisAgent v1: Basit sözleşme risk analizi
+- [x] Dilekçe çeşitliliği: 50+ şablon (istinaf, temyiz, ihtarname, arabuluculuk dahil)
+- [ ] ContractAnalysisAgent v1: Sözleşme risk analizi
 - [ ] LaborCalculationAgent v1: Kıdem/ihbar hesaplama
-- [ ] Onboarding flow: İlk kullanım deneyimi tasarımı
-- [ ] Performans optimizasyonu: Cache katmanları, streaming iyileştirmesi
+- [ ] Onboarding flow
+- [x] Cache katmanları: Redis cache servisi aktif (`services/cache.py`)
 
-**20 avukatla test:**
-- Davetli program: İlk 5'in referanslarıyla 15 yeni avukat
-- Gerçek dava dosyaları ile kapsamlı test
-- Her avukat en az 3 gerçek davayı sisteme yükler
-
-**Başarı metriği:**
-- 20 avukatın 15'i haftalık aktif
-- NPS (Net Promoter Score) > 40
-- Ortalama oturum süresi > 15 dakika
-- Hallücinasyon oranı <%1
-- En az 50 gerçek dilekçe taslağı üretildi
-
-**Bu aşamada öğrenmemiz gereken tek şey:** Ürün "para ödenir" kalitesine ulaştı mı? İlk ücretli kullanıcı olmaya hazır mı?
-
-**Geçiş koşulu:** 20 avukatın 10'u "bunun için para öderdim" diyor, NPS > 40
+**Durum:** Çoğunlukla başlanmadı. Document processing ve dilekçe çeşitliliği tamamlandı.
 
 ---
 
@@ -213,23 +176,14 @@ Tek bir avukatla çalışan, sadece içtihat arama + citation doğrulama yapan m
 ### Ay 6: Büyüme Mekanizmaları
 
 **Ne inşa edilecek:**
-- [ ] Referral program: "Arkadaşını davet et, 1 ay ücretsiz"
-- [ ] İçerik pazarlama: Haftalık hukuk AI bülteni
-- [ ] SEO: "İçtihat arama", "dilekçe örneği" gibi aramalar için landing page'ler
-- [ ] ClientReportAgent v1: Müvekkil raporu üretimi
-- [ ] EvidenceMatrixAgent v1: Delil matrisi
-- [ ] Performance dashboard: Avukat kullanım istatistikleri
+- [ ] Referral program
+- [ ] İçerik pazarlama
+- [ ] SEO landing page'ler
+- [ ] ClientReportAgent v1
+- [ ] EvidenceMatrixAgent v1
+- [ ] Performance dashboard
 
-**Başarı metriği:**
-- 50+ kayıtlı avukat
-- 20+ ücretli abonelik
-- MRR (Monthly Recurring Revenue): ₺30,000+
-- Churn rate: <%10/ay
-- İstanbul Barosu partnership aktif
-
-**Bu aşamada öğrenmemiz gereken tek şey:** Avukatlar para ödüyor mu? Hangi fiyat noktası kabul ediliyor? İlk churn nedenleri ne?
-
-**Geçiş koşulu:** 20+ ücretli kullanıcı, MRR > ₺30K, churn <%10
+**Durum:** Başlanmadı.
 
 ---
 
@@ -242,35 +196,25 @@ Tam ajan ekosistemi, mobil uygulama, enterprise paket, referans mekanizması.
 
 **Ne inşa edilecek:**
 - [ ] Tüm 19 ajanın aktif olması
-- [ ] Dava outcome tahmini (Özellik 3, Bölüm 6)
-- [ ] İçtihat Watchdog (Özellik 5, Bölüm 6)
-- [ ] Strateji Simülatörü v1 (Özellik 4, Bölüm 6)
+- [ ] Dava outcome tahmini
+- [ ] İçtihat Watchdog
+- [ ] Strateji Simülatörü v1
 - [ ] OpposingCounselAgent v1
-- [ ] AIHMSearchAgent v1
-- [ ] DoctrinSearchAgent v1: DergiPark + akademik kaynak
-- [ ] Embedding fine-tune (Türkçe hukuk terminolojisi)
+- [x] AİHM veri kaynağı: HUDOC API entegrasyonu (`services/hudoc.py`) — ajan değil servis olarak
+- [ ] DoctrinSearchAgent v1
+- [ ] Embedding fine-tune
 - [ ] Reranker fine-tune
 
 ### Ay 9: Enterprise ve Mobil
 
 **Ne inşa edilecek:**
-- [ ] Mobil uygulama (React Native veya Flutter — iOS + Android)
-- [ ] Enterprise paket: Büro yönetim dashboard, merkezi faturalandırma, kullanıcı yönetimi
-- [ ] API erişimi (enterprise müşteriler için)
-- [ ] SSO entegrasyonu (büyük firmalar için)
-- [ ] Gelişmiş raporlama: Büro performans metrikleri
+- [ ] Mobil uygulama (React Native veya Flutter)
+- [ ] Enterprise paket
+- [ ] API erişimi
+- [ ] SSO entegrasyonu
+- [ ] Gelişmiş raporlama
 
-**Başarı metriği:**
-- 150+ kayıtlı avukat
-- 80+ ücretli abonelik
-- MRR: ₺150,000+
-- NPS > 50
-- 2+ büro (enterprise) anlaşması
-- Mobil uygulama yayında
-
-**Bu aşamada öğrenmemiz gereken tek şey:** Enterprise segment (büro) satılabilir mi? Mobil kullanım pattern'ı nasıl?
-
-**Geçiş koşulu:** MRR > ₺150K, en az 2 enterprise müşteri, mobil kullanım oranı >%20
+**Durum:** Başlanmadı. AİHM/HUDOC servisi erken implement edildi.
 
 ---
 
@@ -279,54 +223,68 @@ Tam ajan ekosistemi, mobil uygulama, enterprise paket, referans mekanizması.
 ### Hedef
 500+ avukat, büyük firma satışları, veri network etkisi, yatırım hazırlığı.
 
-### Ay 10-11: Büyüme
-
-**Ne inşa edilecek:**
-- [ ] 3+ baro partnership (Ankara, İzmir)
-- [ ] Outbound satış ekibi (2 kişi): Büyük hukuk firmalarına direkt satış
-- [ ] Multi-language: İngilizce arayüz (uluslararası firmalar için)
-- [ ] Advanced analytics: Sektörel içtihat trendleri raporu (aylık yayın)
-- [ ] API marketplace: Barolar, hukuk eğitim platformları için API
-
-### Ay 12: Yatırım Hazırlığı
-
-**Ne inşa edilecek:**
-- [ ] Veri network etkisi raporlaması: Kullanıcı arttıkça nasıl zekileşiyor
-- [ ] Unit economics optimizasyonu: CAC, LTV, payback period
+- [ ] 3+ baro partnership
+- [ ] Outbound satış ekibi
+- [ ] Multi-language
+- [ ] Advanced analytics
+- [ ] API marketplace
 - [ ] Pitch deck + financial model
-- [ ] 500+ avukat hedefi → Türkiye'nin en büyük hukuk AI platformu
 
-**Başarı metriği:**
-- 500+ kayıtlı avukat
-- 300+ ücretli abonelik
-- MRR: ₺500,000+
-- ARR: ₺6M+
-- 5+ enterprise müşteri
-- NPS > 55
-- Seed/Pre-A yatırım hazır
-
-**Bu aşamada öğrenmemiz gereken tek şey:** Unit economics sürdürülebilir mi? Yatırımcı ilgisi var mı?
+**Durum:** Başlanmadı.
 
 ---
 
 ## Özet Roadmap Tablosu
 
-| Aşama | Süre | Kullanıcı | MRR | Temel Öğrenim |
-|-------|------|-----------|-----|---------------|
-| POC | Hafta 1-4 | 1 | ₺0 | RAG kalitesi yeterli mi? |
-| Alpha | Hafta 5-8 | 5 | ₺0 | Günlük iş akışında kullanılıyor mu? |
-| Closed Beta | Ay 3-4 | 20 | ₺0 | Para ödenir kalitede mi? |
-| Public Beta | Ay 5-6 | 50+ | ₺30K+ | Ödeme yapıyorlar mı? |
-| V1.0 | Ay 7-9 | 150+ | ₺150K+ | Enterprise satılır mı? |
-| Scale | Ay 10-12 | 500+ | ₺500K+ | Unit economics çalışıyor mu? |
+| Aşama | Süre | Kullanıcı | MRR | İlerleme | Temel Öğrenim |
+|-------|------|-----------|-----|----------|---------------|
+| POC | Hafta 1-4 | 1 | ₺0 | **%85** | RAG kalitesi yeterli mi? |
+| Alpha | Hafta 5-8 | 5 | ₺0 | **%65** | Günlük iş akışında kullanılıyor mu? |
+| Closed Beta | Ay 3-4 | 20 | ₺0 | **%25** | Para ödenir kalitede mi? |
+| Public Beta | Ay 5-6 | 50+ | ₺30K+ | %0 | Ödeme yapıyorlar mı? |
+| V1.0 | Ay 7-9 | 150+ | ₺150K+ | %0 | Enterprise satılır mı? |
+| Scale | Ay 10-12 | 500+ | ₺500K+ | %0 | Unit economics çalışıyor mu? |
 
-### Ekip Büyüme Planı
+---
 
-| Aşama | Toplam Ekip | Yeni Pozisyonlar |
-|-------|-------------|-----------------|
-| POC | 5 | 2 backend, 1 frontend, 1 ML, 1 hukuk |
-| Alpha | 5 | (aynı ekip) |
-| Closed Beta | 7 | +1 hukuk uzmanı (ceza), +1 QA |
-| Public Beta | 9 | +1 customer success, +1 satış |
-| V1.0 | 12 | +1 mobil dev, +1 DevOps, +1 ürün yöneticisi |
-| Scale | 16 | +2 satış, +1 pazarlama, +1 veri mühendisi |
+## Mevcut Teknik Envanter (24 Mart 2026)
+
+### Backend Servisleri (17 adet)
+| Servis | Dosya | Durum |
+|--------|-------|-------|
+| Embedding | `services/embedding.py` | Aktif (bge-m3, 1024d) |
+| Vector Store | `services/vector_store.py` | Aktif (Qdrant, 2 koleksiyon) |
+| Bedesten API | `services/yargi.py` | Aktif |
+| AYM | `services/aym.py` | Aktif |
+| AİHM/HUDOC | `services/hudoc.py` | Aktif |
+| Mevzuat | `services/mevzuat.py` | Aktif (24 kanun) |
+| Query Expansion | `services/query_expansion.py` | Aktif (65+ kısaltma) |
+| Reranker | `services/reranker.py` | Aktif (ms-marco) |
+| Citation Verifier | `services/citation_verifier.py` | Aktif |
+| Template Engine | `services/template_engine.py` | Aktif (50+ şablon) |
+| Document Export | `services/document_export.py` | Aktif (PDF+DOCX) |
+| Document Processor | `services/document_processor.py` | Aktif (OCR) |
+| Deadline Calculator | `services/deadline_calculator.py` | Aktif |
+| Email Service | `services/email_service.py` | Aktif (SMTP+HTML) |
+| Cache | `services/cache.py` | Aktif (Redis) |
+| Statistics | `services/statistics.py` | Aktif |
+
+### API Route'ları (13 adet)
+`/auth`, `/search`, `/admin`, `/cases`, `/deadlines`, `/templates`, `/export`, `/ingest`, `/upload`, `/dashboard`, `/statistics`, `/health`, `/notifications`
+
+### Frontend Sayfaları (15 adet)
+Landing, giriş, kayıt, şifre sıfırlama, doğrulama, arama, mevzuat, davalar, süreler, dilekçe, belge, istatistik, ayarlar, admin
+
+### Altyapı
+- **Sunucu:** 204.168.136.223 (Vesper)
+- **Proxy:** Caddy (HTTPS)
+- **Prod servisleri:** backend (2 worker), worker (Celery, 3GB), beat (scheduler), frontend, postgres, redis (auth), qdrant
+- **Embedding sayısı:** 4,735+ (artıyor)
+- **Qdrant koleksiyonları:** `ictihat_embeddings`, `mevzuat_embeddings`
+
+### Kritik Eksikler
+1. **Ajan orkestrasyonu** — Hiçbir ajan implement edilmedi, düz RAG pipeline var
+2. **Kullanıcı feedback döngüsü** — Analytics ve 👍/👎 mekanizması yok
+3. **Sistematik test/ölçüm** — Hallücinasyon oranı, precision, yanıt süresi ölçülmedi
+4. **Ödeme sistemi** — Stripe/iyzico entegrasyonu yok
+5. **LangSmith/observability** — Detaylı logging/tracing yok

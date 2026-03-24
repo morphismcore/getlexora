@@ -219,9 +219,9 @@ const features = [
     gradient: "from-[#3DD68C]/10 to-[#3DD68C]/5",
   },
   {
-    href: "/sureler",
-    title: "Sure Hesaplama",
-    desc: "Dava ve islem surelerini otomatik hesaplayin, yaklasan sureler icin bildirim alin.",
+    href: "/davalar",
+    title: "Sure Takibi",
+    desc: "Dava olaylarina bagli yasal sureleri otomatik hesaplayin, kritik sureler icin uyari alin.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
         <circle cx="12" cy="12" r="10" />
@@ -503,6 +503,219 @@ function LandingPage() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Deadline Widget for Dashboard                                       */
+/* ------------------------------------------------------------------ */
+
+interface UpcomingDeadline {
+  id: string;
+  title: string;
+  court: string;
+  case_title: string;
+  date: string;
+  deadline_date: string;
+  days_left: number;
+  deadline_type: string;
+  case_id?: string;
+}
+
+interface DeadlineWidgetProps {
+  token: string | null;
+  deadlines: UpcomingDeadline[];
+}
+
+function groupDeadlinesByPeriod(deadlines: UpcomingDeadline[]) {
+  const today: UpcomingDeadline[] = [];
+  const thisWeek: UpcomingDeadline[] = [];
+  const nextWeek: UpcomingDeadline[] = [];
+  const past: UpcomingDeadline[] = [];
+
+  deadlines.forEach((dl) => {
+    if (dl.days_left < 0) {
+      past.push(dl);
+    } else if (dl.days_left === 0) {
+      today.push(dl);
+    } else if (dl.days_left <= 7) {
+      thisWeek.push(dl);
+    } else {
+      nextWeek.push(dl);
+    }
+  });
+
+  return { today, thisWeek, nextWeek, past };
+}
+
+function getWidgetUrgency(daysLeft: number) {
+  if (daysLeft < 0) return { dot: "bg-[#5C5C5F]", text: "text-[#5C5C5F]", bg: "bg-[#5C5C5F]/5", border: "border-[#5C5C5F]/20", label: `${Math.abs(daysLeft)} gun gecti` };
+  if (daysLeft === 0) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/5", border: "border-[#E5484D]/20", label: "SON GUN" };
+  if (daysLeft <= 3) return { dot: "bg-[#E5484D]", text: "text-[#E5484D]", bg: "bg-[#E5484D]/5", border: "border-[#E5484D]/20", label: `${daysLeft} gun` };
+  if (daysLeft <= 7) return { dot: "bg-[#FFB224]", text: "text-[#FFB224]", bg: "bg-[#FFB224]/5", border: "border-[#FFB224]/20", label: `${daysLeft} gun` };
+  if (daysLeft <= 14) return { dot: "bg-[#F5D90A]", text: "text-[#F5D90A]", bg: "bg-[#F5D90A]/5", border: "border-[#F5D90A]/20", label: `${daysLeft} gun` };
+  return { dot: "bg-[#3DD68C]", text: "text-[#3DD68C]", bg: "bg-[#3DD68C]/5", border: "border-[#3DD68C]/20", label: `${daysLeft} gun` };
+}
+
+function DeadlineWidget({ token, deadlines }: DeadlineWidgetProps) {
+  const [nextWeekOpen, setNextWeekOpen] = useState(false);
+  const todayStr = new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  const { today, thisWeek, nextWeek, past } = groupDeadlinesByPeriod(deadlines);
+
+  if (deadlines.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
+            <span className="text-[12px] text-[#5C5C5F]">{todayStr}</span>
+          </div>
+          <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
+        </div>
+        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-[#1A1A1F] flex items-center justify-center mb-3">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+          </div>
+          <p className="text-[13px] text-[#5C5C5F]">Henuz sure eklenmemis</p>
+          <Link href="/davalar" className="inline-block mt-3 text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF]">Dava dosyalarindan sure ekle</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const renderDeadlineItem = (dl: UpcomingDeadline, elevated: boolean) => {
+    const urg = getWidgetUrgency(dl.days_left);
+    const dateFormatted = dl.deadline_date ? new Date(dl.deadline_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) : dl.date;
+
+    if (elevated) {
+      return (
+        <motion.div
+          key={dl.id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`bg-[#111113] border ${urg.border} rounded-xl p-4 shadow-lg shadow-black/20`}
+        >
+          <div className="flex items-start gap-3">
+            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${urg.dot}`} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-[#ECECEE] truncate">{dl.title}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${urg.bg} ${urg.text}`}>{urg.label}</span>
+              </div>
+              <p className="text-[12px] text-[#5C5C5F] mt-1 truncate">
+                {dl.case_title || ""} {dl.court ? `\u00b7 ${dl.court}` : ""}
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <Link
+                  href={dl.case_id ? `/davalar/${dl.case_id}` : "/davalar"}
+                  className="px-2.5 py-1 text-[11px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 rounded-md hover:bg-[#6C6CFF]/20 transition-colors"
+                >
+                  Davayi Ac
+                </Link>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={dl.id}
+        initial={{ opacity: 0, x: -8 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.02] transition-colors"
+      >
+        <div className={`w-2 h-2 rounded-full shrink-0 ${urg.dot}`} />
+        <span className="text-[12px] text-[#ECECEE] truncate flex-1">{dl.title}</span>
+        <span className="text-[11px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
+        <span className={`text-[11px] font-medium shrink-0 ${urg.text}`}>{urg.label}</span>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
+          <span className="text-[12px] text-[#5C5C5F]">{todayStr}</span>
+        </div>
+        <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
+      </div>
+
+      {/* BUGUN */}
+      {today.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#E5484D]">Bugun</span>
+            <span className="text-[10px] text-[#5C5C5F]">({today.length})</span>
+          </div>
+          <div className="space-y-2">
+            {today.map((dl) => renderDeadlineItem(dl, true))}
+          </div>
+        </div>
+      )}
+
+      {/* BU HAFTA */}
+      {thisWeek.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#FFB224]">Bu Hafta</span>
+            <span className="text-[10px] text-[#5C5C5F]">({thisWeek.length})</span>
+          </div>
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+            {thisWeek.slice(0, 3).map((dl) => renderDeadlineItem(dl, false))}
+            {thisWeek.length > 3 && (
+              <Link href="/davalar" className="block px-3 py-2 text-[11px] text-[#6C6CFF] hover:bg-white/[0.02] transition-colors">
+                +{thisWeek.length - 3} daha...
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* GELECEK HAFTA */}
+      {nextWeek.length > 0 && (
+        <div className="space-y-1">
+          <button
+            onClick={() => setNextWeekOpen(!nextWeekOpen)}
+            className="flex items-center gap-2 px-1 w-full text-left group"
+          >
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+              className={`text-[#5C5C5F] transition-transform ${nextWeekOpen ? "rotate-90" : ""}`}
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gelecek Hafta</span>
+            <span className="text-[10px] text-[#3A3A3F]">({nextWeek.length})</span>
+          </button>
+          {nextWeekOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] overflow-hidden"
+            >
+              {nextWeek.map((dl) => renderDeadlineItem(dl, false))}
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* GECMIS */}
+      {past.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gecmis</span>
+            <span className="text-[10px] text-[#3A3A3F]">({past.length})</span>
+          </div>
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] opacity-60">
+            {past.map((dl) => renderDeadlineItem(dl, false))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Authenticated Dashboard                                            */
 /* ------------------------------------------------------------------ */
 
@@ -590,49 +803,9 @@ function AuthenticatedDashboard() {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        {/* Deadlines */}
+        {/* Deadline Widget */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yaklasan Sureler</h2>
-            <Link href="/sureler" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu gor</Link>
-          </div>
-
-          {data.upcoming_deadlines.length === 0 ? (
-            <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-[#1A1A1F] flex items-center justify-center mb-3">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-              </div>
-              <p className="text-[13px] text-[#5C5C5F]">Henuz sure eklenmemis</p>
-              <Link href="/sureler" className="inline-block mt-3 text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF]">Sure hesapla &rarr;</Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {data.upcoming_deadlines.map((dl, i) => {
-                const urg = getUrgencyColor(dl.days_left);
-                return (
-                  <motion.div
-                    key={dl.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className={`flex items-center gap-4 bg-[#111113] border border-white/[0.06] rounded-2xl p-4 hover:border-white/[0.10] transition-all ${urg.glow}`}
-                  >
-                    <div className={`w-[3px] self-stretch rounded-full ${urg.bar}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#ECECEE] truncate">{dl.title}</p>
-                      <p className="text-[12px] text-[#5C5C5F] mt-0.5">{dl.court || dl.case_title}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold tabular-nums ${urg.badge}`}>
-                        {dl.days_left} gun
-                      </span>
-                      <span className="text-[11px] text-[#5C5C5F]">{dl.date}</span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+          <DeadlineWidget token={token} deadlines={data.upcoming_deadlines} />
         </div>
 
         {/* Recent Searches */}

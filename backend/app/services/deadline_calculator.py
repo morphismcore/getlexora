@@ -634,3 +634,182 @@ class DeadlineCalculator:
             {"value": key, "label": info["label"], "description": info["description"]}
             for key, info in self.EVENT_TYPES.items()
         ]
+
+    # ----- Detailed calculation (for event-based system) -----
+
+    def _get_holidays_in_range(self, start: date, end: date) -> list[dict]:
+        """Tarih aralığındaki resmi tatilleri döndür."""
+        holidays = []
+        current = start
+        while current <= end:
+            if self.is_holiday(current):
+                name = self._get_holiday_name(current)
+                holidays.append({"date": current.isoformat(), "name": name})
+            current += timedelta(days=1)
+        return holidays
+
+    def _get_weekends_in_range(self, start: date, end: date) -> list[dict]:
+        """Tarih aralığındaki hafta sonlarını döndür."""
+        weekends = []
+        current = start
+        while current <= end:
+            if current.weekday() >= 5:
+                weekends.append({"date": current.isoformat()})
+            current += timedelta(days=1)
+        return weekends
+
+    def _get_holiday_name(self, d: date) -> str:
+        """Tatil gününün adını döndür."""
+        md = (d.month, d.day)
+        fixed_names = {
+            (1, 1): "Yılbaşı",
+            (4, 23): "Ulusal Egemenlik ve Çocuk Bayramı",
+            (5, 1): "Emek ve Dayanışma Günü",
+            (5, 19): "Atatürk'ü Anma, Gençlik ve Spor Bayramı",
+            (7, 15): "Demokrasi ve Millî Birlik Günü",
+            (8, 30): "Zafer Bayramı",
+            (10, 29): "Cumhuriyet Bayramı",
+        }
+        if md in fixed_names:
+            return fixed_names[md]
+
+        year_holidays = self.RELIGIOUS_HOLIDAYS.get(d.year, [])
+        if md in year_holidays:
+            # Determine if Ramazan or Kurban
+            idx = year_holidays.index(md)
+            if idx < 3:
+                return f"Ramazan Bayramı {idx + 1}. gün"
+            else:
+                return f"Kurban Bayramı {idx - 3 + 1}. gün"
+        return "Resmi tatil"
+
+    def _get_adjustment_reason(self, raw_end: date, adjusted_end: date) -> str | None:
+        """Ham tarih ile düzeltilmiş tarih arasındaki farkı açıkla."""
+        if raw_end == adjusted_end:
+            return None
+        day_names_tr = {
+            0: "Pazartesi", 1: "Salı", 2: "Çarşamba",
+            3: "Perşembe", 4: "Cuma", 5: "Cumartesi", 6: "Pazar",
+        }
+        reasons = []
+        if raw_end.weekday() >= 5:
+            reasons.append(f"Son gün {day_names_tr[raw_end.weekday()]}")
+        if self.is_holiday(raw_end):
+            reasons.append(f"Son gün {self._get_holiday_name(raw_end)}")
+        target_day = day_names_tr[adjusted_end.weekday()]
+        reasons.append(f"{target_day}'e uzatıldı")
+        return ", ".join(reasons)
+
+    def _parse_duration_info(self, duration_str: str) -> tuple[int, str]:
+        """Parse duration string to (days, type). Returns approximate values."""
+        dur = duration_str.lower().strip()
+        if "hafta" in dur:
+            # "2 hafta" or "2 hafta (14 gün)"
+            try:
+                weeks = int(dur.split()[0])
+                return weeks * 7, "takvim_gunu"
+            except (ValueError, IndexError):
+                return 14, "takvim_gunu"
+        if "ay" in dur:
+            try:
+                months = int(dur.split()[0])
+                return months * 30, "takvim_gunu"
+            except (ValueError, IndexError):
+                return 30, "takvim_gunu"
+        if "yıl" in dur:
+            try:
+                years = int(dur.split()[0])
+                return years * 365, "takvim_gunu"
+            except (ValueError, IndexError):
+                return 365, "takvim_gunu"
+        if "iş günü" in dur:
+            try:
+                days = int(dur.split()[0])
+                return days, "is_gunu"
+            except (ValueError, IndexError):
+                return 7, "is_gunu"
+        # Default: calendar days like "7 gün", "15 gün", "60 gün"
+        try:
+            days = int(dur.split()[0])
+            return days, "takvim_gunu"
+        except (ValueError, IndexError):
+            return 0, "takvim_gunu"
+
+    def calculate_deadline_detail(self, event_type: str, event_date: date, **kwargs) -> dict:
+        """
+        Olay tipine göre tüm ilgili süreleri DETAYLI hesapla.
+        Her süre için tam hesap dökümü döndürür.
+        """
+        handler_name = self._HANDLERS.get(event_type)
+        if not handler_name:
+            return {
+                "event_type": event_type,
+                "event_date": event_date.isoformat(),
+                "error": f"Bilinmeyen olay tipi: {event_type}",
+                "deadlines": [],
+            }
+
+        handler = getattr(self, handler_name)
+        today = kwargs.pop("today", None) or date.today()
+        basic_deadlines = handler(event_date, today=today, **kwargs)
+
+        detailed_deadlines = []
+        for dl in basic_deadlines:
+            deadline_date = date.fromisoformat(dl["deadline_date"])
+            duration_days, duration_type = self._parse_duration_info(dl["duration"])
+
+            # Calculate raw end date (before weekend/holiday adjustment)
+            if duration_type == "is_gunu":
+                raw_end = event_date + timedelta(days=duration_days)
+            else:
+                raw_end = event_date + timedelta(days=duration_days)
+
+            # The adjusted date is the actual deadline
+            adjusted_end = deadline_date
+
+            # Get holidays and weekends in the range
+            holidays_in_range = self._get_holidays_in_range(event_date, adjusted_end)
+            weekends_in_range = self._get_weekends_in_range(event_date, adjusted_end)
+
+            # Adjustment reason
+            adjustment_reason = self._get_adjustment_reason(raw_end, adjusted_end)
+
+            # Adli tatil check (July 20 - Sept 1)
+            adli_tatil_applied = False
+            check = event_date
+            while check <= adjusted_end:
+                if (check.month == 7 and check.day >= 20) or check.month == 8 or (check.month == 9 and check.day == 1):
+                    adli_tatil_applied = True
+                    break
+                check += timedelta(days=1)
+
+            bdays_left = self.business_days_until(today, deadline_date)
+            cdays_left = (deadline_date - today).days if deadline_date >= today else 0
+
+            detail = {
+                "name": dl["name"],
+                "law_reference": dl["law_reference"],
+                "law_text": dl.get("note", ""),
+                "duration": dl["duration"],
+                "duration_days": duration_days,
+                "duration_type": duration_type,
+                "start_date": event_date.isoformat(),
+                "raw_end_date": raw_end.isoformat(),
+                "adjusted_end_date": adjusted_end.isoformat(),
+                "deadline_date": deadline_date.isoformat(),
+                "adjustment_reason": adjustment_reason,
+                "holidays_skipped": holidays_in_range,
+                "weekends_in_range": weekends_in_range,
+                "adli_tatil_applied": adli_tatil_applied,
+                "business_days_left": bdays_left,
+                "calendar_days_left": cdays_left,
+                "urgency": dl["urgency"],
+                "note": dl.get("note", ""),
+            }
+            detailed_deadlines.append(detail)
+
+        return {
+            "event_type": event_type,
+            "event_date": event_date.isoformat(),
+            "deadlines": detailed_deadlines,
+        }

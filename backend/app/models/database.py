@@ -133,6 +133,9 @@ class Case(Base):
     deadlines: Mapped[list["Deadline"]] = relationship(
         back_populates="case", cascade="all, delete-orphan"
     )
+    events: Mapped[list["CaseEvent"]] = relationship(
+        back_populates="case", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("ix_cases_user_id", "user_id"),
@@ -204,6 +207,42 @@ class SavedSearch(Base):
         return f"<SavedSearch '{self.query[:30]}...'>"
 
 
+class CaseEvent(Base):
+    """Dava olayı tablosu — süre hesaplaması tetikleyicisi."""
+
+    __tablename__ = "case_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "karar_teblig", "dava_acilma"
+    event_date: Mapped[date] = mapped_column(Date, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    case: Mapped["Case"] = relationship(back_populates="events")
+    creator: Mapped["User | None"] = relationship(foreign_keys=[created_by])
+    deadlines: Mapped[list["Deadline"]] = relationship(
+        back_populates="event", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_case_events_case_id", "case_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CaseEvent {self.event_type} @ {self.event_date}>"
+
+
 class Deadline(Base):
     """Hak düşürücü süre / takvim tablosu."""
 
@@ -227,12 +266,30 @@ class Deadline(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
+    # Event-based deadline fields
+    event_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("case_events.id", ondelete="SET NULL"), nullable=True
+    )
+    original_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_manual_override: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    override_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    override_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    override_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    law_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    duration_text: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    calculation_detail: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON text
+
     # Relationships
     case: Mapped["Case"] = relationship(back_populates="deadlines")
+    event: Mapped["CaseEvent | None"] = relationship(back_populates="deadlines")
+    overrider: Mapped["User | None"] = relationship(foreign_keys=[override_by])
 
     __table_args__ = (
         Index("ix_deadlines_case_id", "case_id"),
         Index("ix_deadlines_deadline_date", "deadline_date"),
+        Index("ix_deadlines_event_id", "event_id"),
     )
 
     def __repr__(self) -> str:
