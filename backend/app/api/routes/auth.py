@@ -216,16 +216,28 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
 
-    # Firma hesabı ise otomatik firma oluştur
+    # Firma hesabı ise otomatik kurumsal firma oluştur
     if body.account_type == "firma" and body.firma_adi:
         firm = Firm(
             name=body.firma_adi,
             tax_id=body.firma_vergi_no,
+            firm_type="kurumsal",
         )
         db.add(firm)
         await db.flush()
         user.firm_id = firm.id
         user.role = "admin"
+        await db.flush()
+    else:
+        # Bireysel kayıt — otomatik bireysel firma oluştur
+        firm = Firm(
+            name=f"{body.full_name} Hukuk",
+            max_users=1,
+            firm_type="bireysel",
+        )
+        db.add(firm)
+        await db.flush()
+        user.firm_id = firm.id
         await db.flush()
 
     await db.refresh(user)
@@ -413,6 +425,17 @@ class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str = Field(..., min_length=8, max_length=128)
 
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Şifre en az 8 karakter olmalıdır")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Şifre en az bir büyük harf içermelidir")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Şifre en az bir rakam içermelidir")
+        return v
+
 
 @router.put("/password")
 async def change_password(
@@ -447,6 +470,7 @@ class FirmResponse(BaseModel):
     phone: str | None
     email: str | None
     max_users: int
+    firm_type: str
     is_active: bool
     created_at: datetime
 

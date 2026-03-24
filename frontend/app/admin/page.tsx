@@ -10,7 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 // ── Interfaces ───────────────────────────────────────
 
 interface UserItem { id: string; email: string; full_name: string; role: string; baro: string | null; baro_sicil_no: string | null; is_active: boolean; created_at: string | null; firm_id: string | null; }
-interface FirmItem { id: string; name: string; email: string | null; member_count: number; max_users: number; is_active: boolean; created_at: string | null; }
+interface FirmItem { id: string; name: string; email: string | null; member_count: number; max_users: number; firm_type: string; is_active: boolean; created_at: string | null; }
 interface PlatformStats { users: { total: number; active: number; pending: number }; firms: number; cases: number; deadlines: number; searches: number; }
 interface EmbeddingStats { ictihat: { points_count: number }; mevzuat: { points_count: number }; total: number; }
 
@@ -405,6 +405,8 @@ export default function AdminPage() {
       <AnimatePresence>
         {toast && (
           <motion.div
+            role="alert"
+            aria-live="polite"
             initial={{ opacity: 0, y: -20, x: 20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -540,27 +542,75 @@ export default function AdminPage() {
       )}
 
       {/* Firms tab */}
-      {tab === "firms" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
-          {firms.length === 0 ? (
-            <EmptyState
-              icon="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
-              title="Henuz firma yok"
-              description="Firmalar kullanicilar tarafindan olusturulacak."
-            />
-          ) : firms.map((f) => (
-            <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
-              <div>
-                <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
-                <p className="text-[12px] text-[#5C5C5F]">{f.email || "—"} · {f.member_count}/{f.max_users} uye</p>
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
-                {f.is_active ? "Aktif" : "Pasif"}
-              </span>
-            </div>
-          ))}
-        </motion.div>
-      )}
+      {tab === "firms" && (() => {
+        const kurumsalFirms = firms.filter((f) => f.firm_type === "kurumsal");
+        const bireyselFirms = firms.filter((f) => f.firm_type === "bireysel");
+        return (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            {firms.length === 0 ? (
+              <EmptyState
+                icon="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
+                title="Henuz firma yok"
+                description="Firmalar kullanicilar tarafindan olusturulacak."
+              />
+            ) : (
+              <>
+                {/* Kurumsal Burolar */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
+                    <h3 className="text-[14px] font-semibold text-[#ECECEE]">Kurumsal Burolar</h3>
+                    <span className="text-[12px] text-[#5C5C5F]">({kurumsalFirms.length})</span>
+                  </div>
+                  {kurumsalFirms.length === 0 ? (
+                    <p className="text-[12px] text-[#5C5C5F] pl-3">Henuz kurumsal buro yok.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {kurumsalFirms.map((f) => (
+                        <div key={f.id} className="bg-[#09090B] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
+                          <div>
+                            <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
+                            <p className="text-[12px] text-[#5C5C5F]">{f.email || "\u2014"} · {f.member_count}/{f.max_users} uye</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                            {f.is_active ? "Aktif" : "Pasif"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bireysel Avukatlar */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
+                    <h3 className="text-[14px] font-semibold text-[#ECECEE]">Bireysel Avukatlar</h3>
+                    <span className="text-[12px] text-[#5C5C5F]">({bireyselFirms.length})</span>
+                  </div>
+                  {bireyselFirms.length === 0 ? (
+                    <p className="text-[12px] text-[#5C5C5F] pl-3">Henuz bireysel avukat yok.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {bireyselFirms.map((f) => (
+                        <div key={f.id} className="bg-[#09090B] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
+                          <div>
+                            <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
+                            <p className="text-[12px] text-[#5C5C5F]">{f.member_count}/{f.max_users} uye</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                            {f.is_active ? "Aktif" : "Pasif"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </motion.div>
+        );
+      })()}
 
       {/* Deadline Rules tab */}
       {tab === "deadline-rules" && (

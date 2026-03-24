@@ -1384,7 +1384,7 @@ export default function AramaPage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl flex items-center gap-2"
+            role="alert" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl flex items-center gap-2"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-[#3DD68C]" />
             <span className="text-[13px] text-[#ECECEE]">{toast}</span>

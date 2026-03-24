@@ -46,7 +46,15 @@ def _create_pipeline():
     return IngestionPipeline(yargi, vector_store, embedding)
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_topics_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_topics_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
     """Ictihat ingestion — Bedesten API uzerinden konu bazli."""
     task_id = self.request.id
@@ -96,7 +104,15 @@ def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_aym_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_aym_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
     """AYM bireysel basvuru kararlari ingestion."""
     task_id = self.request.id
@@ -144,7 +160,15 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_aihm_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_aihm_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_aihm_task(self, max_results: int = 500):
     """AIHM Turkiye aleyhine kararlari ingestion."""
     task_id = self.request.id
@@ -192,7 +216,15 @@ def ingest_aihm_task(self, max_results: int = 500):
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_mevzuat_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_mevzuat_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_mevzuat_task(self):
     """Mevzuat ingestion — 24 temel kanun, madde bazli chunking."""
     task_id = self.request.id
@@ -239,7 +271,15 @@ def ingest_mevzuat_task(self):
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_batch_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_batch_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_batch_task(
     self,
     include_ictihat: bool = True,
@@ -297,7 +337,15 @@ def ingest_batch_task(
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_daire_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_daire_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None = None, pages: int = 10):
     """Daire bazli sistematik ictihat ingestion."""
     task_id = self.request.id
@@ -348,7 +396,15 @@ def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None =
         raise
 
 
-@celery_app.task(bind=True, name="app.tasks.ingestion_tasks.ingest_date_range_task")
+@celery_app.task(
+    bind=True,
+    name="app.tasks.ingestion_tasks.ingest_date_range_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
 def ingest_date_range_task(self, start_date: str, end_date: str, court_types: list[str] | None = None, max_pages: int = 50):
     """Tarih bazli sistematik ictihat ingestion."""
     task_id = self.request.id

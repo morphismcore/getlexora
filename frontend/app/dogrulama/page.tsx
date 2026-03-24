@@ -217,7 +217,7 @@ export default function DogrulamaPage() {
     <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
+        <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
           {toast}
         </div>
       )}

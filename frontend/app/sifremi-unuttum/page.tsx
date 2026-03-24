@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -82,12 +83,12 @@ export default function SifremiUnuttumPage() {
             <p className="text-[11px] text-[#5C5C5F]">
               Link 1 saat boyunca gecerlidir.
             </p>
-            <a
+            <Link
               href="/giris"
               className="inline-block mt-2 text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
             >
               Giris sayfasina don
-            </a>
+            </Link>
           </motion.div>
         ) : (
           /* Form */
@@ -138,9 +139,9 @@ export default function SifremiUnuttumPage() {
             </div>
 
             <p className="text-center text-[13px] text-[#5C5C5F]">
-              <a href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              <Link href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Giris sayfasina don
-              </a>
+              </Link>
             </p>
           </form>
         )}

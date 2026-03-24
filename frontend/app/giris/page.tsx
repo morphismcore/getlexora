@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/components/ui/auth-provider";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -265,7 +266,7 @@ export default function GirisPage() {
           >
             {/* Email */}
             <div>
-              <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
+              <label htmlFor="giris-email" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
                 E-posta
               </label>
               <div className="relative">
@@ -276,6 +277,7 @@ export default function GirisPage() {
                   </svg>
                 </div>
                 <input
+                  id="giris-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -288,7 +290,7 @@ export default function GirisPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
+              <label htmlFor="giris-password" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
                 Sifre
               </label>
               <div className="relative">
@@ -299,6 +301,7 @@ export default function GirisPage() {
                   </svg>
                 </div>
                 <input
+                  id="giris-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -328,32 +331,21 @@ export default function GirisPage() {
 
             {/* Remember me */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div
-                  className={`w-4 h-4 rounded border transition-all duration-200 flex items-center justify-center ${
-                    rememberMe
-                      ? "bg-[#6C6CFF] border-[#6C6CFF]"
-                      : "border-white/[0.15] group-hover:border-white/[0.25]"
-                  }`}
-                  onClick={() => setRememberMe(!rememberMe)}
-                >
-                  {rememberMe && (
-                    <motion.svg
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"
-                    >
-                      <path d="M20 6L9 17l-5-5" />
-                    </motion.svg>
-                  )}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${rememberMe ? "bg-[#6C6CFF] border-[#6C6CFF]" : "border-[#5C5C5F] bg-transparent"}`}>
+                  {rememberMe && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12"><path d="M3.5 6l2 2 3-4" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
-                <span className="text-[12px] text-[#5C5C5F] group-hover:text-[#8B8B8E] transition-colors">
-                  Beni hatirla
-                </span>
+                <span className="text-[12px] text-[#8B8B8E]">Beni hatirla</span>
               </label>
-              <a href="/sifremi-unuttum" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              <Link href="/sifremi-unuttum" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Sifremi unuttum
-              </a>
+              </Link>
             </div>
 
             {/* Error */}
@@ -406,12 +398,12 @@ export default function GirisPage() {
           {/* Register link */}
           <p className="text-center text-[14px] text-[#5C5C5F]">
             Hesabiniz yok mu?{" "}
-            <a
+            <Link
               href="/kayit"
               className="text-[#6C6CFF] hover:text-[#8B8BFF] font-medium transition-colors"
             >
               Ucretsiz Kayit Ol
-            </a>
+            </Link>
           </p>
 
           {/* Footer */}

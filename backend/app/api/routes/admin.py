@@ -62,6 +62,7 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
 ):
     """Tüm kullanıcıları listele (sayfalı)."""
+    limit = min(limit, 500)  # Cap at 500
     result = await db.execute(
         select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
     )
@@ -165,27 +166,34 @@ async def update_user_role(
 
 @router.get("/firms")
 async def list_firms(
+    firm_type: str | None = None,
     admin: User = Depends(require_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Tüm firmaları listele."""
-    result = await db.execute(select(Firm).order_by(Firm.created_at.desc()))
-    firms = result.scalars().all()
-    out = []
-    for f in firms:
-        member_count = await db.execute(
-            select(func.count()).select_from(User).where(User.firm_id == f.id)
-        )
-        out.append({
+    """Tüm firmaları listele. firm_type ile filtrelenebilir (kurumsal/bireysel)."""
+    stmt = (
+        select(Firm, func.count(User.id).label("member_count"))
+        .outerjoin(User, User.firm_id == Firm.id)
+    )
+    if firm_type in ("kurumsal", "bireysel"):
+        stmt = stmt.where(Firm.firm_type == firm_type)
+    stmt = stmt.group_by(Firm.id).order_by(Firm.created_at.desc())
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [
+        {
             "id": str(f.id),
             "name": f.name,
             "email": f.email,
             "max_users": f.max_users,
-            "member_count": member_count.scalar() or 0,
+            "firm_type": f.firm_type,
+            "member_count": count,
             "is_active": f.is_active,
             "created_at": f.created_at.isoformat() if f.created_at else None,
-        })
-    return out
+        }
+        for f, count in rows
+    ]
 
 
 # ── Sistem Durumu ─────────────────────────────────────

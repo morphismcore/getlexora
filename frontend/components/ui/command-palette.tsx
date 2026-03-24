@@ -26,6 +26,7 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Toggle with Cmd+K / Ctrl+K
   useEffect(() => {
@@ -49,14 +50,17 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
   }, [open]);
 
   // Filter items based on query
-  const filteredGroups = groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) =>
-        item.label.toLowerCase().includes(query.toLowerCase())
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+  const filteredGroups = useMemo(() =>
+    groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) =>
+          item.label.toLowerCase().includes(query.toLowerCase())
+        ),
+      }))
+      .filter((group) => group.items.length > 0),
+    [groups, query]
+  );
 
   const allItems = filteredGroups.flatMap((g) => g.items);
 
@@ -103,6 +107,34 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
     setActiveIndex(0);
   }, [query]);
 
+  // Focus trap: cycle Tab within modal when open
+  useEffect(() => {
+    if (!open) return;
+
+    const handleFocusTrap = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        const focusable = modalRef.current?.querySelectorAll(
+          'input, button, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable?.length) return;
+
+        const first = focusable[0] as HTMLElement;
+        const last = focusable[focusable.length - 1] as HTMLElement;
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleFocusTrap);
+    return () => document.removeEventListener("keydown", handleFocusTrap);
+  }, [open]);
+
   // Pre-compute a map of item id -> flat index so we don't rely on a mutable
   // variable that breaks across React re-renders.
   const flatIndexMap = useMemo(() => {
@@ -137,6 +169,7 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
 
           {/* Dialog */}
           <motion.div
+            ref={modalRef}
             className="relative w-full max-w-[560px] mx-4 bg-[#111113]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

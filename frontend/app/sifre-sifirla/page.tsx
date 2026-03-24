@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -103,12 +104,12 @@ export default function SifreSifirlaPage() {
             <p className="text-[13px] text-[#8B8B8E]">
               Yeni sifrenizle giris yapabilirsiniz.
             </p>
-            <a
+            <Link
               href="/giris"
               className="inline-block mt-2 px-6 py-2.5 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] rounded-xl text-[14px] font-semibold text-white transition-all hover:from-[#5B5BEE] hover:to-[#6C6CFF]"
             >
               Giris Yap
-            </a>
+            </Link>
           </motion.div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -206,9 +207,9 @@ export default function SifreSifirlaPage() {
             </div>
 
             <p className="text-center text-[13px] text-[#5C5C5F]">
-              <a href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              <Link href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Giris sayfasina don
-              </a>
+              </Link>
             </p>
           </form>
         )}

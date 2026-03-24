@@ -1,8 +1,10 @@
 import time
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.config import get_settings
 from app.api.deps import get_cache_service
+from app.api.routes.auth import get_current_user
+from app.models.database import User
 
 router = APIRouter(tags=["health"])
 
@@ -13,7 +15,9 @@ async def health():
 
 
 @router.get("/health/details")
-async def health_details():
+async def health_details(current_user: User = Depends(get_current_user)):
+    if current_user.role != "platform_admin":
+        raise HTTPException(status_code=403, detail="Platform admin yetkisi gerekli")
     """Tum bagimliliklarin durumunu kontrol et — response_time_ms dahil."""
     settings = get_settings()
     checks = {}
@@ -96,7 +100,9 @@ async def health_details():
 
 
 @router.get("/health/llm")
-async def health_llm():
+async def health_llm(current_user: User = Depends(get_current_user)):
+    if current_user.role != "platform_admin":
+        raise HTTPException(status_code=403, detail="Platform admin yetkisi gerekli")
     """Claude API key kontrolu — AI Asistan durumu."""
     settings = get_settings()
     t0 = time.monotonic()
@@ -133,7 +139,9 @@ async def health_llm():
 
 
 @router.get("/health/cache")
-async def health_cache():
+async def health_cache(current_user: User = Depends(get_current_user)):
+    if current_user.role != "platform_admin":
+        raise HTTPException(status_code=403, detail="Platform admin yetkisi gerekli")
     """Redis cache istatistikleri."""
     cache = get_cache_service()
     if cache is None:

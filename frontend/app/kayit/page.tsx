@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -310,9 +311,9 @@ export default function KayitPage() {
               Hesabiniz admin onayi bekliyor. Onaylandiginda e-posta ile bilgilendirileceksiniz.
             </p>
           </div>
-          <a href="/giris" className="inline-block px-8 py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] rounded-xl text-[14px] font-semibold text-white hover:from-[#5B5BEE] hover:to-[#6C6CFF] transition-all">
+          <Link href="/giris" className="inline-block px-8 py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] rounded-xl text-[14px] font-semibold text-white hover:from-[#5B5BEE] hover:to-[#6C6CFF] transition-all">
             Giris Sayfasina Don
-          </a>
+          </Link>
         </motion.div>
       </div>
     );
@@ -384,16 +385,16 @@ export default function KayitPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Ad Soyad *</label>
-                  <input type="text" value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="Av. Mehmet Demir" className={inputCls} />
+                  <label htmlFor="kayit-fullname" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Ad Soyad *</label>
+                  <input id="kayit-fullname" type="text" value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="Av. Mehmet Demir" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">E-posta *</label>
-                  <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="avukat@ornek.com" className={inputCls} />
+                  <label htmlFor="kayit-email" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">E-posta *</label>
+                  <input id="kayit-email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="avukat@ornek.com" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre * (en az 8 karakter)</label>
-                  <input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="••••••••" className={inputCls} />
+                  <label htmlFor="kayit-password" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre * (en az 8 karakter)</label>
+                  <input id="kayit-password" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="••••••••" className={inputCls} />
                   {form.password && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
@@ -411,8 +412,8 @@ export default function KayitPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre Tekrar *</label>
-                  <input type="password" value={form.password_confirm} onChange={(e) => update("password_confirm", e.target.value)} placeholder="••••••••" className={inputCls} />
+                  <label htmlFor="kayit-password-confirm" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre Tekrar *</label>
+                  <input id="kayit-password-confirm" type="password" value={form.password_confirm} onChange={(e) => update("password_confirm", e.target.value)} placeholder="••••••••" className={inputCls} />
                   {form.password_confirm && form.password !== form.password_confirm && (
                     <p className="text-[11px] text-[#E5484D] mt-1">Sifreler eslesmiyor</p>
                   )}
@@ -458,22 +459,29 @@ export default function KayitPage() {
                 className="space-y-4"
               >
                 {/* Firm toggle */}
-                <label className="flex items-center gap-3 p-4 bg-[#09090B] rounded-xl cursor-pointer group">
-                  <div
-                    className={`w-10 h-6 rounded-full transition-colors duration-200 relative ${form.hasFirm ? "bg-[#6C6CFF]" : "bg-[#1A1A1F]"}`}
-                    onClick={() => update("hasFirm", !form.hasFirm)}
-                  >
-                    <motion.div
-                      className="w-4 h-4 bg-white rounded-full absolute top-1"
-                      animate={{ left: form.hasFirm ? 22 : 4 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                <div className="flex items-center gap-3 p-4 bg-[#09090B] rounded-xl">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.hasFirm as boolean}
+                      onChange={(e) => update("hasFirm", e.target.checked)}
+                      className="sr-only peer"
+                      role="switch"
+                      aria-checked={form.hasFirm as boolean}
                     />
-                  </div>
+                    <div className={`w-10 h-6 rounded-full transition-colors duration-200 relative ${form.hasFirm ? "bg-[#6C6CFF]" : "bg-[#1A1A1F]"}`}>
+                      <motion.div
+                        className="w-4 h-4 bg-white rounded-full absolute top-1"
+                        animate={{ left: form.hasFirm ? 22 : 4 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    </div>
+                  </label>
                   <div>
                     <p className="text-[13px] font-medium text-[#ECECEE]">Hukuk Burosu Olustur</p>
                     <p className="text-[11px] text-[#5C5C5F]">Ekibinizi yonetin (istege bagli)</p>
                   </div>
-                </label>
+                </div>
 
                 <AnimatePresence>
                   {form.hasFirm && (
@@ -496,12 +504,17 @@ export default function KayitPage() {
                 </AnimatePresence>
 
                 {/* Terms */}
-                <label className="flex items-start gap-3 cursor-pointer group mt-4">
+                <label className="flex items-start gap-3 cursor-pointer mt-4">
+                  <input
+                    type="checkbox"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="sr-only peer"
+                  />
                   <div
                     className={`w-5 h-5 mt-0.5 rounded border-2 transition-all duration-200 flex items-center justify-center shrink-0 ${
-                      acceptTerms ? "bg-[#6C6CFF] border-[#6C6CFF]" : "border-white/[0.15] group-hover:border-white/[0.25]"
+                      acceptTerms ? "bg-[#6C6CFF] border-[#6C6CFF]" : "border-white/[0.15]"
                     }`}
-                    onClick={() => setAcceptTerms(!acceptTerms)}
                   >
                     {acceptTerms && (
                       <motion.svg initial={{ scale: 0 }} animate={{ scale: 1 }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
@@ -553,9 +566,9 @@ export default function KayitPage() {
         {/* Login link */}
         <p className="text-center text-[14px] text-[#5C5C5F]">
           Zaten hesabiniz var mi?{" "}
-          <a href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] font-medium transition-colors">
+          <Link href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] font-medium transition-colors">
             Giris Yap
-          </a>
+          </Link>
         </p>
       </motion.div>
     </div>

@@ -139,20 +139,8 @@ export default function BelgePage() {
     if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
   }, [toast]);
 
-  // Simulate progress during upload
-  useEffect(() => {
-    if (!loading) { setUploadProgress(0); return; }
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress > 90) progress = 90;
-      setUploadProgress(progress);
-    }, 300);
-    return () => clearInterval(interval);
-  }, [loading]);
-
   const uploadFile = useCallback(async (file: File) => {
-    setError(null); setResult(null);
+    setError(null); setResult(null); setUploadProgress(0);
     const ext = file.name.split(".").pop()?.toLowerCase();
     const validTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
     if (!validTypes.includes(file.type) && ext !== "pdf" && ext !== "docx") {
@@ -161,19 +149,46 @@ export default function BelgePage() {
     if (file.size > 20 * 1024 * 1024) { setError("Dosya boyutu 20MB sınırını aşıyor."); return; }
 
     setLoading(true);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const formData = new FormData();
+    formData.append("file", file);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`${API_URL}/api/v1/upload/analyze`, {
-        method: "POST", body: formData, signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (!res.ok) { const data = await res.json().catch(() => null); throw new Error(data?.detail || `Hata: ${res.status}`); }
+      const data = await new Promise<AnalyzeResult>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const timeoutId = setTimeout(() => { xhr.abort(); reject(new Error("İstek zaman aşımına uğradı.")); }, 30000);
 
-      const data: AnalyzeResult = await res.json();
+        xhr.open("POST", `${API_URL}/api/v1/upload/analyze`);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 90));
+          }
+        };
+
+        xhr.onload = () => {
+          clearTimeout(timeoutId);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const parsed = JSON.parse(xhr.responseText);
+              resolve(parsed);
+            } catch {
+              reject(new Error("Yanıt ayrıştırılamadı"));
+            }
+          } else {
+            try {
+              const errData = JSON.parse(xhr.responseText);
+              reject(new Error(errData?.detail || `Hata: ${xhr.status}`));
+            } catch {
+              reject(new Error(`Hata: ${xhr.status}`));
+            }
+          }
+        };
+
+        xhr.onerror = () => { clearTimeout(timeoutId); reject(new Error("Ağ hatası")); };
+        xhr.onabort = () => { clearTimeout(timeoutId); reject(new Error("İstek zaman aşımına uğradı.")); };
+        xhr.send(formData);
+      });
+
       setUploadProgress(100);
       setTimeout(() => {
         setResult(data);
@@ -193,8 +208,7 @@ export default function BelgePage() {
         });
       }, 400);
     } catch (err) {
-      clearTimeout(timeout);
-      setError(err instanceof Error && err.name === "AbortError" ? "İstek zaman aşımına uğradı." : (err instanceof Error ? err.message : "Bilinmeyen hata"));
+      setError(err instanceof Error ? err.message : "Bilinmeyen hata");
     } finally {
       setLoading(false);
     }
@@ -468,7 +482,7 @@ export default function BelgePage() {
       {/* Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          <motion.div role="alert" aria-live="polite" initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[#3DD68C]" />
             <span className="text-[13px] text-[#ECECEE]">{toast}</span>

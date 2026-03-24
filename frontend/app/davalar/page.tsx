@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "@/components/ui/auth-provider";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -69,7 +70,7 @@ export default function DavalarPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [token, setToken] = useState<string | null>(null);
+  const { token } = useAuth();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
@@ -89,15 +90,16 @@ export default function DavalarPage() {
     }
   }, [toast]);
 
-  // Auth token from localStorage
+  // Fetch cases when token is available from auth provider
   useEffect(() => {
-    const t = localStorage.getItem("lexora_token");
-    setToken(t);
-    tokenRef.current = t;
-    if (t) fetchCases(t);
-    else setLoading(false);
+    if (token) {
+      tokenRef.current = token;
+      fetchCases(token);
+    } else {
+      setLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   // Cleanup abort controllers on unmount
   useEffect(() => {
@@ -119,8 +121,6 @@ export default function DavalarPage() {
       clearTimeout(timeout);
 
       if (res.status === 401) {
-        localStorage.removeItem("lexora_token");
-        setToken(null);
         setError("Lütfen giriş yapın");
         setLoading(false);
         return;
@@ -192,7 +192,7 @@ export default function DavalarPage() {
       setToast("Dava dosyası oluşturuldu");
       fetchCases(token);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Hata oluştu");
+      setToast(err instanceof Error ? err.message : "Hata oluştu");
     } finally {
       setCreateLoading(false);
     }
@@ -211,7 +211,7 @@ export default function DavalarPage() {
       setSelectedCase(null);
       fetchCases(token);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Hata oluştu");
+      setToast(err instanceof Error ? err.message : "Hata oluştu");
     } finally {
       setDeleting(false);
     }
@@ -243,7 +243,7 @@ export default function DavalarPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
+        <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
           {toast}
         </div>
       )}

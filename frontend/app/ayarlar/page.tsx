@@ -190,7 +190,7 @@ export default function AyarlarPage() {
 
   return (
     <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
-      {toast && <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg">{toast}</div>}
+      {toast && <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg">{toast}</div>}
 
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Ayarlar</h1>
@@ -216,26 +216,26 @@ export default function AyarlarPage() {
       {tab === "profil" && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4 max-w-lg">
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">E-posta</label>
-            <input type="email" value={user?.email || ""} disabled className={inputCls + " opacity-50 cursor-not-allowed"} />
+            <label htmlFor="profil-email" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">E-posta</label>
+            <input id="profil-email" type="email" value={user?.email || ""} disabled className={inputCls + " opacity-50 cursor-not-allowed"} />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Ad Soyad</label>
-            <input type="text" value={profile.full_name} onChange={e => setProfile(p => ({ ...p, full_name: e.target.value }))} className={inputCls} />
+            <label htmlFor="profil-fullname" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Ad Soyad</label>
+            <input id="profil-fullname" type="text" value={profile.full_name} onChange={e => setProfile(p => ({ ...p, full_name: e.target.value }))} className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro Sicil No</label>
-              <input type="text" value={profile.baro_sicil_no} onChange={e => setProfile(p => ({ ...p, baro_sicil_no: e.target.value }))} className={inputCls} />
+              <label htmlFor="profil-baro-sicil" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro Sicil No</label>
+              <input id="profil-baro-sicil" type="text" value={profile.baro_sicil_no} onChange={e => setProfile(p => ({ ...p, baro_sicil_no: e.target.value }))} className={inputCls} />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro</label>
-              <input type="text" value={profile.baro} onChange={e => setProfile(p => ({ ...p, baro: e.target.value }))} className={inputCls} />
+              <label htmlFor="profil-baro" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro</label>
+              <input id="profil-baro" type="text" value={profile.baro} onChange={e => setProfile(p => ({ ...p, baro: e.target.value }))} className={inputCls} />
             </div>
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Telefon</label>
-            <input type="tel" value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} className={inputCls} />
+            <label htmlFor="profil-phone" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Telefon</label>
+            <input id="profil-phone" type="tel" value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} className={inputCls} />
           </div>
           <button onClick={saveProfile} disabled={profileLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
             {profileLoading ? "Kaydediliyor..." : "Kaydet"}
@@ -248,16 +248,16 @@ export default function AyarlarPage() {
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4 max-w-lg">
           <h3 className="text-[13px] font-semibold text-[#ECECEE]">Şifre Değiştir</h3>
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Mevcut Şifre</label>
-            <input type="password" value={passwords.current} onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))} className={inputCls} />
+            <label htmlFor="pw-current" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Mevcut Şifre</label>
+            <input id="pw-current" type="password" value={passwords.current} onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))} className={inputCls} />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (min 8 karakter)</label>
-            <input type="password" value={passwords.new_password} onChange={e => setPasswords(p => ({ ...p, new_password: e.target.value }))} className={inputCls} />
+            <label htmlFor="pw-new" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (min 8 karakter)</label>
+            <input id="pw-new" type="password" value={passwords.new_password} onChange={e => setPasswords(p => ({ ...p, new_password: e.target.value }))} className={inputCls} />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (tekrar)</label>
-            <input type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} className={inputCls} />
+            <label htmlFor="pw-confirm" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (tekrar)</label>
+            <input id="pw-confirm" type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} className={inputCls} />
           </div>
           {pwError && <p className="text-[13px] text-[#E5484D]">{pwError}</p>}
           <button onClick={changePassword} disabled={pwLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
@@ -276,46 +276,67 @@ export default function AyarlarPage() {
 
           <div className="space-y-3">
             {/* Deadline reminder toggle */}
-            <label className="flex items-center justify-between cursor-pointer group">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13px] text-[#ECECEE]">Sure Hatirlatmalari</p>
                 <p className="text-[11px] text-[#5C5C5F]">Yaklasan hak dusurucusu ve durusma tarihleri</p>
               </div>
-              <div
-                onClick={() => setNotifPrefs(p => ({ ...p, email_deadline_reminder: !p.email_deadline_reminder }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_deadline_reminder ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_deadline_reminder ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifPrefs.email_deadline_reminder}
+                  onChange={(e) => setNotifPrefs(p => ({ ...p, email_deadline_reminder: e.target.checked }))}
+                  className="sr-only peer"
+                  role="switch"
+                  aria-checked={notifPrefs.email_deadline_reminder}
+                />
+                <div className={`w-10 h-5 rounded-full transition-colors ${notifPrefs.email_deadline_reminder ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_deadline_reminder ? "translate-x-5" : "translate-x-0.5"} mt-0.5`} />
+                </div>
+              </label>
+            </div>
 
             {/* Case update toggle */}
-            <label className="flex items-center justify-between cursor-pointer group">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13px] text-[#ECECEE]">Dava Guncellemeleri</p>
                 <p className="text-[11px] text-[#5C5C5F]">Dava durumu degisiklikleri hakkinda bildirim</p>
               </div>
-              <div
-                onClick={() => setNotifPrefs(p => ({ ...p, email_case_update: !p.email_case_update }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_case_update ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_case_update ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifPrefs.email_case_update}
+                  onChange={(e) => setNotifPrefs(p => ({ ...p, email_case_update: e.target.checked }))}
+                  className="sr-only peer"
+                  role="switch"
+                  aria-checked={notifPrefs.email_case_update}
+                />
+                <div className={`w-10 h-5 rounded-full transition-colors ${notifPrefs.email_case_update ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_case_update ? "translate-x-5" : "translate-x-0.5"} mt-0.5`} />
+                </div>
+              </label>
+            </div>
 
             {/* Weekly summary toggle */}
-            <label className="flex items-center justify-between cursor-pointer group">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13px] text-[#ECECEE]">Haftalik Ozet</p>
                 <p className="text-[11px] text-[#5C5C5F]">Her pazartesi dava ve sure ozeti</p>
               </div>
-              <div
-                onClick={() => setNotifPrefs(p => ({ ...p, email_weekly_summary: !p.email_weekly_summary }))}
-                className={`w-10 h-5 rounded-full transition-colors relative ${notifPrefs.email_weekly_summary ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_weekly_summary ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifPrefs.email_weekly_summary}
+                  onChange={(e) => setNotifPrefs(p => ({ ...p, email_weekly_summary: e.target.checked }))}
+                  className="sr-only peer"
+                  role="switch"
+                  aria-checked={notifPrefs.email_weekly_summary}
+                />
+                <div className={`w-10 h-5 rounded-full transition-colors ${notifPrefs.email_weekly_summary ? "bg-[#6C6CFF]" : "bg-[#3A3A3F]"}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.email_weekly_summary ? "translate-x-5" : "translate-x-0.5"} mt-0.5`} />
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Reminder days before */}

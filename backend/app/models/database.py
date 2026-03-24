@@ -44,6 +44,9 @@ class Firm(Base):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     max_users: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    firm_type: Mapped[str] = mapped_column(
+        String(20), default="kurumsal", nullable=False
+    )  # kurumsal, bireysel
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -140,6 +143,7 @@ class Case(Base):
     __table_args__ = (
         Index("ix_cases_user_id", "user_id"),
         Index("ix_cases_status", "status"),
+        Index("ix_cases_firm_id", "firm_id"),
     )
 
     def __repr__(self) -> str:
@@ -345,8 +349,6 @@ class NotificationPreference(Base):
 
     # Relationships
     user: Mapped["User"] = relationship()
-
-    __table_args__ = (Index("ix_notification_preferences_user_id", "user_id"),)
 
     def __repr__(self) -> str:
         return f"<NotificationPreference user_id={self.user_id}>"
