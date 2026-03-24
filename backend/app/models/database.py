@@ -350,3 +350,127 @@ class NotificationPreference(Base):
 
     def __repr__(self) -> str:
         return f"<NotificationPreference user_id={self.user_id}>"
+
+
+# ── Admin-Configurable Deadline Rules ─────────────────────────────────────
+
+
+class EventTypeDefinition(Base):
+    """Admin tarafından yapılandırılabilen olay türleri."""
+
+    __tablename__ = "event_type_definitions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    rules: Mapped[list["DeadlineRuleDefinition"]] = relationship(
+        back_populates="event_type", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<EventTypeDefinition {self.slug}>"
+
+
+class DeadlineRuleDefinition(Base):
+    """Admin tarafından yapılandırılabilen süre kuralları."""
+
+    __tablename__ = "deadline_rule_definitions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    event_type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("event_type_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    law_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    law_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_value: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration_unit: Mapped[str] = mapped_column(String(20), nullable=False)
+    duration_display: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    deadline_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    affected_by_adli_tatil: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    affected_by_holidays: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    event_type: Mapped["EventTypeDefinition"] = relationship(back_populates="rules")
+
+    __table_args__ = (
+        Index("ix_deadline_rule_definitions_event_type_id", "event_type_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<DeadlineRuleDefinition {self.name}>"
+
+
+class PublicHoliday(Base):
+    """Admin tarafından yapılandırılabilen resmi tatiller."""
+
+    __tablename__ = "public_holidays"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    is_half_day: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    holiday_type: Mapped[str] = mapped_column(String(50), default="resmi", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_public_holidays_year_date", "year", "date"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<PublicHoliday {self.name} @ {self.date}>"
+
+
+class JudicialRecess(Base):
+    """Admin tarafından yapılandırılabilen adli tatil dönemleri."""
+
+    __tablename__ = "judicial_recesses"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    year: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    extension_days_hukuk: Mapped[int] = mapped_column(Integer, default=7, nullable=False)
+    extension_days_ceza: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    extension_days_idari: Mapped[int] = mapped_column(Integer, default=7, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<JudicialRecess {self.year}>"

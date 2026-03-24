@@ -2,6 +2,9 @@
 Türk hukuk sistemi süre hesaplayıcı.
 Hak düşürücü süreler, zamanaşımı, usul süreleri.
 İş günü hesabı dahil (resmi tatiller otomatik).
+
+Hybrid approach: DB-driven (EventTypeDefinition, DeadlineRuleDefinition,
+PublicHoliday, JudicialRecess) with fallback to hardcoded rules.
 """
 
 from datetime import date, timedelta
@@ -107,8 +110,23 @@ class DeadlineCalculator:
         },
     }
 
+    # ----- Constructor (hybrid: optional DB session) -----
+
+    def __init__(self, db_session=None):
+        """
+        db_session: optional AsyncSession for DB-driven mode.
+        If None, all methods use hardcoded rules only.
+        """
+        self._db = db_session
+        self._db_event_types = None   # cache
+        self._db_rules = None         # cache
+        self._db_holidays = None      # cache
+        self._db_recesses = None      # cache
+
+    # ----- Hardcoded holiday / business-day helpers -----
+
     def is_holiday(self, d: date) -> bool:
-        """Resmi tatil mi kontrol et."""
+        """Resmi tatil mi kontrol et (hardcoded)."""
         md = (d.month, d.day)
         if md in self.FIXED_HOLIDAYS:
             return True
@@ -117,13 +135,31 @@ class DeadlineCalculator:
             return True
         return False
 
+    def is_holiday_db(self, d: date) -> bool:
+        """Check holiday against DB data, fallback to hardcoded."""
+        if not self._db_holidays:
+            return self.is_holiday(d)
+        for h in self._db_holidays:
+            if h.date == d:
+                return True
+        return False
+
+    def _get_holiday_name_db(self, d: date) -> str:
+        """Get holiday name from DB, fallback to hardcoded."""
+        if not self._db_holidays:
+            return self._get_holiday_name(d)
+        for h in self._db_holidays:
+            if h.date == d:
+                return h.name
+        return "Resmi tatil"
+
     def is_business_day(self, d: date) -> bool:
-        """İş günü mü (hafta sonu + tatil değil)."""
+        """İş günü mü (hafta sonu + tatil değil). DB-aware when loaded."""
         if d.weekday() >= 5:  # Saturday=5, Sunday=6
             return False
-        if self.is_holiday(d):
-            return False
-        return True
+        if self._db_holidays is not None:
+            return not self.is_holiday_db(d)
+        return not self.is_holiday(d)
 
     def next_business_day(self, d: date) -> date:
         """Eğer tatilse sonraki iş gününü döndür, değilse aynı günü döndür."""
@@ -642,8 +678,13 @@ class DeadlineCalculator:
         holidays = []
         current = start
         while current <= end:
-            if self.is_holiday(current):
-                name = self._get_holiday_name(current)
+            if self._db_holidays is not None:
+                is_hol = self.is_holiday_db(current)
+                name = self._get_holiday_name_db(current) if is_hol else ""
+            else:
+                is_hol = self.is_holiday(current)
+                name = self._get_holiday_name(current) if is_hol else ""
+            if is_hol:
                 holidays.append({"date": current.isoformat(), "name": name})
             current += timedelta(days=1)
         return holidays
@@ -694,7 +735,10 @@ class DeadlineCalculator:
         reasons = []
         if raw_end.weekday() >= 5:
             reasons.append(f"Son gün {day_names_tr[raw_end.weekday()]}")
-        if self.is_holiday(raw_end):
+        if self._db_holidays is not None:
+            if self.is_holiday_db(raw_end):
+                reasons.append(f"Son gün {self._get_holiday_name_db(raw_end)}")
+        elif self.is_holiday(raw_end):
             reasons.append(f"Son gün {self._get_holiday_name(raw_end)}")
         target_day = day_names_tr[adjusted_end.weekday()]
         reasons.append(f"{target_day}'e uzatıldı")
@@ -813,3 +857,293 @@ class DeadlineCalculator:
             "event_date": event_date.isoformat(),
             "deadlines": detailed_deadlines,
         }
+
+    # =====================================================================
+    # DB-driven async methods (hybrid: try DB first, fallback to hardcoded)
+    # =====================================================================
+
+    async def _load_from_db(self) -> bool:
+        """Load all config from database. Cache for the lifetime of this instance."""
+        if self._db is None:
+            return False
+        # If already loaded, return cached result
+        if self._db_event_types is not None:
+            return len(self._db_event_types) > 0
+        try:
+            from app.models.database import (
+                EventTypeDefinition,
+                DeadlineRuleDefinition,
+                PublicHoliday,
+                JudicialRecess,
+            )
+            from sqlalchemy import select
+            from sqlalchemy.orm import selectinload
+
+            # Load event types with rules
+            result = await self._db.execute(
+                select(EventTypeDefinition)
+                .where(EventTypeDefinition.is_active == True)  # noqa: E712
+                .options(selectinload(EventTypeDefinition.rules))
+                .order_by(EventTypeDefinition.category, EventTypeDefinition.display_order)
+            )
+            self._db_event_types = result.scalars().all()
+
+            # Load holidays
+            result = await self._db.execute(
+                select(PublicHoliday).order_by(PublicHoliday.date)
+            )
+            self._db_holidays = result.scalars().all()
+
+            # Load judicial recesses
+            result = await self._db.execute(
+                select(JudicialRecess).order_by(JudicialRecess.year)
+            )
+            self._db_recesses = result.scalars().all()
+
+            return len(self._db_event_types) > 0
+        except Exception:
+            # DB tables may not exist yet (migration not run) — fall back
+            self._db_event_types = None
+            self._db_holidays = None
+            self._db_recesses = None
+            return False
+
+    # ----- DB-driven calculate -----
+
+    async def calculate_deadline_from_db(
+        self, event_type_slug: str, event_date: date, today: date | None = None
+    ) -> dict:
+        """Calculate deadlines using DB rules, fallback to hardcoded."""
+        loaded = await self._load_from_db()
+        if not loaded:
+            return self.calculate_deadline(event_type_slug, event_date, today=today)
+
+        today = today or date.today()
+
+        # Find event type
+        evt = None
+        for et in self._db_event_types:
+            if et.slug == event_type_slug:
+                evt = et
+                break
+
+        if not evt:
+            return {
+                "event_type": event_type_slug,
+                "event_date": event_date.isoformat(),
+                "error": f"Bilinmeyen olay tipi: {event_type_slug}",
+                "deadlines": [],
+            }
+
+        deadlines = []
+        active_rules = [r for r in evt.rules if r.is_active]
+
+        for rule in sorted(active_rules, key=lambda r: r.display_order):
+            if rule.duration_unit == "bilgi":
+                # Informational only — no deadline date
+                deadlines.append(self._make_deadline(
+                    rule.name,
+                    rule.law_reference or "",
+                    rule.duration_display or "Bilgi amaçlı",
+                    event_date,
+                    rule.note or rule.law_text or "",
+                    today,
+                ))
+                continue
+
+            # Calculate deadline date based on duration
+            dl_date = self._calculate_date(event_date, rule.duration_value, rule.duration_unit)
+
+            deadlines.append(self._make_deadline(
+                rule.name,
+                rule.law_reference or "",
+                rule.duration_display or f"{rule.duration_value} {rule.duration_unit}",
+                dl_date,
+                rule.note or rule.law_text or "",
+                today,
+            ))
+
+        return {
+            "event_type": event_type_slug,
+            "event_date": event_date.isoformat(),
+            "deadlines": deadlines,
+        }
+
+    def _calculate_date(self, start: date, value: int, unit: str) -> date:
+        """Calculate a deadline date from start + duration."""
+        if unit == "gun":
+            return self.add_calendar_days(start, value)
+        elif unit == "is_gunu":
+            return self.add_business_days(start, value)
+        elif unit == "hafta":
+            return self.add_weeks(start, value)
+        elif unit == "ay":
+            return self.add_months(start, value)
+        elif unit == "yil":
+            return self.add_years(start, value)
+        else:
+            return self.add_calendar_days(start, value)
+
+    # ----- DB-driven get_event_types -----
+
+    async def get_event_types_from_db(self) -> list[dict]:
+        """Get event types from DB, falling back to hardcoded."""
+        loaded = await self._load_from_db()
+        if not loaded:
+            return self.get_event_types()
+
+        result = []
+        for et in self._db_event_types:
+            active_rules = [r for r in et.rules if r.is_active]
+            result.append({
+                "value": et.slug,
+                "label": et.name,
+                "description": et.description or "",
+                "category": et.category,
+                "rule_count": len(active_rules),
+            })
+        return result
+
+    # ----- DB-driven detailed calculation -----
+
+    async def calculate_deadline_detail_from_db(
+        self, event_type_slug: str, event_date: date, **kwargs
+    ) -> dict:
+        """Calculate detailed deadlines from DB, with full breakdown."""
+        loaded = await self._load_from_db()
+        if not loaded:
+            return self.calculate_deadline_detail(event_type_slug, event_date, **kwargs)
+
+        today = kwargs.get("today") or date.today()
+
+        # Find event type
+        evt = None
+        for et in self._db_event_types:
+            if et.slug == event_type_slug:
+                evt = et
+                break
+
+        if not evt:
+            return {
+                "event_type": event_type_slug,
+                "event_date": event_date.isoformat(),
+                "error": f"Bilinmeyen olay tipi: {event_type_slug}",
+                "deadlines": [],
+            }
+
+        detailed_deadlines = []
+        active_rules = [r for r in evt.rules if r.is_active]
+
+        for rule in sorted(active_rules, key=lambda r: r.display_order):
+            if rule.duration_unit == "bilgi":
+                detailed_deadlines.append({
+                    "name": rule.name,
+                    "law_reference": rule.law_reference or "",
+                    "law_text": rule.law_text or rule.note or "",
+                    "duration": rule.duration_display or "Bilgi amaçlı",
+                    "duration_days": 0,
+                    "duration_type": "bilgi",
+                    "start_date": event_date.isoformat(),
+                    "raw_end_date": event_date.isoformat(),
+                    "adjusted_end_date": event_date.isoformat(),
+                    "deadline_date": event_date.isoformat(),
+                    "adjustment_reason": None,
+                    "holidays_skipped": [],
+                    "weekends_in_range": [],
+                    "adli_tatil_applied": False,
+                    "business_days_left": 0,
+                    "calendar_days_left": 0,
+                    "urgency": "normal",
+                    "note": rule.note or "",
+                    "is_informational": True,
+                })
+                continue
+
+            dl_date = self._calculate_date(event_date, rule.duration_value, rule.duration_unit)
+
+            # Raw end (before business day adjustment)
+            if rule.duration_unit == "hafta":
+                raw_end = event_date + timedelta(weeks=rule.duration_value)
+            elif rule.duration_unit == "ay":
+                raw_end = self._raw_add_months(event_date, rule.duration_value)
+            elif rule.duration_unit == "yil":
+                raw_end = self._raw_add_years(event_date, rule.duration_value)
+            elif rule.duration_unit == "is_gunu":
+                raw_end = event_date + timedelta(days=rule.duration_value)
+            else:
+                raw_end = event_date + timedelta(days=rule.duration_value)
+
+            holidays_in_range = self._get_holidays_in_range(event_date, dl_date)
+            weekends_in_range = self._get_weekends_in_range(event_date, dl_date)
+            adjustment_reason = self._get_adjustment_reason(raw_end, dl_date)
+
+            # Check adli tatil
+            adli_tatil = self._check_adli_tatil(event_date, dl_date, rule.affected_by_adli_tatil)
+
+            bdays = self.business_days_until(today, dl_date)
+            cdays = (dl_date - today).days if dl_date >= today else 0
+
+            detailed_deadlines.append({
+                "name": rule.name,
+                "law_reference": rule.law_reference or "",
+                "law_text": rule.law_text or "",
+                "duration": rule.duration_display or f"{rule.duration_value} {rule.duration_unit}",
+                "duration_days": rule.duration_value,
+                "duration_type": rule.duration_unit,
+                "start_date": event_date.isoformat(),
+                "raw_end_date": raw_end.isoformat(),
+                "adjusted_end_date": dl_date.isoformat(),
+                "deadline_date": dl_date.isoformat(),
+                "adjustment_reason": adjustment_reason,
+                "holidays_skipped": holidays_in_range,
+                "weekends_in_range": weekends_in_range,
+                "adli_tatil_applied": adli_tatil,
+                "business_days_left": bdays,
+                "calendar_days_left": cdays,
+                "urgency": self._urgency(dl_date, today),
+                "note": rule.note or "",
+                "deadline_type": rule.deadline_type,
+                "affected_by_adli_tatil": rule.affected_by_adli_tatil,
+                "affected_by_holidays": rule.affected_by_holidays,
+            })
+
+        return {
+            "event_type": event_type_slug,
+            "event_date": event_date.isoformat(),
+            "deadlines": detailed_deadlines,
+        }
+
+    # ----- DB-driven helper methods -----
+
+    def _raw_add_months(self, start: date, months: int) -> date:
+        """Add months without business day adjustment."""
+        month = start.month - 1 + months
+        year = start.year + month // 12
+        month = month % 12 + 1
+        day = min(start.day, self._days_in_month(year, month))
+        return date(year, month, day)
+
+    def _raw_add_years(self, start: date, years: int) -> date:
+        """Add years without business day adjustment."""
+        try:
+            return start.replace(year=start.year + years)
+        except ValueError:
+            return date(start.year + years, start.month, 28)
+
+    def _check_adli_tatil(self, start: date, end: date, affected: bool) -> bool:
+        """Check if deadline period overlaps with judicial recess."""
+        if not affected:
+            return False
+        # Check DB recesses first
+        if self._db_recesses:
+            for recess in self._db_recesses:
+                if start <= recess.end_date and end >= recess.start_date:
+                    return True
+            return False
+        # Fallback: standard July 20 - Sept 1
+        check = start
+        while check <= end:
+            if (check.month == 7 and check.day >= 20) or check.month == 8 or (check.month == 9 and check.day == 1):
+                return True
+            check += timedelta(days=1)
+        return False

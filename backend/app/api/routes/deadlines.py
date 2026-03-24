@@ -20,6 +20,7 @@ from app.services.deadline_calculator import DeadlineCalculator
 
 router = APIRouter(prefix="/deadlines", tags=["deadlines"])
 
+# Module-level calculator for sync fallback (no DB session)
 calculator = DeadlineCalculator()
 
 
@@ -80,10 +81,14 @@ class UpcomingDeadlinesResponse(BaseModel):
 
 
 @router.post("/calculate", response_model=CalculateResponse)
-async def calculate_deadlines(body: CalculateRequest):
-    """Olay tipine göre tüm ilgili yasal süreleri hesapla."""
+async def calculate_deadlines(
+    body: CalculateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Olay tipine göre tüm ilgili yasal süreleri hesapla (DB-driven with fallback)."""
     extra = body.extra_params or {}
-    result = calculator.calculate_deadline(body.event_type, body.event_date, **extra)
+    db_calc = DeadlineCalculator(db_session=db)
+    result = await db_calc.calculate_deadline_from_db(body.event_type, body.event_date, **extra)
 
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
@@ -92,9 +97,12 @@ async def calculate_deadlines(body: CalculateRequest):
 
 
 @router.get("/types", response_model=list[EventTypeItem])
-async def list_event_types():
-    """Desteklenen olay tiplerini listele."""
-    return calculator.get_event_types()
+async def list_event_types(
+    db: AsyncSession = Depends(get_db),
+):
+    """Desteklenen olay tiplerini listele (DB-driven with fallback)."""
+    db_calc = DeadlineCalculator(db_session=db)
+    return await db_calc.get_event_types_from_db()
 
 
 @router.get("/upcoming", response_model=UpcomingDeadlinesResponse)

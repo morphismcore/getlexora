@@ -455,8 +455,11 @@ async def create_event(
     """Davaya olay ekle ve ilgili süreleri otomatik hesapla."""
     await _get_user_case(case_id, current_user, db)
 
-    # Validate event_type
-    valid_types = [et["value"] for et in calculator.get_event_types()]
+    # Use DB-driven calculator with fallback
+    db_calc = DeadlineCalculator(db_session=db)
+
+    # Validate event_type (DB-driven with fallback)
+    valid_types = [et["value"] for et in await db_calc.get_event_types_from_db()]
     if body.event_type not in valid_types:
         raise HTTPException(
             status_code=400,
@@ -475,8 +478,8 @@ async def create_event(
     await db.flush()
     await db.refresh(event)
 
-    # Calculate detailed deadlines
-    result = calculator.calculate_deadline_detail(body.event_type, body.event_date)
+    # Calculate detailed deadlines (DB-driven with fallback)
+    result = await db_calc.calculate_deadline_detail_from_db(body.event_type, body.event_date)
     deadline_details = result.get("deadlines", [])
 
     # Filter by selected types if provided
@@ -650,8 +653,9 @@ async def recalculate_event_deadlines(
             dl for dl in deadlines if not dl.is_manual_override
         ]
 
-    # Recalculate
-    new_result = calculator.calculate_deadline_detail(event.event_type, body.new_event_date)
+    # Recalculate (DB-driven with fallback)
+    db_calc = DeadlineCalculator(db_session=db)
+    new_result = await db_calc.calculate_deadline_detail_from_db(event.event_type, body.new_event_date)
     new_deadlines_map = {d["name"]: d for d in new_result.get("deadlines", [])}
 
     comparisons = []

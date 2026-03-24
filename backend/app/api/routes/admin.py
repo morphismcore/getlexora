@@ -11,12 +11,17 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from datetime import date as date_type
+from sqlalchemy import select, func, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.routes.auth import get_current_user
 from app.config import get_settings
-from app.models.database import User, Firm, Case, Deadline, SavedSearch
+from app.models.database import (
+    User, Firm, Case, Deadline, SavedSearch,
+    EventTypeDefinition, DeadlineRuleDefinition, PublicHoliday, JudicialRecess,
+)
 from app.models.db import get_db
 from app.api.deps import get_vector_store, get_cache_service, get_ingestion_pipeline
 from app.ingestion.ingest import _ingest_state, _ingest_logs
@@ -689,6 +694,627 @@ async def monitoring_history(
         return {"history": history, "count": len(history)}
     except Exception as e:
         return {"history": [], "count": 0, "error": str(e)}
+
+
+# ── Süre Yönetimi Pydantic Şemaları ──────────────────
+
+
+class EventTypeCreate(BaseModel):
+    slug: str
+    name: str
+    description: str | None = None
+    category: str
+    is_active: bool = True
+    display_order: int = 0
+
+
+class EventTypeUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    is_active: bool | None = None
+    display_order: int | None = None
+
+
+class DeadlineRuleCreate(BaseModel):
+    event_type_id: uuid.UUID
+    name: str
+    law_reference: str | None = None
+    law_text: str | None = None
+    duration_value: int
+    duration_unit: str  # gun, is_gunu, hafta, ay, yil, bilgi
+    duration_display: str | None = None
+    deadline_type: str  # hak_dusurucusu, zamanasimai, usul_suresi, bildirim, bilgi
+    affected_by_adli_tatil: bool = True
+    affected_by_holidays: bool = True
+    is_active: bool = True
+    display_order: int = 0
+    note: str | None = None
+
+
+class DeadlineRuleUpdate(BaseModel):
+    name: str | None = None
+    law_reference: str | None = None
+    law_text: str | None = None
+    duration_value: int | None = None
+    duration_unit: str | None = None
+    duration_display: str | None = None
+    deadline_type: str | None = None
+    affected_by_adli_tatil: bool | None = None
+    affected_by_holidays: bool | None = None
+    is_active: bool | None = None
+    display_order: int | None = None
+    note: str | None = None
+
+
+class HolidayCreate(BaseModel):
+    date: str  # ISO format
+    name: str
+    year: int
+    is_half_day: bool = False
+    holiday_type: str = "resmi"
+
+
+class HolidayUpdate(BaseModel):
+    date: str | None = None
+    name: str | None = None
+    is_half_day: bool | None = None
+    holiday_type: str | None = None
+
+
+class JudicialRecessCreate(BaseModel):
+    year: int
+    start_date: str
+    end_date: str
+    extension_days_hukuk: int = 7
+    extension_days_ceza: int = 3
+    extension_days_idari: int = 7
+    note: str | None = None
+
+
+class JudicialRecessUpdate(BaseModel):
+    start_date: str | None = None
+    end_date: str | None = None
+    extension_days_hukuk: int | None = None
+    extension_days_ceza: int | None = None
+    extension_days_idari: int | None = None
+    note: str | None = None
+
+
+# ── Olay Türleri (Event Types) ───────────────────────
+
+
+def _serialize_rule(r: DeadlineRuleDefinition) -> dict:
+    """Tek bir süre kuralını dict olarak döndür."""
+    return {
+        "id": str(r.id),
+        "event_type_id": str(r.event_type_id),
+        "name": r.name,
+        "law_reference": r.law_reference,
+        "law_text": r.law_text,
+        "duration_value": r.duration_value,
+        "duration_unit": r.duration_unit,
+        "duration_display": r.duration_display,
+        "deadline_type": r.deadline_type,
+        "affected_by_adli_tatil": r.affected_by_adli_tatil,
+        "affected_by_holidays": r.affected_by_holidays,
+        "is_active": r.is_active,
+        "display_order": r.display_order,
+        "note": r.note,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+    }
+
+
+def _serialize_event_type(et: EventTypeDefinition, include_rules: bool = True) -> dict:
+    """Tek bir olay türünü dict olarak döndür."""
+    data = {
+        "id": str(et.id),
+        "slug": et.slug,
+        "name": et.name,
+        "description": et.description,
+        "category": et.category,
+        "is_active": et.is_active,
+        "display_order": et.display_order,
+        "rule_count": len(et.rules) if et.rules else 0,
+        "created_at": et.created_at.isoformat() if et.created_at else None,
+        "updated_at": et.updated_at.isoformat() if et.updated_at else None,
+    }
+    if include_rules:
+        data["rules"] = [_serialize_rule(r) for r in (et.rules or [])]
+    return data
+
+
+@router.get("/event-types/categories")
+async def list_event_type_categories(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mevcut olay türü kategorilerini listele."""
+    result = await db.execute(
+        select(distinct(EventTypeDefinition.category)).order_by(EventTypeDefinition.category)
+    )
+    categories = [row[0] for row in result.all()]
+    return {"categories": categories}
+
+
+@router.get("/event-types")
+async def list_event_types(
+    category: str | None = None,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tüm olay türlerini listele. ?category= filtresi desteklenir."""
+    query = select(EventTypeDefinition).options(
+        selectinload(EventTypeDefinition.rules)
+    ).order_by(EventTypeDefinition.display_order, EventTypeDefinition.name)
+
+    if category:
+        query = query.where(EventTypeDefinition.category == category)
+
+    result = await db.execute(query)
+    event_types = result.scalars().all()
+    return [_serialize_event_type(et) for et in event_types]
+
+
+@router.get("/event-types/{event_type_id}")
+async def get_event_type(
+    event_type_id: uuid.UUID,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tek bir olay türünü kurallarıyla birlikte getir."""
+    result = await db.execute(
+        select(EventTypeDefinition)
+        .options(selectinload(EventTypeDefinition.rules))
+        .where(EventTypeDefinition.id == event_type_id)
+    )
+    et = result.scalar_one_or_none()
+    if not et:
+        raise HTTPException(status_code=404, detail="Olay türü bulunamadı")
+    return _serialize_event_type(et)
+
+
+@router.post("/event-types")
+async def create_event_type(
+    body: EventTypeCreate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Yeni olay türü oluştur."""
+    # Slug benzersizlik kontrolü
+    existing = await db.execute(
+        select(EventTypeDefinition).where(EventTypeDefinition.slug == body.slug)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"'{body.slug}' slug'ı zaten mevcut")
+
+    et = EventTypeDefinition(
+        slug=body.slug,
+        name=body.name,
+        description=body.description,
+        category=body.category,
+        is_active=body.is_active,
+        display_order=body.display_order,
+    )
+    db.add(et)
+    await db.flush()
+    await db.refresh(et, attribute_names=["rules"])
+    return _serialize_event_type(et)
+
+
+@router.put("/event-types/{event_type_id}")
+async def update_event_type(
+    event_type_id: uuid.UUID,
+    body: EventTypeUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Olay türünü güncelle."""
+    result = await db.execute(
+        select(EventTypeDefinition)
+        .options(selectinload(EventTypeDefinition.rules))
+        .where(EventTypeDefinition.id == event_type_id)
+    )
+    et = result.scalar_one_or_none()
+    if not et:
+        raise HTTPException(status_code=404, detail="Olay türü bulunamadı")
+
+    update_data = body.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(et, key, value)
+    await db.flush()
+    return _serialize_event_type(et)
+
+
+@router.delete("/event-types/{event_type_id}")
+async def delete_event_type(
+    event_type_id: uuid.UUID,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Olay türünü sil. Kuralları varsa soft delete (is_active=False), yoksa hard delete."""
+    result = await db.execute(
+        select(EventTypeDefinition)
+        .options(selectinload(EventTypeDefinition.rules))
+        .where(EventTypeDefinition.id == event_type_id)
+    )
+    et = result.scalar_one_or_none()
+    if not et:
+        raise HTTPException(status_code=404, detail="Olay türü bulunamadı")
+
+    if et.rules and len(et.rules) > 0:
+        # Soft delete — kuralları olan olay türü tamamen silinemez
+        et.is_active = False
+        await db.flush()
+        return {"status": "ok", "message": f"'{et.name}' deaktif edildi (ilişkili {len(et.rules)} kural mevcut)"}
+    else:
+        await db.delete(et)
+        await db.flush()
+        return {"status": "ok", "message": f"'{et.name}' kalıcı olarak silindi"}
+
+
+# ── Süre Kuralları (Deadline Rules) ──────────────────
+
+
+@router.get("/deadline-rules/stats")
+async def deadline_rules_stats(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Süre yönetimi istatistikleri."""
+    event_types_total = (await db.execute(
+        select(func.count()).select_from(EventTypeDefinition)
+    )).scalar() or 0
+
+    rules_total = (await db.execute(
+        select(func.count()).select_from(DeadlineRuleDefinition)
+    )).scalar() or 0
+
+    # Yıl bazlı tatil sayıları
+    holidays_by_year_result = await db.execute(
+        select(PublicHoliday.year, func.count())
+        .group_by(PublicHoliday.year)
+        .order_by(PublicHoliday.year.desc())
+    )
+    holidays_by_year = {str(row[0]): row[1] for row in holidays_by_year_result.all()}
+
+    recesses_total = (await db.execute(
+        select(func.count()).select_from(JudicialRecess)
+    )).scalar() or 0
+
+    return {
+        "event_types_total": event_types_total,
+        "rules_total": rules_total,
+        "holidays_by_year": holidays_by_year,
+        "recesses_total": recesses_total,
+    }
+
+
+@router.get("/deadline-rules")
+async def list_deadline_rules(
+    event_type_id: uuid.UUID | None = None,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tüm süre kurallarını listele. ?event_type_id= filtresi desteklenir."""
+    query = select(DeadlineRuleDefinition).order_by(
+        DeadlineRuleDefinition.display_order, DeadlineRuleDefinition.name
+    )
+    if event_type_id:
+        query = query.where(DeadlineRuleDefinition.event_type_id == event_type_id)
+
+    result = await db.execute(query)
+    rules = result.scalars().all()
+    return [_serialize_rule(r) for r in rules]
+
+
+@router.post("/deadline-rules")
+async def create_deadline_rule(
+    body: DeadlineRuleCreate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Yeni süre kuralı oluştur."""
+    # event_type varlık kontrolü
+    et_result = await db.execute(
+        select(EventTypeDefinition).where(EventTypeDefinition.id == body.event_type_id)
+    )
+    if not et_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="İlişkili olay türü bulunamadı")
+
+    rule = DeadlineRuleDefinition(
+        event_type_id=body.event_type_id,
+        name=body.name,
+        law_reference=body.law_reference,
+        law_text=body.law_text,
+        duration_value=body.duration_value,
+        duration_unit=body.duration_unit,
+        duration_display=body.duration_display,
+        deadline_type=body.deadline_type,
+        affected_by_adli_tatil=body.affected_by_adli_tatil,
+        affected_by_holidays=body.affected_by_holidays,
+        is_active=body.is_active,
+        display_order=body.display_order,
+        note=body.note,
+    )
+    db.add(rule)
+    await db.flush()
+    await db.refresh(rule)
+    return _serialize_rule(rule)
+
+
+@router.put("/deadline-rules/{rule_id}")
+async def update_deadline_rule(
+    rule_id: uuid.UUID,
+    body: DeadlineRuleUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Süre kuralını güncelle."""
+    result = await db.execute(
+        select(DeadlineRuleDefinition).where(DeadlineRuleDefinition.id == rule_id)
+    )
+    rule = result.scalar_one_or_none()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Süre kuralı bulunamadı")
+
+    update_data = body.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(rule, key, value)
+    await db.flush()
+    return _serialize_rule(rule)
+
+
+@router.delete("/deadline-rules/{rule_id}")
+async def delete_deadline_rule(
+    rule_id: uuid.UUID,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Süre kuralını sil."""
+    result = await db.execute(
+        select(DeadlineRuleDefinition).where(DeadlineRuleDefinition.id == rule_id)
+    )
+    rule = result.scalar_one_or_none()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Süre kuralı bulunamadı")
+
+    rule_name = rule.name
+    await db.delete(rule)
+    await db.flush()
+    return {"status": "ok", "message": f"'{rule_name}' kuralı silindi"}
+
+
+# ── Resmi Tatiller (Public Holidays) ─────────────────
+
+
+def _serialize_holiday(h: PublicHoliday) -> dict:
+    """Tek bir tatili dict olarak döndür."""
+    return {
+        "id": str(h.id),
+        "date": h.date.isoformat() if h.date else None,
+        "name": h.name,
+        "year": h.year,
+        "is_half_day": h.is_half_day,
+        "holiday_type": h.holiday_type,
+        "created_at": h.created_at.isoformat() if h.created_at else None,
+    }
+
+
+@router.get("/holidays")
+async def list_holidays(
+    year: int | None = None,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resmi tatilleri listele. ?year= filtresi desteklenir (varsayılan: mevcut yıl)."""
+    from datetime import date as dt_date
+
+    target_year = year or dt_date.today().year
+    query = (
+        select(PublicHoliday)
+        .where(PublicHoliday.year == target_year)
+        .order_by(PublicHoliday.date)
+    )
+    result = await db.execute(query)
+    holidays = result.scalars().all()
+    return {"year": target_year, "holidays": [_serialize_holiday(h) for h in holidays]}
+
+
+@router.post("/holidays")
+async def create_holiday(
+    body: HolidayCreate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Yeni resmi tatil oluştur."""
+    holiday = PublicHoliday(
+        date=date_type.fromisoformat(body.date),
+        name=body.name,
+        year=body.year,
+        is_half_day=body.is_half_day,
+        holiday_type=body.holiday_type,
+    )
+    db.add(holiday)
+    await db.flush()
+    await db.refresh(holiday)
+    return _serialize_holiday(holiday)
+
+
+@router.post("/holidays/bulk")
+async def bulk_create_holidays(
+    holidays: list[HolidayCreate],
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toplu resmi tatil oluştur."""
+    created = []
+    for h in holidays:
+        holiday = PublicHoliday(
+            date=date_type.fromisoformat(h.date),
+            name=h.name,
+            year=h.year,
+            is_half_day=h.is_half_day,
+            holiday_type=h.holiday_type,
+        )
+        db.add(holiday)
+        created.append(holiday)
+
+    await db.flush()
+    for h in created:
+        await db.refresh(h)
+    return {"status": "ok", "created": len(created), "holidays": [_serialize_holiday(h) for h in created]}
+
+
+@router.put("/holidays/{holiday_id}")
+async def update_holiday(
+    holiday_id: uuid.UUID,
+    body: HolidayUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resmi tatili güncelle."""
+    result = await db.execute(
+        select(PublicHoliday).where(PublicHoliday.id == holiday_id)
+    )
+    holiday = result.scalar_one_or_none()
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Tatil bulunamadı")
+
+    update_data = body.model_dump(exclude_unset=True)
+    if "date" in update_data and update_data["date"] is not None:
+        update_data["date"] = date_type.fromisoformat(update_data["date"])
+    for key, value in update_data.items():
+        setattr(holiday, key, value)
+    await db.flush()
+    return _serialize_holiday(holiday)
+
+
+@router.delete("/holidays/{holiday_id}")
+async def delete_holiday(
+    holiday_id: uuid.UUID,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resmi tatili sil."""
+    result = await db.execute(
+        select(PublicHoliday).where(PublicHoliday.id == holiday_id)
+    )
+    holiday = result.scalar_one_or_none()
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Tatil bulunamadı")
+
+    holiday_name = holiday.name
+    await db.delete(holiday)
+    await db.flush()
+    return {"status": "ok", "message": f"'{holiday_name}' tatili silindi"}
+
+
+# ── Adli Tatil (Judicial Recesses) ───────────────────
+
+
+def _serialize_recess(jr: JudicialRecess) -> dict:
+    """Tek bir adli tatil dönemini dict olarak döndür."""
+    return {
+        "id": str(jr.id),
+        "year": jr.year,
+        "start_date": jr.start_date.isoformat() if jr.start_date else None,
+        "end_date": jr.end_date.isoformat() if jr.end_date else None,
+        "extension_days_hukuk": jr.extension_days_hukuk,
+        "extension_days_ceza": jr.extension_days_ceza,
+        "extension_days_idari": jr.extension_days_idari,
+        "note": jr.note,
+        "created_at": jr.created_at.isoformat() if jr.created_at else None,
+    }
+
+
+@router.get("/judicial-recesses")
+async def list_judicial_recesses(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Adli tatil dönemlerini listele (yıl azalan sırada)."""
+    result = await db.execute(
+        select(JudicialRecess).order_by(JudicialRecess.year.desc())
+    )
+    recesses = result.scalars().all()
+    return [_serialize_recess(jr) for jr in recesses]
+
+
+@router.post("/judicial-recesses")
+async def create_judicial_recess(
+    body: JudicialRecessCreate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Yeni adli tatil dönemi oluştur."""
+    # Yıl benzersizlik kontrolü
+    existing = await db.execute(
+        select(JudicialRecess).where(JudicialRecess.year == body.year)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"{body.year} yılı için adli tatil zaten tanımlı")
+
+    recess = JudicialRecess(
+        year=body.year,
+        start_date=date_type.fromisoformat(body.start_date),
+        end_date=date_type.fromisoformat(body.end_date),
+        extension_days_hukuk=body.extension_days_hukuk,
+        extension_days_ceza=body.extension_days_ceza,
+        extension_days_idari=body.extension_days_idari,
+        note=body.note,
+    )
+    db.add(recess)
+    await db.flush()
+    await db.refresh(recess)
+    return _serialize_recess(recess)
+
+
+@router.put("/judicial-recesses/{recess_id}")
+async def update_judicial_recess(
+    recess_id: uuid.UUID,
+    body: JudicialRecessUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Adli tatil dönemini güncelle."""
+    result = await db.execute(
+        select(JudicialRecess).where(JudicialRecess.id == recess_id)
+    )
+    recess = result.scalar_one_or_none()
+    if not recess:
+        raise HTTPException(status_code=404, detail="Adli tatil dönemi bulunamadı")
+
+    update_data = body.model_dump(exclude_unset=True)
+    if "start_date" in update_data and update_data["start_date"] is not None:
+        update_data["start_date"] = date_type.fromisoformat(update_data["start_date"])
+    if "end_date" in update_data and update_data["end_date"] is not None:
+        update_data["end_date"] = date_type.fromisoformat(update_data["end_date"])
+    for key, value in update_data.items():
+        setattr(recess, key, value)
+    await db.flush()
+    return _serialize_recess(recess)
+
+
+@router.delete("/judicial-recesses/{recess_id}")
+async def delete_judicial_recess(
+    recess_id: uuid.UUID,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Adli tatil dönemini sil."""
+    result = await db.execute(
+        select(JudicialRecess).where(JudicialRecess.id == recess_id)
+    )
+    recess = result.scalar_one_or_none()
+    if not recess:
+        raise HTTPException(status_code=404, detail="Adli tatil dönemi bulunamadı")
+
+    year = recess.year
+    await db.delete(recess)
+    await db.flush()
+    return {"status": "ok", "message": f"{year} yılı adli tatil dönemi silindi"}
 
 
 async def _store_monitoring_snapshot():
