@@ -100,19 +100,12 @@ async def health_details(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/health/llm")
-async def health_llm(current_user: User = Depends(get_current_user)):
-    if current_user.role != "platform_admin":
-        raise HTTPException(status_code=403, detail="Platform admin yetkisi gerekli")
-    """Claude API key kontrolu — AI Asistan durumu."""
+async def health_llm():
+    """Claude API key kontrolu — AI Asistan durumu. Public endpoint (hassas bilgi yok)."""
     settings = get_settings()
-    t0 = time.monotonic()
 
     if not settings.anthropic_api_key:
-        return {
-            "status": "unavailable",
-            "error": "ANTHROPIC_API_KEY not configured",
-            "response_time_ms": 0,
-        }
+        return {"status": "unavailable"}
 
     try:
         import httpx
@@ -124,18 +117,12 @@ async def health_llm(current_user: User = Depends(get_current_user)):
                     "anthropic-version": "2023-06-01",
                 },
             )
-            elapsed = round((time.monotonic() - t0) * 1000, 1)
             if resp.status_code == 200:
-                return {"status": "ok", "response_time_ms": elapsed}
+                return {"status": "ok"}
             else:
-                return {
-                    "status": "error",
-                    "http_status": resp.status_code,
-                    "response_time_ms": elapsed,
-                }
+                return {"status": "error"}
     except Exception as e:
-        elapsed = round((time.monotonic() - t0) * 1000, 1)
-        return {"status": "error", "error": str(e), "response_time_ms": elapsed}
+        return {"status": "error"}
 
 
 @router.get("/health/cache")
