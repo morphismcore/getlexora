@@ -2,7 +2,7 @@
 
 > **Temel İlke:** Her aşamada "bir sonraki aşamaya geçmeden önce bu aşamada öğrenmemiz gereken tek şey ne?" sorusunu yanıtla. Öğrenmeden ölçekleme yapma.
 
-> **Son Güncelleme:** 24 Mart 2026 (Oturum 3) — 42 güvenlik+kalite fix, DB-driven süreler, firma restructure, tam proje auditi (139 bulgu, 71 fix).
+> **Son Güncelleme:** 25 Mart 2026 (Oturum 4) — Dashboard redesign, Mevzuat+AI tab aktif, arama pipeline paralel, 10+ deploy.
 
 ---
 
@@ -10,12 +10,21 @@
 
 | Aşama | İlerleme | Açıklama |
 |-------|----------|----------|
-| POC (Hafta 1-4) | **%95** | Search+RAG+citation verification güçlü, embedding 4,735+ (hedef 50K) |
-| Alpha (Hafta 5-8) | **%85** | Auth+dilekçe+deadline(DB-driven)+admin+güvenlik tamam, ajan orkestrasyonu eksik |
-| Closed Beta (Ay 3-4) | **%30** | DocumentReader+email tamam, strateji/UYAP/trend analizi eksik |
+| POC (Hafta 1-4) | **%95** | Search+RAG+citation güçlü, embedding 6,279 (hedef 50K), paralel pipeline |
+| Alpha (Hafta 5-8) | **%90** | Auth+dilekçe+deadline(DB)+admin+güvenlik+dashboard tamam, ajan eksik |
+| Closed Beta (Ay 3-4) | **%35** | DocumentReader+email+mevzuat arama+AI asistan tamam |
 | Public Beta (Ay 5-6) | **%0** | Başlanmadı |
 | V1.0 (Ay 7-9) | **%0** | Başlanmadı |
 | Scale (Ay 10-12) | **%0** | Başlanmadı |
+
+### Oturum 4 Güncellemeleri (25 Mart 2026)
+- **Dashboard tam redesign:** 10 widget (sabah briefing, süre timeline, davalar, mini takvim, dava dağılımı, son aramalar, yeni kararlar, hızlı erişim). Backend 9 paralel data fetcher.
+- **Arama Mevzuat tab aktif:** Bedesten API ile mevzuat arama + tam metin görüntüleme
+- **Arama AI Asistan tab aktif:** Chat UI, SSE streaming, Claude API, citation verification badge
+- **Arama pipeline paralel rewrite:** Bedesten+Qdrant+Synonyms asyncio.gather, dense+sparse paralel, embedding async+cache, rerank top-10
+- **Detail view fix:** Race condition çözümü, hata durumunda özet göster, _format_legal_text()
+- **Embedding preload:** Startup'ta model yükleme (OOM fix), backend 3GB, torch 2.6+
+- **LLM health endpoint:** Public (AI status yeşil dot)
 
 ### Oturum 3 Güncellemeleri (24 Mart 2026)
 - **DB-driven süre kuralları:** 75 olay türü, 93 kural, 64 tatil, 4 adli tatil, 20 CRUD endpoint
