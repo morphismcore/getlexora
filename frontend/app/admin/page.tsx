@@ -68,7 +68,7 @@ interface Holiday {
   id: string;
   date: string;
   name: string;
-  type: string;
+  holiday_type: string;
   is_half_day: boolean;
   year: number;
 }
@@ -1542,8 +1542,10 @@ function HolidaysTab({
         fetch(`${apiUrl}/api/v1/admin/holidays?year=${selectedYear}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${apiUrl}/api/v1/admin/judicial-recesses`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (holRes.status === "fulfilled" && holRes.value.ok) setHolidays(await holRes.value.json());
-      else setHolidays([]);
+      if (holRes.status === "fulfilled" && holRes.value.ok) {
+        const holData = await holRes.value.json();
+        setHolidays(Array.isArray(holData) ? holData : holData.holidays || []);
+      } else setHolidays([]);
       if (recRes.status === "fulfilled" && recRes.value.ok) setRecesses(await recRes.value.json());
       else setRecesses([]);
     } catch { /* ignore */ }
@@ -1556,7 +1558,7 @@ function HolidaysTab({
     try {
       const r = await fetch(`${apiUrl}/api/v1/admin/holidays`, {
         method: "POST", headers,
-        body: JSON.stringify({ ...holidayForm, year: selectedYear }),
+        body: JSON.stringify({ date: holidayForm.date, name: holidayForm.name, holiday_type: holidayForm.type, is_half_day: holidayForm.is_half_day, year: selectedYear }),
       });
       if (r.ok) {
         onToast("Tatil eklendi");
@@ -1730,9 +1732,9 @@ function HolidaysTab({
                   const dateStr = `${selectedYear}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                   const dayHolidays = holidaysByDate[dateStr];
                   const hasHoliday = !!dayHolidays;
-                  const isResmi = dayHolidays?.some((h) => h.type === "resmi");
-                  const isDini = dayHolidays?.some((h) => h.type === "dini");
-                  const isArife = dayHolidays?.some((h) => h.type === "arife");
+                  const isResmi = dayHolidays?.some((h) => h.holiday_type === "resmi");
+                  const isDini = dayHolidays?.some((h) => h.holiday_type === "dini");
+                  const isArife = dayHolidays?.some((h) => h.holiday_type === "arife");
                   const isHalf = dayHolidays?.some((h) => h.is_half_day);
 
                   // Check if in judicial recess
@@ -1818,7 +1820,7 @@ function HolidaysTab({
               {holidays
                 .sort((a, b) => a.date.localeCompare(b.date))
                 .map((h) => {
-                  const htLabel = HOLIDAY_TYPE_LABELS[h.type] || { label: h.type, color: "#8B8B8E", bg: "bg-[#8B8B8E]/10" };
+                  const htLabel = HOLIDAY_TYPE_LABELS[h.holiday_type] || { label: h.holiday_type, color: "#8B8B8E", bg: "bg-[#8B8B8E]/10" };
                   return (
                     <tr key={h.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                       <td className="p-3 text-[#ECECEE] font-mono text-[12px]">
@@ -2026,7 +2028,7 @@ function EditHolidayForm({ holiday, onSave, onCancel }: { holiday: Holiday; onSa
         <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
       </FormField>
       <FormField label="Tatil Turu">
-        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
+        <select value={form.holiday_type} onChange={(e) => setForm({ ...form, holiday_type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
           {Object.entries(HOLIDAY_TYPE_LABELS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v.label}</option>)}
         </select>
       </FormField>
