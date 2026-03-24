@@ -2,7 +2,7 @@
 
 > **Temel İlke:** Her aşamada "bir sonraki aşamaya geçmeden önce bu aşamada öğrenmemiz gereken tek şey ne?" sorusunu yanıtla. Öğrenmeden ölçekleme yapma.
 
-> **Son Güncelleme:** 24 Mart 2026 — Canlı ortam aktif (204.168.136.223), embedding ingestion çalışıyor.
+> **Son Güncelleme:** 24 Mart 2026 (Oturum 3) — 42 güvenlik+kalite fix, DB-driven süreler, firma restructure, tam proje auditi (139 bulgu, 71 fix).
 
 ---
 
@@ -10,12 +10,20 @@
 
 | Aşama | İlerleme | Açıklama |
 |-------|----------|----------|
-| POC (Hafta 1-4) | **%85** | Altyapı+search+RAG tamam, embedding 4,735+ (hedef 10K), ingestion aktif |
-| Alpha (Hafta 5-8) | **%65** | Auth+dilekçe+deadline tamam, ajan orkestrasyonu+analytics eksik |
-| Closed Beta (Ay 3-4) | **%25** | DocumentReader+email tamam, strateji/UYAP/trend analizi eksik |
+| POC (Hafta 1-4) | **%95** | Search+RAG+citation verification güçlü, embedding 4,735+ (hedef 50K) |
+| Alpha (Hafta 5-8) | **%85** | Auth+dilekçe+deadline(DB-driven)+admin+güvenlik tamam, ajan orkestrasyonu eksik |
+| Closed Beta (Ay 3-4) | **%30** | DocumentReader+email tamam, strateji/UYAP/trend analizi eksik |
 | Public Beta (Ay 5-6) | **%0** | Başlanmadı |
 | V1.0 (Ay 7-9) | **%0** | Başlanmadı |
 | Scale (Ay 10-12) | **%0** | Başlanmadı |
+
+### Oturum 3 Güncellemeleri (24 Mart 2026)
+- **DB-driven süre kuralları:** 75 olay türü, 93 kural, 64 tatil, 4 adli tatil, 20 CRUD endpoint
+- **8 tab admin paneli:** Süre Kuralları, Tatiller, Ayarlar (kurumsal/bireysel firma ayrımı)
+- **42 güvenlik fix (3 fazda):** Citation exact match, RAG post-verification, JWT refresh, HSTS/CSP, Redis rate limit, cache stampede, Celery dead letter, reranker normalization, +14 daha
+- **16 frontend fix:** A11y (toggle, checkbox, toast, focus trap), Link component, useAuth, XHR upload, React.memo
+- **CI/CD:** Security audit, dependency pinning, rollback tagging, code coverage
+- **Detaylar:** `YAPILACAKLAR.md`
 
 ---
 
