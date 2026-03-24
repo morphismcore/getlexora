@@ -1,8 +1,10 @@
 """
 Qdrant vector store servisi.
 İçtihat ve mevzuat embedding'lerini saklar ve hybrid search yapar.
+Dense + sparse aramaları paralel çalışır (asyncio.gather).
 """
 
+import asyncio
 import structlog
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
@@ -109,37 +111,57 @@ class VectorStoreService:
     ) -> list[dict]:
         """
         Hybrid search: dense (semantic) + sparse (keyword/BM25).
+        PARALLEL: dense ve sparse aramaları aynı anda çalışır.
         RRF (Reciprocal Rank Fusion) ile birleştirir.
         """
         filter_obj = self._build_filter(filters) if filters else None
 
-        # Dense search
-        dense_results = await self.client.query_points(
-            collection_name=collection,
-            query=dense_vector,
-            using="dense",
-            query_filter=filter_obj,
-            limit=limit,
-        )
-
-        # Sparse search (keyword-based)
-        sparse_results = []
-        if sparse_vector and sparse_vector.get("indices"):
-            sparse_results = await self.client.query_points(
+        # Run BOTH searches in parallel
+        tasks = [
+            self.client.query_points(
                 collection_name=collection,
-                query=SparseVector(
-                    indices=sparse_vector["indices"],
-                    values=sparse_vector["values"],
-                ),
-                using="sparse",
+                query=dense_vector,
+                using="dense",
                 query_filter=filter_obj,
                 limit=limit,
             )
+        ]
+
+        has_sparse = sparse_vector and sparse_vector.get("indices")
+        if has_sparse:
+            tasks.append(
+                self.client.query_points(
+                    collection_name=collection,
+                    query=SparseVector(
+                        indices=sparse_vector["indices"],
+                        values=sparse_vector["values"],
+                    ),
+                    using="sparse",
+                    query_filter=filter_obj,
+                    limit=limit,
+                )
+            )
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Handle dense result
+        dense_results = results[0]
+        if isinstance(dense_results, Exception):
+            logger.warning("dense_search_error", error=str(dense_results))
+            dense_results = None
+
+        # Handle sparse result
+        sparse_results = None
+        if has_sparse and len(results) > 1:
+            sparse_results = results[1]
+            if isinstance(sparse_results, Exception):
+                logger.warning("sparse_search_error", error=str(sparse_results))
+                sparse_results = None
 
         # RRF Fusion
-        if sparse_results:
+        if dense_results and sparse_results:
             return self._rrf_fusion(dense_results.points, sparse_results.points, limit)
-        else:
+        elif dense_results:
             return [
                 {
                     "id": p.id,
@@ -148,6 +170,17 @@ class VectorStoreService:
                 }
                 for p in dense_results.points
             ]
+        elif sparse_results:
+            return [
+                {
+                    "id": p.id,
+                    "score": p.score,
+                    "payload": p.payload,
+                }
+                for p in sparse_results.points
+            ]
+        else:
+            return []
 
     def _rrf_fusion(
         self,

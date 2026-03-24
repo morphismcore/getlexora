@@ -127,6 +127,30 @@ class CacheService:
         key = self.make_key("verify", text_hash)
         return await self.get(key)
 
+    # ── Embedding cache ────────────────────────────────────────────
+
+    async def get_cached_embedding(self, query: str) -> dict | None:
+        """Get cached query embedding."""
+        key = f"emb:{hashlib.md5(query.encode()).hexdigest()}"
+        try:
+            data = await self.client.get(key)
+            if data:
+                logger.debug("embedding_cache_hit", query=query[:30])
+                return json.loads(data)
+        except Exception:
+            pass
+        return None
+
+    async def cache_embedding(self, query: str, embedding: dict, ttl: int = 3600):
+        """Cache query embedding. TTL: 1 hour."""
+        key = f"emb:{hashlib.md5(query.encode()).hexdigest()}"
+        try:
+            data = json.dumps(embedding, default=str)
+            await self.client.setex(key, ttl, data)
+            logger.debug("embedding_cached", query=query[:30])
+        except Exception:
+            pass
+
     async def get_stats(self) -> dict:
         """Return cache stats: total keys, memory usage."""
         try:

@@ -5,6 +5,7 @@ RAG soru-cevap: LLM gerektirir (opsiyonel).
 """
 
 import json
+import re
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,6 +23,42 @@ from app.models.database import User
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
+
+
+def _format_legal_text(html_content: str) -> str:
+    """Convert legal HTML to well-formatted plain text preserving structure."""
+    text = html_content
+
+    # Convert block elements to newlines BEFORE stripping tags
+    text = re.sub(r'<br\s*/?>', '\n', text)
+    text = re.sub(r'</p>', '\n\n', text)
+    text = re.sub(r'</div>', '\n', text)
+    text = re.sub(r'</li>', '\n', text)
+    text = re.sub(r'</tr>', '\n', text)
+    text = re.sub(r'<h[1-6][^>]*>', '\n\n', text)
+    text = re.sub(r'</h[1-6]>', '\n', text)
+
+    # Strip remaining tags
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Decode HTML entities
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    text = text.replace('&quot;', '"')
+    text = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), text)
+    text = re.sub(r'&\w+;', ' ', text)
+
+    # Clean up excessive whitespace but PRESERVE paragraph breaks
+    text = re.sub(r'[ \t]+', ' ', text)        # Collapse horizontal whitespace
+    text = re.sub(r' *\n *', '\n', text)        # Clean spaces around newlines
+    text = re.sub(r'\n{4,}', '\n\n\n', text)   # Max 3 consecutive newlines
+
+    # Trim
+    text = text.strip()
+
+    return text
 
 
 @router.post("/ictihat", response_model=SearchResponse)
@@ -154,16 +191,12 @@ async def get_mevzuat_content(
     try:
         result = await mevzuat.get_content(mevzuat_id)
         if result.get("content"):
-            import re
-            clean = re.sub(r"<[^>]+>", "\n", result["content"])
-            clean = clean.replace("&nbsp;", " ").replace("&amp;", "&")
-            clean = re.sub(r"&\w+;", " ", clean)
-            clean = re.sub(r"\n\s*\n+", "\n\n", clean).strip()
+            clean = _format_legal_text(result["content"])
             return {"mevzuat_id": mevzuat_id, "content": clean, "html": result["content"]}
         return {"mevzuat_id": mevzuat_id, "content": "", "error": "İçerik alınamadı"}
     except Exception as e:
         logger.error("mevzuat_content_error", error=str(e), mevzuat_id=mevzuat_id)
-        raise HTTPException(status_code=500, detail="Mevzuat içeriği alınırken bir hata oluştu. Lütfen tekrar deneyin.")
+        raise HTTPException(status_code=500, detail="Mevzuat içeriği alınırken bir hata oluştu.")
 
 
 @router.get("/karar/{document_id}")
@@ -177,16 +210,12 @@ async def get_karar(
         doc = await yargi.get_document(document_id)
         content = doc.get("data", {}).get("decoded_content", "")
         if content:
-            import re
-            clean = re.sub(r"<[^>]+>", " ", content)
-            clean = clean.replace("&nbsp;", " ").replace("&amp;", "&")
-            clean = re.sub(r"&\w+;", " ", clean)
-            clean = re.sub(r"\s+", " ", clean).strip()
+            clean = _format_legal_text(content)
             return {"document_id": document_id, "content": clean, "html": content}
         return {"document_id": document_id, "content": "", "error": "İçerik alınamadı"}
     except Exception as e:
         logger.error("karar_fetch_error", error=str(e), document_id=document_id)
-        raise HTTPException(status_code=500, detail="Karar metni alınırken bir hata oluştu. Lütfen tekrar deneyin.")
+        raise HTTPException(status_code=500, detail="Karar metni alınırken bir hata oluştu.")
 
 
 class VerifyRequest(BaseModel):

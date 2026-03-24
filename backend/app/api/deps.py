@@ -151,6 +151,7 @@ def get_rag_pipeline() -> RAGPipeline:
             llm=get_llm_service(),  # None olabilir
             query_expander=get_query_expander(),
             reranker=get_reranker(),
+            cache=get_cache_service(),
         )
     return _rag
 

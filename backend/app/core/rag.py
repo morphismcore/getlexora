@@ -1,9 +1,13 @@
 """
 RAG (Retrieval-Augmented Generation) Pipeline.
-Arama: LLM olmadan çalışır (Bedesten API + Vector DB).
+Arama: LLM olmadan calisir (Bedesten API + Vector DB).
 Soru-cevap: LLM gerektirir (opsiyonel).
+
+Performance: Tum bagimsiz arama kaynaklari paralel calisir (asyncio.gather).
+Hedef: <800ms (onceki: 1.5-4.5s).
 """
 
+import asyncio
 import re
 import time
 import structlog
@@ -30,8 +34,8 @@ logger = structlog.get_logger()
 class RAGPipeline:
     """
     Ana pipeline.
-    search() → LLM gerektirmez, doğrudan Bedesten API + Vector DB.
-    ask() → LLM gerektirir (Claude API).
+    search() -> LLM gerektirmez, dogrudan Bedesten API + Vector DB.
+    ask() -> LLM gerektirir (Claude API).
     """
 
     def __init__(
@@ -44,6 +48,7 @@ class RAGPipeline:
         llm=None,  # opsiyonel
         query_expander: QueryExpansionService | None = None,
         reranker: RerankerService | None = None,
+        cache=None,  # CacheService for embedding caching
     ):
         self.yargi = yargi
         self.mevzuat = mevzuat
@@ -53,6 +58,7 @@ class RAGPipeline:
         self.llm = llm
         self.query_expander = query_expander
         self.reranker = reranker
+        self.cache = cache
         self.settings = get_settings()
 
     @property
@@ -61,16 +67,15 @@ class RAGPipeline:
 
     async def search(self, request: SearchRequest) -> SearchResponse:
         """
-        İçtihat arama. LLM GEREKTIRMEZ.
-        1. Query expansion (kısaltma açma + eş anlamlı)
-        2. Bedesten API'de keyword arama
-        3. Vector DB'de semantic search (varsa)
-        4. Sonuçları birleştir
-        5. Cross-encoder reranking (etkinse)
+        Ictihat arama. LLM GEREKTIRMEZ.
+        Tum bagimsiz kaynaklar PARALEL calisir:
+          - Bedesten API (ana sorgu + synonym sorgulari)
+          - Vector DB (embedding + Qdrant hybrid search)
+        Sonra merge + rerank.
         """
         start = time.monotonic()
 
-        # 0. Query expansion
+        # 0. Query expansion (instant, ~1ms — CPU only, no I/O)
         search_query = request.query
         expansion_info = None
         if self.query_expander and self.settings.query_expansion_enabled:
@@ -97,67 +102,63 @@ class RAGPipeline:
 
         daire = request.daire if hasattr(request, "daire") and request.daire else None
 
-        # 1. Bedesten API'de doğrudan arama (genişletilmiş sorgu ile)
-        api_results = await self.yargi.search_unified(
-            keyword=search_query,
-            court_types=court_types,
-            daire=daire,
-            max_results=request.max_sonuc,
-        )
+        # 1. PARALLEL: Bedesten API + ALL synonyms + Vector search
+        # These are independent — run them ALL at the same time
+        tasks = []
+        task_labels = []
 
-        # 1b. Eş anlamlı terimlerle ek arama (varsa, ilk 2 synonym)
-        expansion_failures = 0
-        if expansion_info and expansion_info["synonyms"]:
+        # Task A: Main Bedesten search
+        tasks.append(self._search_bedesten(search_query, court_types, daire, request.max_sonuc))
+        task_labels.append("bedesten_main")
+
+        # Task B: Synonym Bedesten searches (up to 2)
+        if expansion_info and expansion_info.get("expanded_queries"):
             for syn_query in expansion_info["expanded_queries"][1:3]:
-                try:
-                    syn_results = await self.yargi.search_unified(
-                        keyword=syn_query,
-                        court_types=court_types,
-                        daire=daire,
-                        max_results=5,
-                    )
-                    api_results.extend(syn_results)
-                except Exception as e:
-                    expansion_failures += 1
-                    logger.warning("synonym_search_failed", query=syn_query, error=str(e))
+                tasks.append(self._search_bedesten_safe(syn_query, court_types, daire, 5))
+                task_labels.append("bedesten_synonym")
 
-        # Track warnings for partial results
-        search_warnings = []
-        if expansion_failures > 0:
-            search_warnings.append(f"{expansion_failures} ek arama başarısız oldu, sonuçlar kısmi olabilir.")
+        # Task C: Vector search (embedding + Qdrant in one async call)
+        tasks.append(self._search_vectors(request.query, request.hukuk_alani, request.max_sonuc))
+        task_labels.append("vector")
 
-        # 2. Vector DB'de semantic search (koleksiyon doluysa)
+        # Run ALL tasks in parallel
+        all_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Collect results (skip exceptions)
+        api_results = []
         vector_results = []
-        try:
-            info = await self.vector_store.get_collection_info(
-                self.settings.qdrant_collection_ictihat
-            )
-            if info["points_count"] > 0:
-                query_embedding = self.embedding.embed_query(request.query)
-                filters = {}
-                if request.hukuk_alani:
-                    filters["hukuk_alani"] = request.hukuk_alani.value
+        search_warnings = []
 
-                vector_results = await self.vector_store.search_hybrid(
-                    collection=self.settings.qdrant_collection_ictihat,
-                    dense_vector=query_embedding["dense_vector"],
-                    sparse_vector=query_embedding.get("sparse_vector"),
-                    filters=filters if filters else None,
-                    limit=request.max_sonuc,
-                )
-        except Exception as e:
-            logger.warning("vector_search_skip", error=str(e))
+        for i, result in enumerate(all_results):
+            label = task_labels[i]
+            if isinstance(result, Exception):
+                if label == "bedesten_main":
+                    search_warnings.append("Ana arama kaynagi baglantisi basarisiz oldu")
+                    logger.warning("search_bedesten_main_failed", error=str(result))
+                elif label == "bedesten_synonym":
+                    search_warnings.append("Ek arama basarisiz oldu, sonuclar kismi olabilir.")
+                    logger.warning("search_bedesten_synonym_failed", error=str(result))
+                else:
+                    logger.warning("search_vector_failed", error=str(result))
+                continue
 
-        # 3. Sonuçları birleştir
+            if label == "vector":
+                vector_results = result if isinstance(result, list) else []
+            else:
+                # Bedesten results (main or synonym)
+                if isinstance(result, list):
+                    api_results.extend(result)
+
+        # 2. Merge (instant, ~1ms)
         results = self._merge_results(api_results, vector_results, request.max_sonuc)
 
-        # 4. Cross-encoder reranking
+        # 3. Cross-encoder reranking — only TOP 10 for speed
         if self.reranker and self.settings.reranking_enabled and len(results) > 1:
             try:
                 results = self.reranker.rerank_ictihat(
                     query=request.query,
                     results=results,
-                    top_k=self.settings.rag_rerank_top_k or request.max_sonuc,
+                    top_k=min(10, self.settings.rag_rerank_top_k or request.max_sonuc),
                 )
                 logger.debug(
                     "reranking_applied",
@@ -177,23 +178,97 @@ class RAGPipeline:
             warnings=search_warnings if search_warnings else [],
         )
 
+    # ── Parallel search helpers ────────────────────────────────────
+
+    async def _search_bedesten(self, query, court_types, daire, max_results):
+        """Bedesten API search."""
+        return await self.yargi.search_unified(
+            keyword=query, court_types=court_types, daire=daire, max_results=max_results
+        )
+
+    async def _search_bedesten_safe(self, query, court_types, daire, max_results):
+        """Bedesten API search — returns empty on error."""
+        try:
+            return await self.yargi.search_unified(
+                keyword=query, court_types=court_types, daire=daire, max_results=max_results
+            )
+        except Exception:
+            return []
+
+    async def _search_vectors(self, query, hukuk_alani, max_results):
+        """Embedding + Qdrant search — async embedding to not block event loop."""
+        try:
+            info = await self.vector_store.get_collection_info(
+                self.settings.qdrant_collection_ictihat
+            )
+            if info["points_count"] == 0:
+                return []
+
+            # Check embedding cache first
+            query_embedding = None
+            if self.cache:
+                query_embedding = await self._get_cached_embedding(query)
+
+            if query_embedding is None:
+                # Run embedding in thread pool (CPU-bound, don't block event loop)
+                loop = asyncio.get_event_loop()
+                query_embedding = await loop.run_in_executor(
+                    None, self.embedding.embed_query, query
+                )
+                # Cache for next time
+                if self.cache:
+                    await self._cache_embedding(query, query_embedding)
+
+            filters = {}
+            if hukuk_alani:
+                filters["hukuk_alani"] = hukuk_alani.value
+
+            return await self.vector_store.search_hybrid(
+                collection=self.settings.qdrant_collection_ictihat,
+                dense_vector=query_embedding["dense_vector"],
+                sparse_vector=query_embedding.get("sparse_vector"),
+                filters=filters if filters else None,
+                limit=max_results,
+            )
+        except Exception as e:
+            logger.warning("vector_search_error", error=str(e))
+            return []
+
+    # ── Embedding cache helpers ────────────────────────────────────
+
+    async def _get_cached_embedding(self, query: str) -> dict | None:
+        """Get cached embedding for a query."""
+        try:
+            return await self.cache.get_cached_embedding(query)
+        except Exception:
+            return None
+
+    async def _cache_embedding(self, query: str, embedding: dict, ttl: int = 3600):
+        """Cache query embedding (1 hour TTL)."""
+        try:
+            await self.cache.cache_embedding(query, embedding, ttl=ttl)
+        except Exception:
+            pass
+
+    # ── ask() — RAG soru-cevap ────────────────────────────────────
+
     async def ask(self, query: str, search_request: SearchRequest | None = None) -> RAGResponse:
         """
-        RAG soru-cevap. LLM GEREKTİRİR.
-        Ara → Context oluştur → LLM → Doğrula.
+        RAG soru-cevap. LLM GEREKTIRIR.
+        Ara -> Context olustur -> LLM -> Dogrula.
         """
         if not self.llm_available:
-            # LLM yoksa sadece arama sonuçlarını dön
+            # LLM yoksa sadece arama sonuclarini don
             if search_request is None:
                 search_request = SearchRequest(query=query)
             search_response = await self.search(search_request)
 
             return RAGResponse(
-                answer="LLM yapılandırılmamış. Arama sonuçları aşağıda listelenmiştir. "
-                       "ANTHROPIC_API_KEY ayarlandığında AI destekli yanıtlar üretilecektir.",
+                answer="LLM yapilandirilmamis. Arama sonuclari asagida listelenmistir. "
+                       "ANTHROPIC_API_KEY ayarlandiginda AI destekli yanitlar uretilecektir.",
                 sources=search_response.sonuclar,
                 confidence_score=0.0,
-                warning="ANTHROPIC_API_KEY tanımlı değil. Sadece arama sonuçları gösteriliyor.",
+                warning="ANTHROPIC_API_KEY tanimli degil. Sadece arama sonuclari gosteriliyor.",
             )
 
         start = time.monotonic()
@@ -203,19 +278,19 @@ class RAGPipeline:
             search_request = SearchRequest(query=query)
         search_response = await self.search(search_request)
 
-        # 2. Context oluştur
+        # 2. Context olustur
         context = self._build_context(search_response.sonuclar)
 
         if not context.strip():
             return RAGResponse(
-                answer="Bu konuda kaynaklarımda yeterli bilgi bulunamadı. "
-                       "Lütfen aramanızı farklı terimlerle tekrar deneyin.",
+                answer="Bu konuda kaynaklarimda yeterli bilgi bulunamadi. "
+                       "Lutfen aramanizi farkli terimlerle tekrar deneyin.",
                 sources=[],
                 confidence_score=0.0,
-                warning="Yeterli kaynak bulunamadı.",
+                warning="Yeterli kaynak bulunamadi.",
             )
 
-        # 3. LLM'den yanıt üret
+        # 3. LLM'den yanit uret
         answer = await self.llm.generate(query=query, context=context)
 
         # 3b. Post-generation citation re-verification against provided context
@@ -235,7 +310,7 @@ class RAGPipeline:
                 count=len(post_verification["unverified"]),
                 unverified=post_verification["unverified"],
             )
-            answer += "\n\n⚠️ Dikkat: Yanıtta doğrulanamayan atıflar tespit edildi. Lütfen kontrol ediniz."
+            answer += "\n\n\u26a0\ufe0f Dikkat: Yanittta dogrulanamayan atiflar tespit edildi. Lutfen kontrol ediniz."
 
         # 4. Citation verification
         verification = await self.verifier.verify_all(answer)
@@ -255,12 +330,12 @@ class RAGPipeline:
             penalty = len(post_verification["unverified"]) * 0.1
             confidence = max(0.0, confidence - penalty)
 
-        # 6. Uyarı
+        # 6. Uyari
         warning = None
         if confidence < 0.5:
-            warning = "Bu yanıtın güvenilirliği düşüktür. Bağımsız araştırma yapmanız önerilir."
+            warning = "Bu yanitin guvenilirligi dusuktur. Bagimsiz arastirma yapmaniz onerilir."
         elif verification.not_found > 0:
-            warning = f"{verification.not_found} referans doğrulanamadı. Manuel kontrol önerilir."
+            warning = f"{verification.not_found} referans dogrulanamadi. Manuel kontrol onerilir."
 
         return RAGResponse(
             answer=answer,
@@ -273,7 +348,7 @@ class RAGPipeline:
 
     def _build_context(self, results: list[IctihatResult], max_chars: int = 600_000) -> str:
         """
-        Arama sonuçlarından LLM context'i oluştur.
+        Arama sonuclarindan LLM context'i olustur.
 
         Turkish text averages ~3.5 chars per token (more compact than English).
         Claude Sonnet 4 has 200K context. Reserve 20K for system prompt + query + response.
@@ -290,7 +365,7 @@ Mahkeme: {r.mahkeme}
 {f'Esas No: {r.esas_no}' if r.esas_no else ''}
 {f'Karar No: {r.karar_no}' if r.karar_no else ''}
 {f'Tarih: {r.tarih}' if r.tarih else ''}
-Özet: {r.ozet}
+Ozet: {r.ozet}
 {f'Tam Metin: {r.tam_metin[:3000]}' if r.tam_metin else ''}
 """
             if total_len + len(part) > max_chars:
@@ -304,8 +379,8 @@ Mahkeme: {r.mahkeme}
         """Post-generation: verify that every citation in the response exists in the provided context."""
         # Extract citations from response
         citation_patterns = [
-            r'(\d+)\.\s*(?:Hukuk|Ceza)\s*Dairesi.*?(\d{4}/\d+)\s*E\.',  # Yargıtay
-            r'Yargıtay.*?(\d{4}/\d+)\s*E\.\s*,?\s*(\d{4}/\d+)\s*K\.',
+            r'(\d+)\.\s*(?:Hukuk|Ceza)\s*Dairesi.*?(\d{4}/\d+)\s*E\.',  # Yargitay
+            r'Yargitay.*?(\d{4}/\d+)\s*E\.\s*,?\s*(\d{4}/\d+)\s*K\.',
             r'(\d{4}/\d+)\s*E\.\s*,?\s*(\d{4}/\d+)\s*K\.',
             r'AYM.*?(\d{4}/\d+)',
         ]
@@ -356,7 +431,7 @@ Mahkeme: {r.mahkeme}
         vector_results: list[dict],
         max_results: int,
     ) -> list[IctihatResult]:
-        """API ve vector search sonuçlarını birleştir."""
+        """API ve vector search sonuclarini birlestir."""
         seen_ids = set()
         merged = []
 

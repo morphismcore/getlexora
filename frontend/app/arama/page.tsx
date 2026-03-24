@@ -209,6 +209,35 @@ function formatDuration(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+function formatLegalText(text: string): ReactNode[] {
+  if (!text) return [];
+
+  // Split by double newlines (paragraphs)
+  const paragraphs = text.split(/\n\n+/);
+
+  return paragraphs.map((para, i) => {
+    const trimmed = para.trim();
+    if (!trimmed) return null;
+
+    // Detect section headers (DAVACI, DAVALI, etc.)
+    const isHeader = /^(DAVACI|DAVALI|HÜKÜM|KARAR|GEREKÇESİ|SONUÇ|İDDİA|SAVUNMA|DELİLLER|T\.C\.|TÜRK MİLLETİ ADINA)/i.test(trimmed);
+
+    if (isHeader) {
+      return (
+        <div key={i} className="mt-4 mb-2">
+          <p className="text-[13px] font-semibold text-[#6C6CFF]">{trimmed}</p>
+        </div>
+      );
+    }
+
+    return (
+      <p key={i} className="text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3 whitespace-pre-wrap">
+        {trimmed}
+      </p>
+    );
+  }).filter(Boolean) as ReactNode[];
+}
+
 /* ─── Typewriter Hook ─── */
 function useTypewriter(phrases: string[], typingSpeed = 60, pauseDuration = 2200, deletingSpeed = 30) {
   const [text, setText] = useState("");
@@ -532,6 +561,8 @@ export default function AramaPage() {
   const [casesError, setCasesError] = useState<string | null>(null);
   const caseDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastKararRequestRef = useRef<string | null>(null);
+  const lastMevzuatRequestRef = useRef<string | null>(null);
 
   /* ─── Mevzuat State ─── */
   const [mevzuatResults, setMevzuatResults] = useState<MevzuatSearchResponse | null>(null);
@@ -692,19 +723,41 @@ export default function AramaPage() {
 
   /* ─── Mevzuat Content Loader ─── */
   const handleSelectMevzuat = useCallback(async (m: MevzuatResult) => {
+    const requestId = m.mevzuatId || m.mevzuatNo || "";
+    lastMevzuatRequestRef.current = requestId;
+
     setSelectedMevzuat(m);
     if (!m.mevzuatId && !m.mevzuatNo) return;
     setMevzuatLoading(true);
-    setMevzuatContent(null);
+    // DON'T clear mevzuatContent yet — keep showing previous while loading
+
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
       const id = m.mevzuatId || m.mevzuatNo;
-      const res = await fetch(`${API_URL}/api/v1/search/mevzuat/${id}`);
+      const res = await fetch(`${API_URL}/api/v1/search/mevzuat/${id}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      // Race condition guard
+      if (lastMevzuatRequestRef.current !== requestId) return;
+
       if (res.ok) {
         const data = await res.json();
         setMevzuatContent(data);
+      } else {
+        setMevzuatContent(null);
       }
-    } catch { /* silent */ }
-    setMevzuatLoading(false);
+    } catch {
+      if (lastMevzuatRequestRef.current !== requestId) return;
+      setMevzuatContent(null);
+    } finally {
+      if (lastMevzuatRequestRef.current === requestId) {
+        setMevzuatLoading(false);
+      }
+    }
   }, []);
 
   /* ─── AI Streaming Handler ─── */
@@ -880,6 +933,9 @@ export default function AramaPage() {
   }, [query, activeTab, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, loading, handleMevzuatSearch, handleAIAsk]);
 
   const handleSelectResult = useCallback(async (result: IctihatResult) => {
+    const requestId = result.karar_id;
+    lastKararRequestRef.current = requestId;
+
     setSelectedResult(result);
     setMobileShowDetail(true);
 
@@ -890,14 +946,25 @@ export default function AramaPage() {
     }
 
     setDetailLoading(true);
-    setKararDetail(null);
+    // DON'T clear kararDetail yet — keep showing previous while loading
 
     try {
-      const res = await fetch(`${API_URL}/api/v1/search/karar/${result.karar_id}`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(`${API_URL}/api/v1/search/karar/${result.karar_id}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      // Race condition guard: check if this is still the current request
+      if (lastKararRequestRef.current !== requestId) return;
+
       if (!res.ok) throw new Error("Karar yüklenemedi");
       const raw = await res.json();
+
       const detail: KararDetail = {
-        id: raw.document_id,
+        id: raw.document_id || result.karar_id,
         mahkeme: result.mahkeme,
         daire: result.daire,
         esas_no: result.esas_no,
@@ -908,7 +975,11 @@ export default function AramaPage() {
       };
       setKararDetail(detail);
       setKararCache(prev => ({ ...prev, [result.karar_id]: detail }));
-    } catch {
+    } catch (err) {
+      // Race condition guard
+      if (lastKararRequestRef.current !== requestId) return;
+
+      // On error: show what we have (ozet from search results) instead of nothing
       setKararDetail({
         id: result.karar_id,
         mahkeme: result.mahkeme,
@@ -917,10 +988,12 @@ export default function AramaPage() {
         karar_no: result.karar_no,
         tarih: result.tarih,
         ozet: result.ozet || "",
-        tam_metin: "Karar metni yüklenirken hata oluştu. Lütfen tekrar deneyin.",
+        tam_metin: "",  // Empty but we still show ozet
       });
     } finally {
-      setDetailLoading(false);
+      if (lastKararRequestRef.current === requestId) {
+        setDetailLoading(false);
+      }
     }
   }, [kararCache]);
 
@@ -1605,15 +1678,10 @@ export default function AramaPage() {
                             <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
                           </div>
-                          <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
-                            {kararDetail.tam_metin
-                              .split(/\n\s*\n/)
-                              .filter((p) => p.trim())
-                              .map((paragraph, i) => (
-                                <p key={i} className="whitespace-pre-wrap">
-                                  {paragraph.trim()}
-                                </p>
-                              ))}
+                          <div className="prose prose-invert max-w-none">
+                            {kararDetail.tam_metin ? formatLegalText(kararDetail.tam_metin) : (
+                              <p className="text-[#5C5C5F] italic">Tam metin yüklenemedi. Özet gösteriliyor.</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1899,30 +1967,20 @@ export default function AramaPage() {
                             </div>
 
                             {/* Full text */}
-                            {mevzuatContent.html ? (
-                              <div
-                                className="text-[14px] text-[#ECECEE]/90 leading-[1.8] prose prose-invert prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: mevzuatContent.html }}
-                              />
-                            ) : (
+                            {mevzuatSearchText.trim().length >= 2 ? (
                               <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
                                 {mevzuatContent.content
-                                  .split(/\n\s*\n/)
+                                  .split(/\n\n+/)
                                   .filter((p) => p.trim())
-                                  .map((paragraph, i) => {
-                                    if (mevzuatSearchText.trim().length >= 2) {
-                                      return (
-                                        <p key={i} className="whitespace-pre-wrap">
-                                          {highlightText(paragraph.trim(), mevzuatSearchText)}
-                                        </p>
-                                      );
-                                    }
-                                    return (
-                                      <p key={i} className="whitespace-pre-wrap">
-                                        {paragraph.trim()}
-                                      </p>
-                                    );
-                                  })}
+                                  .map((paragraph, i) => (
+                                    <p key={i} className="whitespace-pre-wrap text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3">
+                                      {highlightText(paragraph.trim(), mevzuatSearchText)}
+                                    </p>
+                                  ))}
+                              </div>
+                            ) : (
+                              <div className="prose prose-invert max-w-none">
+                                {formatLegalText(mevzuatContent.content)}
                               </div>
                             )}
                           </div>
