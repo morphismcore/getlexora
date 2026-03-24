@@ -108,7 +108,6 @@ jobs:
             --exclude __pycache__ \
             --exclude .git \
             --exclude .env \
-            --exclude docker-compose.prod.yml \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./ ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:${{ env.DEPLOY_PATH }}/
 
@@ -116,21 +115,20 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'DEPLOY'
             cd /opt/lexora
-            
-            # Build
+
+            # Build all application services
             docker compose -f docker-compose.prod.yml build --no-cache frontend backend
-            
-            # Restart (down+up to pick up env changes)
-            docker compose -f docker-compose.prod.yml down backend frontend
-            docker compose -f docker-compose.prod.yml up -d
-            
+
+            # Restart only app services (not nginx/redis/qdrant/postgres)
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate frontend backend worker beat
+
             # Wait for health
-            sleep 10
-            
-            # Connect to Caddy network
+            sleep 15
+
+            # Connect to Caddy network (ignore if already connected)
             docker network connect docker_default lexora-frontend-1 2>/dev/null || true
             docker network connect docker_default lexora-backend-1 2>/dev/null || true
-            
+
             # Health check
             curl -sf http://localhost:8001/health || exit 1
 
