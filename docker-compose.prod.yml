@@ -141,9 +141,9 @@ services:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
-    command: redis-server --requirepass ${REDIS_PASSWORD:-lexora_redis_2026} --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --user default on '>lexora_redis_2026' '~*' '&*' '+@all' --protected-mode no
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "lexora_redis_2026", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
