@@ -44,10 +44,24 @@ const TR_MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temm
 const TR_DAYS_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 const RESMI_TATILLER_2026 = [
-  "2026-01-01", "2026-04-23", "2026-05-01", "2026-05-19",
-  "2026-06-15", "2026-06-16", "2026-06-17", "2026-07-15",
-  "2026-08-22", "2026-08-23", "2026-08-24", "2026-08-25",
-  "2026-08-30", "2026-10-29",
+  // 1 Ocak - Yılbaşı
+  "2026-01-01",
+  // Ramazan Bayramı (3 gün) - 2026
+  "2026-02-17", "2026-02-18", "2026-02-19",
+  // 23 Nisan - Ulusal Egemenlik ve Çocuk Bayramı
+  "2026-04-23",
+  // Kurban Bayramı (4 gün) - 2026
+  "2026-04-26", "2026-04-27", "2026-04-28", "2026-04-29",
+  // 1 Mayıs - Emek ve Dayanışma Günü
+  "2026-05-01",
+  // 19 Mayıs - Atatürk'ü Anma, Gençlik ve Spor Bayramı
+  "2026-05-19",
+  // 15 Temmuz - Demokrasi ve Milli Birlik Günü
+  "2026-07-15",
+  // 30 Ağustos - Zafer Bayramı
+  "2026-08-30",
+  // 29 Ekim - Cumhuriyet Bayramı
+  "2026-10-29",
 ];
 
 /* ─── Helpers ─── */
@@ -70,6 +84,24 @@ function daysUntil(dateStr: string): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function businessDaysUntil(dateStr: string): number {
+  const target = new Date(dateStr + "T00:00:00");
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  let count = 0;
+  const current = new Date(now);
+  while (current < target) {
+    current.setDate(current.getDate() + 1);
+    const day = current.getDay();
+    const dateKey = current.toISOString().slice(0, 10);
+    // Skip weekends (0=Sunday, 6=Saturday) and holidays
+    if (day !== 0 && day !== 6 && !RESMI_TATILLER_2026.includes(dateKey)) {
+      count++;
+    }
+  }
+  return count;
 }
 
 function getUrgencyFromDays(days: number): string {
@@ -178,6 +210,11 @@ function SavedDeadlineCard({ dl }: { dl: SavedDeadline }) {
               {days < 0 ? `${Math.abs(days)} gün geçti` : `${days} gün kaldı`}
             </p>
           )}
+          {!dl.completed && days > 0 && (
+            <p className="text-[10px] text-[#8B8B8E] mt-0.5">
+              {businessDaysUntil(dl.deadline_date)} iş günü
+            </p>
+          )}
         </div>
       </div>
       {!dl.completed && days > 0 && days <= 30 && (
@@ -189,6 +226,16 @@ function SavedDeadlineCard({ dl }: { dl: SavedDeadline }) {
             animate={{ width: `${Math.max(0, 100 - (days / 30) * 100)}%` }}
             transition={{ duration: 0.6 }}
           />
+        </div>
+      )}
+      {!dl.completed && (
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+          <span className="text-[10px] text-[#5C5C5F]">E-posta hatırlatma</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF]">Yakında</span>
         </div>
       )}
     </div>
@@ -489,8 +536,23 @@ export default function SurelerPage() {
                           <span className={`text-[11px] font-medium ${config.text}`}>
                             {dl.urgency === "expired" ? "Süresi dolmuş" : `${dl.business_days_left} iş günü kaldı`}
                           </span>
+                          {dl.urgency !== "expired" && (
+                            <span className="text-[11px] text-[#8B8B8E]">
+                              ({daysUntil(dl.deadline_date)} takvim günü)
+                            </span>
+                          )}
                         </div>
                         {dl.note && <p className="text-[11px] text-[#5C5C5F] mt-2 italic">{dl.note}</p>}
+                        {dl.urgency !== "expired" && (
+                          <div className="mt-2 flex items-center gap-1.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                              <path d="M13.73 21a2 2 0 01-3.46 0" />
+                            </svg>
+                            <span className="text-[10px] text-[#5C5C5F]">E-posta hatırlatma</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF]">Yakında</span>
+                          </div>
+                        )}
 
                         {/* Save to case */}
                         <div className="mt-3 flex justify-end no-print" ref={activeCaseDropdown === index ? caseDropdownRef : undefined}>

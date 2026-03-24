@@ -98,6 +98,13 @@ const DAIRELER = [
   "9. Ceza Dairesi", "10. Ceza Dairesi", "11. Ceza Dairesi", "12. Ceza Dairesi",
   "13. Ceza Dairesi", "14. Ceza Dairesi", "15. Ceza Dairesi", "16. Ceza Dairesi",
   "Hukuk Genel Kurulu", "Ceza Genel Kurulu",
+  "1. İdari Dava Dairesi", "2. İdari Dava Dairesi", "3. İdari Dava Dairesi",
+  "4. İdari Dava Dairesi", "5. İdari Dava Dairesi", "6. İdari Dava Dairesi",
+  "7. İdari Dava Dairesi", "8. İdari Dava Dairesi", "9. İdari Dava Dairesi",
+  "10. İdari Dava Dairesi",
+  "1. Vergi Dava Dairesi", "2. Vergi Dava Dairesi", "3. Vergi Dava Dairesi",
+  "4. Vergi Dava Dairesi",
+  "İdari Dava Daireleri Kurulu", "Vergi Dava Daireleri Kurulu",
 ];
 
 const KAYNAKLAR = ["Tümü", "Bedesten", "AYM", "AİHM"];

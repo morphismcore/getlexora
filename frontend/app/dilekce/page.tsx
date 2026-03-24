@@ -69,6 +69,155 @@ const SECTION_PRESETS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Template types & built-in templates (always available, merged with backend)
+// ---------------------------------------------------------------------------
+
+interface TemplateField {
+  id: string;
+  label: string;
+  type: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: string[];
+}
+
+interface Template {
+  id: string;
+  name: string;
+  category: string;
+  fields: TemplateField[];
+}
+
+const BUILTIN_TEMPLATES: Template[] = [
+  {
+    id: "builtin-ise-iade",
+    name: "İşe İade Davası",
+    category: "İş Hukuku",
+    fields: [
+      { id: "isci_adi", label: "İşçi Adı Soyadı", type: "text", required: true },
+      { id: "isci_tc", label: "TC Kimlik No", type: "text", required: true },
+      { id: "isveren", label: "İşveren Unvanı", type: "text", required: true },
+      { id: "ise_baslama", label: "İşe Başlama Tarihi", type: "date", required: true },
+      { id: "fesih_tarihi", label: "Fesih Tarihi", type: "date", required: true },
+      { id: "fesih_sebebi", label: "Bildirilen Fesih Sebebi", type: "textarea", placeholder: "İşveren tarafından belirtilen fesih gerekçesi" },
+      { id: "mahkeme", label: "Mahkeme", type: "text", placeholder: "Örn: İstanbul 3. İş Mahkemesi" },
+    ],
+  },
+  {
+    id: "builtin-kidem-tazminati",
+    name: "Kıdem Tazminatı Talebi",
+    category: "İş Hukuku",
+    fields: [
+      { id: "isci_adi", label: "İşçi Adı Soyadı", type: "text", required: true },
+      { id: "isveren", label: "İşveren Unvanı", type: "text", required: true },
+      { id: "calisma_suresi", label: "Çalışma Süresi (yıl)", type: "number", required: true },
+      { id: "son_brut_ucret", label: "Son Brüt Ücret (TL)", type: "number", required: true },
+      { id: "fesih_tarihi", label: "Fesih Tarihi", type: "date", required: true },
+    ],
+  },
+  {
+    id: "builtin-ihbarname",
+    name: "Genel İhtarname",
+    category: "Ticaret Hukuku",
+    fields: [
+      { id: "gonderen", label: "Gönderen (Ad Soyad / Unvan)", type: "text", required: true },
+      { id: "muhatap", label: "Muhatap (Ad Soyad / Unvan)", type: "text", required: true },
+      { id: "konu", label: "İhtar Konusu", type: "text", required: true },
+      { id: "aciklama", label: "Açıklama", type: "textarea", required: true, placeholder: "İhtarnamenin detaylı açıklaması" },
+      { id: "sure", label: "Verilen Süre (gün)", type: "number", placeholder: "Örn: 7" },
+    ],
+  },
+  {
+    id: "builtin-bosanma",
+    name: "Anlaşmalı Boşanma Dilekçesi",
+    category: "Aile Hukuku",
+    fields: [
+      { id: "davaci", label: "Davacı Eş", type: "text", required: true },
+      { id: "davali", label: "Davalı Eş", type: "text", required: true },
+      { id: "evlilik_tarihi", label: "Evlilik Tarihi", type: "date", required: true },
+      { id: "cocuk_sayisi", label: "Müşterek Çocuk Sayısı", type: "number" },
+      { id: "protokol_ozeti", label: "Anlaşma Protokolü Özeti", type: "textarea", placeholder: "Velayet, nafaka, mal paylaşımı gibi konulardaki anlaşma" },
+      { id: "mahkeme", label: "Mahkeme", type: "text", placeholder: "Örn: İstanbul Aile Mahkemesi" },
+    ],
+  },
+  {
+    id: "builtin-nafaka",
+    name: "Nafaka Talebi",
+    category: "Aile Hukuku",
+    fields: [
+      { id: "davaci", label: "Davacı", type: "text", required: true },
+      { id: "davali", label: "Davalı", type: "text", required: true },
+      { id: "nafaka_turu", label: "Nafaka Türü", type: "select", options: ["Tedbir Nafakası", "Yoksulluk Nafakası", "İştirak Nafakası"], required: true },
+      { id: "talep_miktari", label: "Talep Edilen Aylık Miktar (TL)", type: "number", required: true },
+      { id: "gerekce", label: "Gerekçe", type: "textarea", required: true },
+    ],
+  },
+  {
+    id: "builtin-suc-duyurusu",
+    name: "Suç Duyurusu",
+    category: "Ceza Hukuku",
+    fields: [
+      { id: "sikayet_eden", label: "Şikayetçi / Müşteki", type: "text", required: true },
+      { id: "suphe_li", label: "Şüpheli", type: "text", required: true },
+      { id: "suc_tarihi", label: "Suç Tarihi", type: "date", required: true },
+      { id: "suc_yeri", label: "Suç Yeri", type: "text" },
+      { id: "olay_ozeti", label: "Olay Özeti", type: "textarea", required: true, placeholder: "Olayın ayrıntılı anlatımı" },
+      { id: "suc_turu", label: "İsnat Edilen Suç", type: "text", placeholder: "Örn: Dolandırıcılık, Tehdit" },
+    ],
+  },
+  {
+    id: "builtin-idari-itiraz",
+    name: "İdari İşlem İptali",
+    category: "İdare Hukuku",
+    fields: [
+      { id: "davaci", label: "Davacı", type: "text", required: true },
+      { id: "davali_idare", label: "Davalı İdare", type: "text", required: true },
+      { id: "islem_tarihi", label: "İşlem Tarihi", type: "date", required: true },
+      { id: "islem_konusu", label: "İptali İstenen İşlem", type: "textarea", required: true, placeholder: "İdari işlemin tanımı" },
+      { id: "hukuka_aykirilik", label: "Hukuka Aykırılık Gerekçesi", type: "textarea", required: true },
+    ],
+  },
+  {
+    id: "builtin-icra-itiraz",
+    name: "İcra Takibine İtiraz",
+    category: "İcra-İflas",
+    fields: [
+      { id: "borclu", label: "Borçlu (İtiraz Eden)", type: "text", required: true },
+      { id: "alacakli", label: "Alacaklı", type: "text", required: true },
+      { id: "dosya_no", label: "İcra Dosya No", type: "text", required: true },
+      { id: "itiraz_sebebi", label: "İtiraz Sebebi", type: "select", options: ["Borca İtiraz", "İmzaya İtiraz", "Zamanaşımı İtirazı", "Yetkiye İtiraz"], required: true },
+      { id: "aciklama", label: "Açıklama", type: "textarea", required: true },
+    ],
+  },
+  {
+    id: "builtin-tuketici-sikayet",
+    name: "Tüketici Şikayet Dilekçesi",
+    category: "Tüketici Hukuku",
+    fields: [
+      { id: "tuketici", label: "Tüketici Adı Soyadı", type: "text", required: true },
+      { id: "firma", label: "Şikayet Edilen Firma", type: "text", required: true },
+      { id: "urun_hizmet", label: "Ürün / Hizmet", type: "text", required: true },
+      { id: "satin_alma_tarihi", label: "Satın Alma Tarihi", type: "date" },
+      { id: "sorun", label: "Sorun Açıklaması", type: "textarea", required: true, placeholder: "Yaşanan sorunun detaylı açıklaması" },
+      { id: "talep", label: "Talep", type: "select", options: ["Ürün İadesi", "Ücretsiz Onarım", "Bedel İadesi", "Ürün Değişimi", "Tazminat"], required: true },
+    ],
+  },
+  {
+    id: "builtin-tahliye",
+    name: "Tahliye Talepli Dava",
+    category: "Gayrimenkul Hukuku",
+    fields: [
+      { id: "kiraya_veren", label: "Kiraya Veren", type: "text", required: true },
+      { id: "kiraci", label: "Kiracı", type: "text", required: true },
+      { id: "tasinmaz_adresi", label: "Taşınmaz Adresi", type: "textarea", required: true },
+      { id: "kira_baslangic", label: "Kira Başlangıç Tarihi", type: "date" },
+      { id: "tahliye_sebebi", label: "Tahliye Sebebi", type: "select", options: ["Kira Bedelinin Ödenmemesi", "Tahliye Taahhüdü", "İhtiyaç Sebebiyle", "Yeniden İnşa/İmar", "Süre Sonu"], required: true },
+      { id: "aciklama", label: "Ek Açıklama", type: "textarea" },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -267,22 +416,6 @@ function IconDoc({ className = "w-4 h-4" }: { className?: string }) {
 // Main Component
 // ---------------------------------------------------------------------------
 
-interface TemplateField {
-  id: string;
-  label: string;
-  type: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: string[];
-}
-
-interface Template {
-  id: string;
-  name: string;
-  category: string;
-  fields: TemplateField[];
-}
-
 export default function DilekcePage() {
   const [doc, setDoc] = useState<DocumentState>(() => {
     if (typeof window !== "undefined") {
@@ -295,7 +428,7 @@ export default function DilekcePage() {
   });
   const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor");
   const [copied, setCopied] = useState(false);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<Template[]>(BUILTIN_TEMPLATES);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const [templateMode, setTemplateMode] = useState(false);
@@ -340,7 +473,13 @@ export default function DilekcePage() {
   useEffect(() => {
     fetch(`${API_URL}/api/v1/templates`)
       .then((r) => r.json())
-      .then((data) => setTemplates(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const backend = Array.isArray(data) ? data : [];
+        // Merge: backend templates first, then built-ins not already present
+        const backendIds = new Set(backend.map((t: Template) => t.id));
+        const merged = [...backend, ...BUILTIN_TEMPLATES.filter((b) => !backendIds.has(b.id))];
+        setTemplates(merged);
+      })
       .catch(() => {});
 
     // Aramadan gelen citation varsa otomatik ekle
@@ -557,58 +696,6 @@ export default function DilekcePage() {
     }
   }, [selectedTemplate, templateValues]);
 
-  // --- Export DOCX ---
-  const handleExportDocx = useCallback(async () => {
-    setExporting("docx");
-    try {
-      const resp = await fetch(`${API_URL}/api/v1/export/docx`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(doc),
-      });
-      if (!resp.ok) throw new Error("Export failed");
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${doc.docType.replace(/\s+/g, "_")}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("DOCX export başarısız oldu.");
-    } finally {
-      setExporting(null);
-    }
-  }, [doc]);
-
-  // --- Export PDF ---
-  const handleExportPdf = useCallback(async () => {
-    setExporting("pdf");
-    try {
-      const resp = await fetch(`${API_URL}/api/v1/export/pdf`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(doc),
-      });
-      if (!resp.ok) throw new Error("Export failed");
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${doc.docType.replace(/\s+/g, "_")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("PDF export başarısız oldu.");
-    } finally {
-      setExporting(null);
-    }
-  }, [doc]);
-
   // --- Plain text generation ---
   const plainText = useMemo(() => {
     const h = doc.header;
@@ -689,6 +776,66 @@ export default function DilekcePage() {
     return lines.join("\n");
   }, [doc]);
 
+  // --- Export DOCX ---
+  const handleExportDocx = useCallback(async () => {
+    setExporting("docx");
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("lexora_token") : null;
+      const resp = await fetch(`${API_URL}/api/v1/export/docx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: plainText, title: doc.header.konu || "Dilekce" }),
+      });
+      if (!resp.ok) throw new Error("DOCX oluşturulamadı");
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${doc.header.konu || "dilekce"}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("DOCX dışa aktarma başarısız");
+    } finally {
+      setExporting(null);
+    }
+  }, [doc, plainText]);
+
+  // --- Export PDF ---
+  const handleExportPdf = useCallback(async () => {
+    setExporting("pdf");
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("lexora_token") : null;
+      const resp = await fetch(`${API_URL}/api/v1/export/pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: plainText, title: doc.header.konu || "Dilekce" }),
+      });
+      if (!resp.ok) throw new Error("PDF oluşturulamadı");
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${doc.header.konu || "dilekce"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("PDF dışa aktarma başarısız");
+    } finally {
+      setExporting(null);
+    }
+  }, [doc, plainText]);
+
   // --- Copy ---
   const handleCopy = useCallback(async () => {
     try {
@@ -752,7 +899,7 @@ export default function DilekcePage() {
               Şablon Galerisi
             </label>
             {/* Category cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
               {(() => {
                 const CATS: Record<string, { color: string; bg: string; border: string; icon: string }> = {
                   "İş Hukuku": { color: "text-[#6C6CFF]", bg: "bg-[#6C6CFF]/[0.06]", border: "border-[#6C6CFF]/20", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
@@ -761,6 +908,8 @@ export default function DilekcePage() {
                   "İdare Hukuku": { color: "text-[#22D3EE]", bg: "bg-[#22D3EE]/[0.06]", border: "border-[#22D3EE]/20", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" },
                   "Aile Hukuku": { color: "text-[#F472B6]", bg: "bg-[#F472B6]/[0.06]", border: "border-[#F472B6]/20", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
                   "İcra-İflas": { color: "text-[#FFB224]", bg: "bg-[#FFB224]/[0.06]", border: "border-[#FFB224]/20", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+                  "Tüketici Hukuku": { color: "text-[#34D399]", bg: "bg-[#34D399]/[0.06]", border: "border-[#34D399]/20", icon: "M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" },
+                  "Gayrimenkul Hukuku": { color: "text-[#FB923C]", bg: "bg-[#FB923C]/[0.06]", border: "border-[#FB923C]/20", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
                 };
                 const categories = Object.keys(CATS);
                 const grouped: Record<string, Template[]> = {};
@@ -1025,7 +1174,7 @@ export default function DilekcePage() {
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50"
           >
             <IconDownload className="w-3.5 h-3.5" />
-            {exporting === "docx" ? "..." : "DOCX"}
+            {exporting === "docx" ? "..." : "DOCX İndir"}
           </button>
           <button
             onClick={handleExportPdf}
@@ -1033,7 +1182,7 @@ export default function DilekcePage() {
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50"
           >
             <IconDownload className="w-3.5 h-3.5" />
-            {exporting === "pdf" ? "..." : "PDF"}
+            {exporting === "pdf" ? "..." : "PDF İndir"}
           </button>
           <button
             onClick={handleDownloadTxt}

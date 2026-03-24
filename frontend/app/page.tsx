@@ -7,6 +7,10 @@ import { useAuth } from "@/components/ui/auth-provider";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/* ------------------------------------------------------------------ */
+/*  Dashboard types & helpers (authenticated view)                     */
+/* ------------------------------------------------------------------ */
+
 interface DashboardData {
   stats: { total_cases: number; upcoming_deadlines: number; total_searches: number; qdrant_documents: number };
   upcoming_deadlines: { id: string; title: string; court: string; case_title: string; date: string; deadline_date: string; days_left: number; deadline_type: string }[];
@@ -97,7 +101,412 @@ const quickActions = [
     icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
 ];
 
-export default function DashboardPage() {
+/* ------------------------------------------------------------------ */
+/*  Landing page (non-authenticated view)                              */
+/* ------------------------------------------------------------------ */
+
+interface HealthStats {
+  totalPoints: number;
+  loading: boolean;
+}
+
+function useHealthStats(): HealthStats {
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${API_URL}/health/details`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        const qdrant = data?.checks?.qdrant;
+        if (qdrant?.total_points) setTotalPoints(qdrant.total_points);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
+
+  return { totalPoints, loading };
+}
+
+function LandingHeroCounter({ end, suffix }: { end: number; suffix: string }) {
+  const count = useCounter(end, 1800);
+  return (
+    <span className="text-[32px] md:text-[40px] font-bold tabular-nums text-[#ECECEE]">
+      {end > 0 ? count.toLocaleString("tr-TR") : "--"}{suffix}
+    </span>
+  );
+}
+
+const dataSources = [
+  {
+    name: "Yargitay",
+    desc: "Bedesten API uzerinden tam metin ictihat kararlari",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
+      </svg>
+    ),
+    color: "text-[#6C6CFF]",
+  },
+  {
+    name: "Danistay",
+    desc: "Idari yargi kararlari ve ictihat arsivi",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+    color: "text-[#A78BFA]",
+  },
+  {
+    name: "Anayasa Mahkemesi",
+    desc: "anayasa.gov.tr kaynaklarindan bireysel basvuru ve norm denetimi kararlari",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M3 6l9-3 9 3M3 6v12l9 3 9-3V6M3 6l9 3m0 0l9-3m-9 3v12" />
+      </svg>
+    ),
+    color: "text-[#E5484D]",
+  },
+  {
+    name: "AiHM (HUDOC)",
+    desc: "Avrupa Insan Haklari Mahkemesi kararlari",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+      </svg>
+    ),
+    color: "text-[#3DD68C]",
+  },
+  {
+    name: "Mevzuat",
+    desc: "mevzuat.gov.tr uzerinden guncel kanun ve yonetmelikler",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    ),
+    color: "text-[#FFB224]",
+  },
+];
+
+const features = [
+  {
+    href: "/arama",
+    title: "Akilli Arama",
+    desc: "AI destekli semantik arama ile binlerce ictihat karari icinden ihtiyaciniz olan karari saniyeler icinde bulun.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    ),
+    color: "text-[#6C6CFF]",
+    gradient: "from-[#6C6CFF]/10 to-[#6C6CFF]/5",
+  },
+  {
+    href: "/dilekce",
+    title: "Dilekce Olusturma",
+    desc: "Sablonlar ve AI destekli metin onerisiyle profesyonel dilekce ve hukuki belge hazirlayin.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+    color: "text-[#3DD68C]",
+    gradient: "from-[#3DD68C]/10 to-[#3DD68C]/5",
+  },
+  {
+    href: "/sureler",
+    title: "Sure Hesaplama",
+    desc: "Dava ve islem surelerini otomatik hesaplayin, yaklasan sureler icin bildirim alin.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    ),
+    color: "text-[#FFB224]",
+    gradient: "from-[#FFB224]/10 to-[#FFB224]/5",
+  },
+  {
+    href: "/belge",
+    title: "Belge Yonetimi",
+    desc: "Dava belgelerinizi guvenli bir sekilde yukleyin, kategorize edin ve kolayca erisin.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+    color: "text-[#A78BFA]",
+    gradient: "from-[#A78BFA]/10 to-[#A78BFA]/5",
+  },
+  {
+    href: "/davalar",
+    title: "Dava Takibi",
+    desc: "Tum davalarinizi tek panelden yonetin, durusma tarihlerini ve gelismeleri takip edin.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+    ),
+    color: "text-[#E5484D]",
+    gradient: "from-[#E5484D]/10 to-[#E5484D]/5",
+  },
+  {
+    href: "/istatistik",
+    title: "Istatistik ve Analiz",
+    desc: "Arama istatistikleri, karar dagilimi ve kullanim analizleriyle calismanizi optimize edin.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+    color: "text-[#6C6CFF]",
+    gradient: "from-[#6C6CFF]/8 to-[#A78BFA]/5",
+  },
+];
+
+function LandingPage() {
+  const { totalPoints, loading: healthLoading } = useHealthStats();
+
+  return (
+    <div className="min-h-screen bg-[#09090B] overflow-auto">
+      {/* Nav */}
+      <nav className="border-b border-white/[0.06] bg-[#09090B]/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#6C6CFF]/20 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C6CFF" strokeWidth={2}>
+                <path d="M3 6l9-3 9 3M3 6v12l9 3 9-3V6M3 6l9 3m0 0l9-3m-9 3v12" />
+              </svg>
+            </div>
+            <span className="text-[18px] font-bold text-[#ECECEE] tracking-tight">Lexora</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/giris"
+              className="px-4 py-2 text-[13px] font-medium text-[#ECECEE] hover:text-white transition-colors"
+            >
+              Giris Yap
+            </Link>
+            <Link
+              href="/kayit"
+              className="px-5 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[13px] font-semibold rounded-xl transition-colors"
+            >
+              Ucretsiz Kayit Ol
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        {/* Subtle gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#6C6CFF]/[0.04] via-transparent to-transparent pointer-events-none" />
+        <div className="max-w-6xl mx-auto px-6 pt-20 pb-16 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-3xl mx-auto"
+          >
+            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight text-[#ECECEE] leading-[1.1]">
+              Turk Hukuk Arastirma Platformu
+            </h1>
+            <p className="mt-5 text-[16px] md:text-[18px] text-[#8B8B8E] leading-relaxed max-w-2xl mx-auto">
+              AI destekli ictihat arama, mevzuat tarama, dilekce olusturma ve dava yonetimi — avukatlar icin tasarlandi.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
+              <Link
+                href="/kayit"
+                className="px-8 py-3.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[15px] font-semibold rounded-xl transition-all hover:-translate-y-0.5 shadow-[0_0_20px_rgba(108,108,255,0.3)]"
+              >
+                Ucretsiz Kayit Ol
+              </Link>
+              <Link
+                href="/giris"
+                className="px-8 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-[#ECECEE] text-[15px] font-medium rounded-xl border border-white/[0.08] transition-all hover:-translate-y-0.5"
+              >
+                Giris Yap
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Stats Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto"
+          >
+            <div className="text-center p-5 bg-[#111113] border border-white/[0.06] rounded-2xl">
+              {healthLoading ? (
+                <Shimmer className="h-10 w-24 mx-auto mb-2" />
+              ) : (
+                <LandingHeroCounter end={totalPoints} suffix="+" />
+              )}
+              <p className="text-[13px] text-[#5C5C5F] mt-1">Ictihat Karari</p>
+            </div>
+            <div className="text-center p-5 bg-[#111113] border border-white/[0.06] rounded-2xl">
+              <span className="text-[32px] md:text-[40px] font-bold text-[#ECECEE]">5</span>
+              <p className="text-[13px] text-[#5C5C5F] mt-1">Veri Kaynagi</p>
+            </div>
+            <div className="text-center p-5 bg-[#111113] border border-white/[0.06] rounded-2xl">
+              <span className="text-[32px] md:text-[40px] font-bold text-[#ECECEE]">15+</span>
+              <p className="text-[13px] text-[#5C5C5F] mt-1">Olay Turu</p>
+            </div>
+            <div className="text-center p-5 bg-[#111113] border border-white/[0.06] rounded-2xl">
+              <span className="text-[32px] md:text-[40px] font-bold text-[#3DD68C]">Ucretsiz</span>
+              <p className="text-[13px] text-[#5C5C5F] mt-1">Baslangic</p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Data Sources Section */}
+      <section className="border-t border-white/[0.06] bg-[#0C0C0E]">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-[24px] md:text-[32px] font-bold text-[#ECECEE] tracking-tight">
+              Veri Kaynaklarimiz
+            </h2>
+            <p className="text-[14px] text-[#5C5C5F] mt-3 max-w-xl mx-auto">
+              Resmi ve guvenilir kaynaklardan toplanan hukuki veriler ile calisiyoruz.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {dataSources.map((src, i) => (
+              <motion.div
+                key={src.name}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.4 }}
+                className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 hover:border-white/[0.12] transition-all"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${src.color.replace("text-", "bg-").replace("]", "]/10]")}`}>
+                  <span className={src.color}>{src.icon}</span>
+                </div>
+                <h3 className="text-[14px] font-semibold text-[#ECECEE]">{src.name}</h3>
+                <p className="text-[12px] text-[#5C5C5F] mt-1.5 leading-relaxed">{src.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="border-t border-white/[0.06]">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-[24px] md:text-[32px] font-bold text-[#ECECEE] tracking-tight">
+              Avukatlar Icin Tasarlandi
+            </h2>
+            <p className="text-[14px] text-[#5C5C5F] mt-3 max-w-xl mx-auto">
+              Hukuki arastirmadan dava yonetimine, tum ihtiyaclariniz tek platformda.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {features.map((f, i) => (
+              <motion.div
+                key={f.href}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.06, duration: 0.4 }}
+              >
+                <div
+                  className={`h-full bg-gradient-to-br ${f.gradient} border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.12] transition-all group`}
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-[#09090B]/50 flex items-center justify-center mb-4 ${f.color} group-hover:scale-110 transition-transform`}>
+                    {f.icon}
+                  </div>
+                  <h3 className="text-[16px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors">{f.title}</h3>
+                  <p className="text-[13px] text-[#5C5C5F] mt-2 leading-relaxed">{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="border-t border-white/[0.06] bg-[#0C0C0E]">
+        <div className="max-w-3xl mx-auto px-6 py-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-[24px] md:text-[32px] font-bold text-[#ECECEE] tracking-tight">
+              Hukuki arastirmanizi hizlandirin
+            </h2>
+            <p className="text-[14px] text-[#5C5C5F] mt-3">
+              Ucretsiz hesap olusturun ve hemen aramaya baslayin.
+            </p>
+            <Link
+              href="/kayit"
+              className="inline-block mt-8 px-10 py-4 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[15px] font-semibold rounded-xl transition-all hover:-translate-y-0.5 shadow-[0_0_20px_rgba(108,108,255,0.3)]"
+            >
+              Ucretsiz Kayit Ol
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/[0.06] bg-[#09090B]">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-md bg-[#6C6CFF]/20 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C6CFF" strokeWidth={2}>
+                  <path d="M3 6l9-3 9 3M3 6v12l9 3 9-3V6M3 6l9 3m0 0l9-3m-9 3v12" />
+                </svg>
+              </div>
+              <span className="text-[14px] font-semibold text-[#5C5C5F]">Lexora</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Gizlilik Politikasi</a>
+              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Kullanim Kosullari</a>
+              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">KVKK Aydinlatma</a>
+              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Iletisim</a>
+            </div>
+          </div>
+          <p className="text-[11px] text-[#3A3A3F] text-center mt-6">
+            Lexora avukatin isini destekler, yapmaz. Nihai hukuki degerlendirme avukata aittir.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Authenticated Dashboard                                            */
+/* ------------------------------------------------------------------ */
+
+function AuthenticatedDashboard() {
   const { token, user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -320,4 +729,18 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main export — switches between landing and dashboard               */
+/* ------------------------------------------------------------------ */
+
+export default function DashboardPage() {
+  const { token, loading } = useAuth();
+
+  if (loading) return <SkeletonDashboard />;
+
+  if (!token) return <LandingPage />;
+
+  return <AuthenticatedDashboard />;
 }
