@@ -1,367 +1,243 @@
-# Lexora — Yapılacaklar Listesi (Detaylı)
+# Lexora — Yapılacaklar Roadmap (24 Mart 2026)
 
-> Bu dosya 24 Mart 2026'da oluşturuldu.
-> Ajanların planladığı ama yapılamayan işler + projeyi dünyanın en iyi hukuk platformu yapacak iyileştirmeler.
-
----
-
-## 1. FRONTEND — Sıfırdan Yeniden Yazılması Gereken Sayfalar
-
-### 1.1 Arama Sayfası (`frontend/app/arama/page.tsx`)
-Projenin kalbi. Şu an çalışıyor ama tasarım eski kaldı.
-
-**Yapılacaklar:**
-- Hero search bar: Büyük, gösterişli, focus'ta glow border, placeholder'da dönen örnek sorgular (typewriter)
-- Gelişmiş filtre paneli: Katlanabilir, hukuk_alani dropdown, mahkeme multi-select, daire, tarih aralığı
-- Tab switcher: "İçtihat Arama", "Mevzuat", "AI Asistan (RAG)" — 3 mod
-- Sonuç kartları yeniden tasarım:
-  - Mahkeme badge (renkli, mahkeme tipine göre)
-  - Esas No / Karar No / Tarih belirgin
-  - Özet'te arama terimlerinin highlight'lanması (mevcut ama iyileştirilebilir)
-  - Relevance score güzel progress bar
-  - Verification status badge
-  - "Tam Metin" genişletme butonu
-  - "Davaya Ekle" ve "Doğrula" aksiyon butonları
-- AI Asistan tab:
-  - Streaming response: cursor animasyonuyla akan metin
-  - Kaynaklar önce tıklanabilir badge olarak
-  - Verification sonuçları inline
-  - Markdown render
-- Sonuç sayısı ve süre gösterimi ("23 sonuç, 0.4s")
-- Boş state: önerilen sorgular
-- Arama geçmişi sidebar
-- Sayfalama veya infinite scroll
-- Skeleton loading state
-- Aramayı davaya kaydetme
-
-### 1.2 Dilekçe Sayfası (`frontend/app/dilekce/page.tsx`)
-**Yapılacaklar:**
-- Auto-save: localStorage'a her 30 saniyede otomatik kayıt, sayfa yenilenince geri yükleme
-- Şablon galerisi: Güzel grid, kategori kartları (İş Hukuku, Ceza, Ticaret, İdare, Aile, İcra-İflas)
-- Her kategori kartı: Ayırt edici renk/ikon, şablon sayısı, tıklayınca genişleme
-- Şablon editörü: Sol form, sağ canlı önizleme (serif font)
-- Dışa aktarma: "Kopyala", "DOCX İndir", "PDF İndir" butonları
-- Şablon arama/filtre
-- Son kullanılan şablonlar
-- Alt paragraf sayısı 26'dan (a-z) fazla olabilmeli
-
-### 1.3 Belge Analiz Sayfası (`frontend/app/belge/page.tsx`)
-**Yapılacaklar:**
-- Drag & drop upload zone: rounded-2xl, sürükleme animasyonu (scale-[1.01]), dashed border animasyonu
-- Desteklenen format ikonları: PDF, DOCX, TXT
-- Yükleme progress bar (yüzdelik)
-- Analiz sonuçları yeniden tasarım:
-  - Belge özeti bölümü
-  - Çıkarılan entity'ler: taraflar, tarihler, tutarlar, atıflar — her biri güzel kartta
-  - İlgili içtihat önerileri (içeriğe göre)
-  - Risk/sorun vurgulama
-  - Belge tipi sınıflandırma badge
-- Belge görüntüleyici: Temiz metin, highlighted entity'ler, sidebar entity listesi
-- Aksiyon butonları: "Davaya Ekle", "Atıfları Doğrula", "Dışa Aktar"
-- Yükleme geçmişi
-- Citation extraction → tıklayınca doğrulama sayfasına yönlendirme
-
-### 1.4 Süre Hesapla Sayfası (`frontend/app/sureler/page.tsx`)
-**Yapılacaklar:**
-- İki bölüm: "Süre Hesapla" (hesaplayıcı) ve "Sürelerim" (kayıtlı süreler)
-- Hesaplayıcı:
-  - Preset süre türleri otomatik gün hesaplamalı
-  - Görsel sonuç: Büyük countdown display, hesaplanan tarih
-  - Mini takvim görünümü (deadline tarihini vurgulayan)
-  - Resmi tatil farkındalık göstergesi
-- Sürelerim:
-  - Timeline/takvim görünümü
-  - Renk kodlu aciliyet (kırmızı <3 gün, turuncu <7 gün, yeşil >7 gün)
-  - Sıralanabilir liste görünümü
-  - Tamamlandı toggle
-  - İlişkili davaya link
-  - Her süre için countdown
-- Takvim görünümü (liste alternatifi)
-- Tekrarlayan süre oluşturma ("her 7 günde 4 hafta boyunca")
-- Yazdırma optimize görünüm
-
-### 1.5 İstatistik Sayfası (`frontend/app/istatistik/page.tsx`)
-**Yapılacaklar:**
-- Hero stat satırı: Büyük animated counter'lar (toplam dava, aktif, tamamlanan süre, toplam arama)
-- Arama analitiği:
-  - En çok aranan terimler (tag cloud veya bar chart — pure SVG)
-  - Arama aktivitesi zaman grafiği (line chart — SVG)
-  - Arama tipi dağılımı (ictihat vs mevzuat — donut chart SVG)
-- Dava analitiği:
-  - Tür bazlı dağılım (pie/donut)
-  - Durum bazlı (aktif/beklemede/kapandı — horizontal bar)
-  - Aylık dava oluşturma trendi
-- Süre analitiği:
-  - Tamamlanma oranı (circular progress)
-  - Yaklaşan vs gecikmiş sayısı
-  - Süre tipi dağılımı
-- Aktivite timeline'ı: Son aramalar, dava işlemleri, süre tamamlamaları
-- Tüm chart'lar pure SVG/CSS (chart kütüphanesi YOK)
-- Zaman periyodu seçici (Bu Hafta, Bu Ay, Son 3 Ay, Tüm Zamanlar)
-- İstatistik dışa aktarma butonu (CSV, JSON)
-
-### 1.6 Doğrulama Sayfası (`frontend/app/dogrulama/page.tsx`)
-**Yapılacaklar:**
-- Textarea: rounded-2xl, daha iyi focus stili ✅ (yapıldı)
-- Batch verification: Birden fazla atıf yapıştırma
-- Sonuçlar dışa aktarılabilir olmalı
-- Şüpheli atıf flagleme (imkansız numara tespiti)
-- Diğer sayfalarla entegrasyon: Belge upload → tespit edilen atıflar → tıklayınca doğrula
-
-### 1.7 Davalar Sayfası (`frontend/app/davalar/page.tsx`)
-**Yapılacaklar:**
-- Kart tasarımı: rounded-2xl
-- Input stili tutarlılığı: rounded-xl, focus:bg-[#16161A]
-- Modal: rounded-2xl
-- Dava detay paneli iyileştirme
-- Padding tutarlılığı
-
-### 1.8 Admin Sayfası (`frontend/app/admin/page.tsx`)
-**Yapılacaklar:**
-- Tab stili iyileştirme
-- Tablo stili: daha iyi hover, satır arası çizgiler
-- Ingestion dashboard: progress bar animasyonu
-- Embedding breakdown chart iyileştirme
+> 4 uzman denetiminden (2 avukat + 2 yazılımcı) çıkan bulgularla oluşturuldu.
+> Avukat puanları: Mehmet 7.6/10, Ayşe 7.8/10
+> Teknik bulgular: Backend 32 sorun (5 kritik), Frontend 37 sorun (7 kritik)
 
 ---
 
-## 2. FRONTEND — Shared Component İyileştirmeleri
+## ✅ TAMAMLANANLAR
 
-### 2.1 Command Palette (`frontend/components/ui/command-palette.tsx`)
-- ✅ Glassmorphism backdrop (yapıldı)
-- ✅ Accent glow active state (yapıldı)
-- Fuzzy search highlight (eşleşen karakterler bold)
-- Keyboard navigation göstergeleri (ok ikonları footer'da)
+### Oturum 1 (24 Mart 2026)
+- Arama sayfası yeniden yazımı (typewriter, 3 tab, glow, Danıştay filtreleri)
+- Dilekçe auto-save (30s interval + 10 built-in şablon + PDF/DOCX export)
+- Süre takvim görünümü (mini takvim, countdown, iş günü, Sürelerim tab)
+- İstatistik SVG chart'lar (donut, bar, line, circular progress — pure SVG)
+- Belge sayfası iyileştirme (drag&drop, progress bar, entity card, upload history)
+- Shared component'ler (badge outline/gradient, confidence glow, empty-state motion, skeleton dual-layer)
+- Celery worker mimarisi (worker.py, tasks/, beat, docker-compose)
+- Monitoring & CI/CD (admin monitoring dashboard, CI/CD tam çalışıyor)
+- Kayıt 80+ baro (81 il, aranabilir dropdown)
+- Landing page (veri kaynakları, güven unsurları, CTA, footer)
+- 27 kritik fix (güvenlik, backend, frontend, DevOps, AI/Search)
 
-### 2.2 Badge (`frontend/components/ui/badge.tsx`)
-- "outline" varyant ekle
-- "gradient" varyant ekle
-
-### 2.3 Confidence Bar (`frontend/components/ui/confidence-bar.tsx`)
-- Glow efekti ekle
-- Animated label girişi
-- size prop (sm, md, lg)
-
-### 2.4 Empty State (`frontend/components/ui/empty-state.tsx`)
-- "use client" + motion/react import
-- İkon, başlık, açıklama için staggered fade-in-up animasyonu
-- Dekoratif glow ring
-
-### 2.5 Loading Skeleton (`frontend/components/ui/loading-skeleton.tsx`)
-- Daha iyi shimmer: dual-layer efekt (shimmer + pulse)
-- Staggered animation delays
-- Yeni SkeletonAvatar export'u
-
-### 2.6 Kayıt Sayfası Baro Dropdown
-- Şu an 20 baro var, Türkiye'deki 80+ baronun tamamı eklenmeli
-- Arama özellikli dropdown (çok uzun liste için)
+### Oturum 2 (24 Mart 2026)
+- Admin panelden ingestion tetikle (batch + daire bazlı + tarih bazlı, gelişmiş ingestion paneli)
+- Mevzuat ingestion (24 temel kanun, ingest_mevzuat(), mevzuat_embeddings koleksiyonu)
+- AYM + AİHM ingestion (ingest_batch() ile entegre, Celery task'lar)
+- İçtihat sistematik çekme (daire bazlı, tarih bazlı, konu bazlı parametreler)
+- E-posta hatırlatma sistemi (SMTP servisi, HTML template, Celery Beat 08:00, bildirim tercihleri)
+- Şifre sıfırlama akışı (token bazlı, rate limited, 2 yeni sayfa)
+- RAG/AI asistan durumu (/health/llm endpoint, AI tab'da durum badge)
+- 50+ dilekçe şablonu (10 → 55 şablon, 8 kategori, doğru kanun atıfları)
+- Cross-encoder reranking (ms-marco-MiniLM-L-6-v2, config ile açılıp kapanabilir)
+- Query expansion (65+ hukuk kısaltması, 35+ eş anlamlı terim grubu)
 
 ---
 
-## 3. FRONTEND — Design System Tamamlama
+## FAZ 1: KRİTİK GÜVENLİK & BUG FIX'LER (Acil — 1-2 gün)
 
-### 3.1 globals.css (Eklenmesi Gerekenler)
-- ✅ ::selection renkleri (yapıldı)
-- ✅ focus-visible stiller (yapıldı)
-- ✅ .glass, .glass-heavy (yapıldı)
-- ✅ .gradient-text (yapıldı)
-- ✅ .gradient-border (yapıldı)
-- ✅ .glow-accent/success/warning (yapıldı)
-- ✅ Firefox scrollbar (yapıldı)
-- ✅ smooth scroll (yapıldı)
-- ✅ reduced-motion (yapıldı)
-- ✅ print stiller (yapıldı)
-- ✅ .tabular-nums (yapıldı)
-- ✅ .noise-bg (yapıldı)
-- Eksik: slide-down, scale-in, bounce-subtle keyframe'leri
-- Eksik: backdrop-blur utility sınıfları
+> Backend 5 kritik + Frontend 7 kritik = 12 kritik sorun. Deploy öncesi mutlaka yapılmalı.
 
----
+### 1.1 Backend Güvenlik (5 kritik)
+- [ ] **XSS via e-posta template** — `email_service.py:55-61` — `html.escape()` ekle
+- [ ] **Reset password şifre validasyonu** — `auth.py:265-267` — `validate_password_strength` ekle
+- [ ] **In-memory rate limiting** — `auth.py:28-52` — Redis tabanlı sliding window'a taşı
+- [ ] **SSE JWT query parameter** — `admin.py:413-431` — Kısa ömürlü tek kullanımlık SSE token sistemi
+- [ ] **Admin rol escalation** — `admin.py:138-155` — platform_admin atamasını kısıtla, son admin koruması
 
-## 4. BACKEND — İyileştirmeler
-
-### 4.1 Health Check ✅ (yapıldı)
-- ✅ Qdrant point count
-- ✅ Redis memory
-- ✅ Postgres SELECT 1
-- ✅ response_time_ms
-
-### 4.2 Request Logging Middleware ✅ (yapıldı)
-- ✅ method, path, status, duration_ms
-
-### 4.3 Config Genişletme ✅ (yapıldı)
-- ✅ Celery ayarları
-- ✅ Ingestion tuning
-- ✅ max_upload_size_mb
-
-### 4.4 Ingestion State ✅ (yapıldı)
-- ✅ last_update
-- ✅ progress_pct
-- ✅ Stack trace logging
-
-### 4.5 Yapılmamış Backend İşler
-- **Ingestion durumunu veritabanına kaydetme**: _ingest_state in-memory, restart'ta kayboluyor → IngestionJob tablosu oluşturulmalı
-- **Dashboard'a total_embeddings ekleme**: qdrant_documents var ama total_embeddings alias'ı yok
-- **Hata mesajları standartlaştırma**: Structured error response (error_code, message, hint)
-- **Verification robustness**: Kısmi karar numaraları handle etme, şüpheli pattern flagleme
-- **Vector DB optimizasyonu**: Domain bazlı koleksiyon (iş hukuku, ticaret, idare ayrı)
-- **Rate limiting**: Global ingestion rate limit
-- **Bedesten fallback**: API down olunca graceful degradation
-- **Token counting**: LLM maliyet takibi
-- **Prometheus metrikleri**: Ingestion count, search latency, LLM cost
+### 1.2 Frontend Güvenlik & Stabilite (7 kritik)
+- [ ] **dangerouslySetInnerHTML XSS** — `giris/page.tsx:151` — SVG'leri JSX'e çevir
+- [ ] **headers useMemo eksik** — `ayarlar/page.tsx:52` + `admin/page.tsx:67` — sonsuz döngü riski
+- [ ] **N+1 API sorgusu** — `sureler/page.tsx:324-335` — toplu deadline endpoint veya Promise.all()
+- [ ] **fetchCases dependency** — `davalar/page.tsx:90` — token state tutarsızlığı
+- [ ] **AbortController cleanup** — `arama/page.tsx:555-598` — race condition
+- [ ] **SSE token URL'de** — `admin/page.tsx:330` — backend ile birlikte çöz
+- [ ] **useSearchParams Suspense** — `sifre-sifirla/page.tsx:10` — Suspense boundary ekle
 
 ---
 
-## 5. BACKEND — Celery Worker Mimarisi (OPTIMIZATION_ROADMAP.md'den)
+## FAZ 2: ÖNEMLİ BACKEND İYİLEŞTİRMELER (1 hafta)
 
-Bu büyük bir iş — OPTIMIZATION_ROADMAP.md dosyasında detaylı plan var.
+### 2.1 Güvenlik & Altyapı
+- [ ] **Senkron SMTP async'te** — `email_service.py:111` — `asyncio.to_thread()` veya `aiosmtplib`
+- [ ] **Health endpoint'leri auth** — `/health/details`, `/health/llm` → admin auth gerekli
+- [ ] **PasswordChange validasyonu** — `auth.py:372-374` — şifre güç kontrolü ekle
+- [ ] **Admin list_users limit** — `admin.py:51-56` — max 500 üst sınır
+- [ ] **Firma davet rol koruması** — `auth.py:513-514` — platform_admin rol düşürme engeli
 
-### Özet:
-- Celery worker ayrı process olarak çalışacak
-- Embedding üretimi backend'i bloklamayacak
-- Redis broker + result backend
-- Celery Beat ile zamanlı görevler (03:00 günlük ingestion)
-- Task iptal, retry, monitoring
-- SSE → Redis Pub/Sub ile canlı bildirimler
-- Docker compose'a worker + beat servisleri eklenmeli
+### 2.2 Celery & Performans
+- [ ] **Celery task retry** — Tüm task'lara `autoretry_for`, `max_retries=3`, `retry_backoff=True`
+- [ ] **asyncio.run() tutarlılığı** — `scheduled_tasks.py` vs `ingestion_tasks.py` — tek yaklaşım
+- [ ] **Pipeline kaynak temizliği** — HTTP client close, connection pool sızıntısı
+- [ ] **_publish_progress Redis** — `celery_broker_url` → `redis_url`, connection pool
+- [ ] **N+1 firms query** — `admin.py:160-182` — tek JOIN sorgusu
 
-### Fazlar:
-1. Celery altyapısı (worker.py, tasks/, config)
-2. Task'ları taşı (asyncio.create_task → task.delay())
-3. Paralel fetch + SSE (Redis Pub/Sub)
-4. Test ve deploy
-
----
-
-## 6. VERİ ÇEKME (Ingestion) — Acil
-
-### Mevcut Durum:
-- İçtihat: 4,735 embedding (yetersiz, 50,000+ olmalı)
-- Mevzuat: 0 embedding (hiç çekilmemiş!)
-- AYM: 0 embedding
-- AİHM: 0 embedding
-
-### Yapılacaklar:
-1. **Mevzuat ingestion başlat**: Temel kanunlar (4857, 5237, 6098, 6100, 5271, 2004, 6102, 2709 vb.)
-2. **AYM kararları çek**: Bireysel başvuru kararları (ihlal kararları öncelikli)
-3. **AİHM kararları çek**: Türkiye aleyhine kararlar (HUDOC API)
-4. **İçtihat artırma**: Daha fazla konu ve sayfa ile toplu ingestion
-5. **Sistematik çekme**: Daire bazlı, tarih bazlı, konu bazlı
-6. **Otomatik güncelleme**: Günlük scheduler'ın çalıştığından emin ol
+### 2.3 Veritabanı & Config
+- [ ] **init_db() production kontrolü** — Alembic migration'a geçiş
+- [ ] **Ingestion state DB'ye** — `_ingest_state` in-memory → IngestionJob tablosu
+- [ ] **Case.firm_id index** — `database.py:113` — performans indexi
+- [ ] **NotificationPreference duplicate index** — `database.py:276,292` — gereksiz index kaldır
+- [ ] **Structured error response** — Tüm endpoint'lerde `{error_code, message, hint}` formatı
 
 ---
 
-## 7. YENİ ÖZELLİKLER (Avukatların Yalvaracağı Şeyler)
+## FAZ 3: FRONTEND KALİTE & UX (1 hafta)
 
-### 7.1 Bildirim Sistemi
-- Süre yaklaşınca e-posta/SMS bildirimi
-- In-app bildirim çanı
-- N gün önceden hatırlatma (ayarlanabilir)
+### 3.1 Erişilebilirlik (a11y)
+- [ ] **Toggle switch'ler** — `ayarlar/page.tsx:279-318` — gerçek checkbox + ARIA role="switch"
+- [ ] **Beni hatırla checkbox** — `giris/page.tsx:303-324` — gerçek input + rememberMe kullan
+- [ ] **htmlFor/id eşleşmesi** — Tüm form sayfalarında label-input bağlantısı
+- [ ] **Toast aria-live** — Tüm sayfalarda `role="alert"` ekle
+- [ ] **Modal focus trap** — `davalar/page.tsx:410-517` — Tab ile çıkışı engelle
 
-### 7.2 İşbirliği
-- Gerçek zamanlı belge düzenleme (WebSocket)
-- Dava/süre yorumları
-- Firma içi dava paylaşımı
+### 3.2 Kod Kalitesi & Performans
+- [ ] **`<Link>` component'ine geç** — giris, sifremi-unuttum, sifre-sifirla sayfaları
+- [ ] **Token yönetimi birleştir** — `useAuth()` hook her yerde, doğrudan localStorage kaldır
+- [ ] **Global toast hook** — `useToast` + `<ToastProvider>` — kod tekrarını kaldır
+- [ ] **Shared component'leri kullan** — Badge, Skeleton, EmptyState inline kopyaları kaldır
+- [ ] **Dilekçe şablonları lazy load** — 55 şablon → ayrı JSON + dynamic import
+- [ ] **filteredGroups useMemo** — `command-palette.tsx:52-59`
+- [ ] **loading ref** — `arama/page.tsx:543` — gereksiz re-render engelle
+- [ ] **SVG icon kütüphanesi** — Tekrarlanan SVG'leri component'lere çıkar
 
-### 7.3 Şablon Kütüphanesi
-- Kullanıcı oluşturmalı özel şablonlar
-- Şablon versiyonlama
-- Firma içi şablon paylaşımı
+### 3.3 Responsive & UX
+- [ ] **Daire listesi filtrele** — `arama/page.tsx:89-108` — mahkemeye göre dinamik
+- [ ] **Grid responsive** — `ayarlar, davalar` — `grid-cols-1 sm:grid-cols-2`
+- [ ] **Admin tablo responsive** — `admin/page.tsx:182` — `overflow-x-auto` veya kart görünümü
+- [ ] **SSE onerror handler** — `admin/page.tsx:351` — retry mantığı + kullanıcı bildirimi
+- [ ] **alert() → toast** — `davalar/page.tsx:166,185`
+- [ ] **Yapay progress → gerçek** — `belge/page.tsx:143` — XMLHttpRequest progress
 
-### 7.4 Gelişmiş Analitik
-- Daire × sonuç heatmap'i
-- Kazanma oranı analizi
-- Atıf etki grafiği
-- Hangi konular/mahkemeler en çok aranıyor
-
-### 7.5 Offline Mod
-- Service worker ile arama cache
-- Read-only offline dökümanlar
-
-### 7.6 Mobil Uygulama
-- React Native (veya PWA)
-- Push notification
-- Temel arama ve süre takibi
-
-### 7.7 OAuth2 / SSO
-- Google/Microsoft login
-- Baro entegrasyonu (varsa)
-- API key authentication (dış entegrasyonlar)
-
-### 7.8 Şifre Sıfırlama
-- E-posta ile şifre sıfırlama akışı (şu an yok!)
+### 3.4 Türkçe & i18n
+- [ ] **Türkçe karakter düzeltmeleri** — ş, ı, ü, ö, ç, ğ eksik olan tüm metinler
+- [ ] **date input color-scheme** — Tüm tarih input'larına `[color-scheme:dark]`
 
 ---
 
-## 8. ALTYAPI & OPERASYON
+## FAZ 4: VERİ ZENGİNLEŞTİRME (2 hafta, sürekli)
 
-### 8.1 Yedekleme
-- Qdrant ve PostgreSQL volume'ları otomatik yedekleme
-- Günlük cron job ile dış depolama
+> Av. Mehmet: "4,735 embedding ile kapsamlı araştırma zor. En az 50,000 gerekli."
 
-### 8.2 Monitoring
-- Prometheus metrikleri
-- Grafana dashboard
-- Alerting (ingestion başarısız, API down)
+### 4.1 Embedding Hedefleri
+- [ ] **İçtihat 50,000+** — Sistematik daire bazlı + tarih bazlı toplu çekme
+- [ ] **Mevzuat aktif et** — 24 temel kanun çekildi, arama tab'ını aktif et
+- [ ] **AYM bireysel başvuru** — İhlal kararları öncelikli
+- [ ] **AİHM Türkiye kararları** — HUDOC API entegrasyonu
+- [ ] **BAM kararları** — Bölge Adliye Mahkemesi kararları
 
-### 8.3 CI/CD
-- GitHub Actions pipeline
-- Otomatik test → build → deploy
-
-### 8.4 Güvenlik
-- Secrets manager (şu an .env dosyası)
-- Key rotation politikası
-- Rate limiting iyileştirme
-
-### 8.5 Ölçeklendirme
-- Redis Cluster
-- Qdrant replication
-- Load balancer (birden fazla backend replica)
+### 4.2 Veri Kalitesi
+- [ ] **Resmi tatil dinamik** — `sureler/page.tsx:46-65` — Yıllık güncelleme veya API
+- [ ] **Adli tatil hesaplaması** — HMK md. 104 — 20 Temmuz-31 Ağustos süre durması
+- [ ] **Mevzuat değişiklik takibi** — "Bu madde değiştirilmiştir" uyarısı
+- [ ] **Emsal karar zinciri** — Atıf yapan/yapılan kararlar ağacı
+- [ ] **Query expansion ek** — KTK, PVSK, YUKK, Noterlik Kanunu kısaltmaları + CMK kurumları (uzlaşma, seri muhakeme, basit yargılama, ön ödeme)
+- [ ] **Tüketici hakem heyeti sınırı** — Yıllık güncel parasal sınır dinamik gösterim
 
 ---
 
-## 9. TEKNİK BORÇ
+## FAZ 5: AVUKAT İHTİYAÇLARI (2-3 hafta)
 
-- `Case.assigned_to` virgülle ayrılmış string → User FK normalize edilmeli
-- Audit trail yok (kim ne zaman ne değiştirdi)
-- Soft delete tutarsız (case kapandı ama diğer kayıtlar hard delete)
-- Bulk operasyon yok (toplu dava, toplu süre import)
-- Arşivleme yok (eski kapalı davaları cold storage'a taşıma)
-- Test coverage düşük (11 test dosyası var ama kapsam bilinmiyor)
-- API dokümantasyonu (Swagger otomatik ama setup guide yok)
+> Av. Mehmet: "Dava yönetimi 6/10 — duruşma takvimi, müvekkil yönetimi olmazsa olmaz."
+
+### 5.1 Dava Yönetimi Güçlendirme
+- [ ] **Duruşma takvimi** — Tarih, saat, mahkeme, salon bilgisi + takvim görünümü
+- [ ] **Müvekkil yönetimi** — Client modeli, dava-müvekkil ilişkisi
+- [ ] **Masraf/ücret takibi** — Vekalet ücretleri, harç takibi
+- [ ] **Kronolojik işlem geçmişi** — Her davada audit log
+- [ ] **Toplu dosya export** — Excel/PDF dava listesi
+
+### 5.2 Ek Dilekçe Şablonları
+- [ ] **İş hukuku ek** — Toplu iş sözleşmesi alacak, tensip zaptına cevap
+- [ ] **Ticaret ek** — Ortaklıktan çıkma/çıkarılma, genel kurul kararı iptali
+- [ ] **İcra-İflas ek** — Şikayet (İİK 16), taşkın haciz şikayeti
+- [ ] **Ceza hukuku ek** — HAGB itirazı, CMK 141 tazminat (haksız tutukluluk), CMK 150 zorunlu müdafilik
+- [ ] **Aile hukuku ek** — Nafaka artırımı/kaldırılması, soybağı (nesep) tespiti, TMK 169 geçici tedbirler
+- [ ] **Tüketici ek** — Taksitli satış iptali (TKHK md. 15), abonelik sözleşmesi, haksız ticari uygulama
+- [ ] **Vergi davası** — VUK kaynaklı vergi uyuşmazlığı şablonu
+- [ ] **Sorumluluk reddi** — Tüm şablon çıktılarına "hukuki tavsiye niteliğinde değildir" beyanı
+
+### 5.3 Doğrulama & Belge İyileştirme
+- [ ] **Doğrulama rapor export** — PDF olarak dışa aktarma
+- [ ] **"Güncel mi?" kontrolü** — İçtihat değişikliği uyarısı
+- [ ] **OCR desteği** — Taranmış PDF'ler (Tesseract)
+- [ ] **Belge karşılaştırma** — İki sözleşme versiyonu diff
+- [ ] **Sözleşme analizi** — Riskli maddeler, eksik hükümler tespiti
 
 ---
 
-## ÖNCELİK SIRASI (Güncellenmiş — 24 Mart 2026)
+## FAZ 6: PLATFORM ÖZELLİKLERİ (Gelecek ay)
 
-### ✅ Tamamlanan (Bu Oturumda)
-- ~~Arama sayfası yeniden yazımı~~ ✅ (typewriter, 3 tab, glow, Danıştay filtreleri)
-- ~~Dilekçe auto-save~~ ✅ (30s interval + 10 built-in şablon + PDF/DOCX export)
-- ~~Süre takvim görünümü~~ ✅ (mini takvim, countdown, iş günü, Sürelerim tab)
-- ~~İstatistik SVG chart'lar~~ ✅ (donut, bar, line, circular progress — pure SVG)
-- ~~Belge sayfası iyileştirme~~ ✅ (drag&drop, progress bar, entity card, upload history)
-- ~~Shared component'ler~~ ✅ (badge outline/gradient, confidence glow, empty-state motion, skeleton dual-layer)
-- ~~Celery worker mimarisi~~ ✅ (worker.py, tasks/, beat, docker-compose)
-- ~~Monitoring & CI/CD~~ ✅ (admin monitoring dashboard, CI/CD tam çalışıyor)
-- ~~Kayıt 80+ baro~~ ✅ (81 il, aranabilir dropdown)
-- ~~Landing page~~ ✅ (veri kaynakları, güven unsurları, CTA, footer)
-- ~~27 kritik fix~~ ✅ (güvenlik, backend, frontend, DevOps, AI/Search)
+### 6.1 Kullanıcı Deneyimi
+- [ ] **Bildirim sistemi** — In-app çan + push notification
+- [ ] **Rol bazlı erişim** — Avukat, stajyer, sekreter, müşteri rolleri
+- [ ] **Sayfalama/infinite scroll** — Arama sonuçlarında 20+ sonuç
+- [ ] **Klavye kısayolları** — Ctrl+K hızlı arama, navigasyon
+- [ ] **OAuth2/SSO** — Google/Microsoft login
 
-### ✅ Tamamlanan (Oturum 2 — 24 Mart 2026)
-- ~~Admin panelden ingestion tetikle~~ ✅ (batch + daire bazlı + tarih bazlı butonlar, gelişmiş ingestion paneli)
-- ~~Mevzuat ingestion~~ ✅ (24 temel kanun, ingest_mevzuat(), mevzuat_embeddings koleksiyonu)
-- ~~AYM + AİHM ingestion~~ ✅ (ingest_batch() ile entegre, Celery task'lar)
-- ~~İçtihat sistematik çekme~~ ✅ (daire bazlı, tarih bazlı, konu bazlı parametreler)
-- ~~E-posta hatırlatma sistemi~~ ✅ (SMTP servisi, HTML template, Celery Beat 08:00, bildirim tercihleri)
-- ~~Şifre sıfırlama akışı~~ ✅ (token bazlı, rate limited, 2 yeni sayfa)
-- ~~RAG/AI asistan durumu~~ ✅ (/health/llm endpoint, AI tab'da durum badge)
-- ~~50+ dilekçe şablonu~~ ✅ (10 → 55 şablon, 8 kategori, doğru kanun atıfları)
-- ~~Cross-encoder reranking~~ ✅ (ms-marco-MiniLM-L-6-v2, config ile açılıp kapanabilir)
-- ~~Query expansion~~ ✅ (65+ hukuk kısaltması, 35+ eş anlamlı terim grubu)
+### 6.2 İşbirliği
+- [ ] **Gerçek zamanlı belge düzenleme** — WebSocket
+- [ ] **Dava/süre yorumları** — Ekip içi iletişim
+- [ ] **Firma içi dava paylaşımı** — Çoklu avukat atama
 
-### 🟢 Planlı (Gelecek Ay)
-1. ColBERT vector desteği
-2. Bildirim sistemi (in-app + push)
-3. İşbirliği özellikleri
-4. UYAP Portal entegrasyonu
-5. Mobil uygulama / PWA
+### 6.3 Gelişmiş Analitik
+- [ ] **Daire × sonuç heatmap** — Kazanma oranı analizi
+- [ ] **Atıf etki grafiği** — Hangi kararlar en çok atıf alıyor
+- [ ] **Arama trendi** — En çok aranan konular/mahkemeler
+
+---
+
+## FAZ 7: ALTYAPI & ÖLÇEKLENDİRME (Sürekli)
+
+### 7.1 Altyapı
+- [ ] **Prometheus metrikleri** — Ingestion count, search latency, LLM cost
+- [ ] **Grafana dashboard** — Alerting (ingestion başarısız, API down)
+- [ ] **Structlog JSON renderer** — Production'da JSON log (aggregation için)
+- [ ] **Redis tabanlı request metrics** — In-memory → Redis (multi-worker)
+- [ ] **Alembic migration** — `create_all()` → proper migration
+
+### 7.2 Güvenlik
+- [ ] **Secrets manager** — .env → HashiCorp Vault veya AWS Secrets
+- [ ] **Key rotation** — JWT secret, API key periyodik değişim
+- [ ] **Rate limiting Redis** — Global, endpoint bazlı
+
+### 7.3 Ölçeklendirme
+- [ ] **Redis Cluster** — Yüksek kullanımda
+- [ ] **Qdrant replication** — Veri güvenliği
+- [ ] **Load balancer** — Birden fazla backend replica
+
+### 7.4 Gelecek
+- [ ] **ColBERT vector desteği** — Arama kalitesi
+- [ ] **UYAP Portal entegrasyonu** — Resmi entegrasyon
+- [ ] **Mobil uygulama / PWA** — React Native veya PWA
+- [ ] **Offline mod** — Service worker + cache
+
+---
+
+## TEKNİK BORÇ
+
+- [ ] `Case.assigned_to` string → User FK normalize
+- [ ] Audit trail (kim ne zaman ne değiştirdi)
+- [ ] Soft delete tutarlılığı
+- [ ] Bulk operasyon (toplu dava, toplu süre import)
+- [ ] Arşivleme (eski kapalı davalar cold storage)
+- [ ] Test coverage artırma
+- [ ] API dokümantasyonu (setup guide)
+- [ ] DRY: Ingestion pipeline tekrarlayan kod → `_process_items()` helper
+- [ ] DRY: Celery task boilerplate → ortak decorator
+- [ ] `CHECKPOINT_FILE` hardcoded path → config'e taşı
+- [ ] `Deadline.reminder_days` → NotificationPreference ile entegre et
+
+---
+
+## ÖZET TABLO
+
+| Faz | Kapsam | Süre | Öncelik |
+|-----|--------|------|---------|
+| **Faz 1** | 12 kritik güvenlik & bug fix | 1-2 gün | 🔴 Acil |
+| **Faz 2** | 15 önemli backend iyileştirme | 1 hafta | 🔴 Acil |
+| **Faz 3** | 18 frontend kalite & UX | 1 hafta | 🟡 Önemli |
+| **Faz 4** | Veri zenginleştirme (50K+ hedef) | 2 hafta | 🟡 Önemli |
+| **Faz 5** | Avukat ihtiyaçları (duruşma, müvekkil) | 2-3 hafta | 🟡 Önemli |
+| **Faz 6** | Platform özellikleri (bildirim, SSO) | 1 ay | 🟢 Planlı |
+| **Faz 7** | Altyapı & ölçeklendirme | Sürekli | 🟢 Planlı |
