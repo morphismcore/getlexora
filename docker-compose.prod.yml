@@ -73,7 +73,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.worker beat --loglevel=info
+    command: celery -A app.worker beat --loglevel=info -s /tmp/celerybeat-schedule
     deploy:
       resources:
         limits:
