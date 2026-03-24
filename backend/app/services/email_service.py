@@ -3,6 +3,7 @@ Lexora E-posta Servisi — SMTP ile HTML e-posta gönderimi.
 Şifre sıfırlama, süre hatırlatma vb. bildirimler için kullanılır.
 """
 
+import html
 import smtplib
 import ssl
 from email.mime.text import MIMEText
@@ -13,6 +14,18 @@ import structlog
 from app.config import get_settings
 
 logger = structlog.get_logger()
+
+
+def _escape(s: str) -> str:
+    """HTML-escape user input to prevent XSS in email templates."""
+    return html.escape(str(s), quote=True) if s else ""
+
+
+def _validate_url(url: str) -> str:
+    """Validate URL starts with allowed scheme and escape for HTML attribute."""
+    if url and (url.startswith("https://") or url.startswith("http://")):
+        return html.escape(url, quote=True)
+    return "#"
 
 
 def _get_base_template(content: str, title: str = "Lexora") -> str:
@@ -49,16 +62,18 @@ def _get_base_template(content: str, title: str = "Lexora") -> str:
 
 def build_password_reset_email(reset_url: str, user_name: str) -> str:
     """Şifre sıfırlama e-posta HTML'i oluştur."""
+    safe_name = _escape(user_name)
+    safe_url = _validate_url(reset_url)
     content = f"""
       <h2 style="color:#ECECEE;font-size:16px;margin:0 0 16px;">Sifre Sifirlama</h2>
       <p style="color:#8B8B8E;font-size:14px;line-height:1.6;margin:0 0 8px;">
-        Merhaba <strong style="color:#ECECEE;">{user_name}</strong>,
+        Merhaba <strong style="color:#ECECEE;">{safe_name}</strong>,
       </p>
       <p style="color:#8B8B8E;font-size:14px;line-height:1.6;margin:0 0 24px;">
         Hesabiniz icin sifre sifirlama talebi aldik. Asagidaki butona tiklayarak yeni sifrenizi belirleyebilirsiniz.
       </p>
       <div style="text-align:center;margin:24px 0;">
-        <a href="{reset_url}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#6C6CFF,#7B7BFF);color:white;text-decoration:none;border-radius:10px;font-size:14px;font-weight:600;">
+        <a href="{safe_url}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#6C6CFF,#7B7BFF);color:white;text-decoration:none;border-radius:10px;font-size:14px;font-weight:600;">
           Sifremi Sifirla
         </a>
       </div>
@@ -68,7 +83,7 @@ def build_password_reset_email(reset_url: str, user_name: str) -> str:
       <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:20px 0;" />
       <p style="color:#3A3A3F;font-size:11px;margin:0;">
         Link calismazsa bu adresi tarayiciniza yapistirin:<br/>
-        <span style="color:#5C5C5F;word-break:break-all;">{reset_url}</span>
+        <span style="color:#5C5C5F;word-break:break-all;">{safe_url}</span>
       </p>
     """
     return _get_base_template(content, title="Lexora")
@@ -83,15 +98,16 @@ def build_deadline_reminder_email(
     for dl in deadlines:
         rows += f"""
         <tr>
-          <td style="padding:8px 12px;color:#ECECEE;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);">{dl['title']}</td>
-          <td style="padding:8px 12px;color:#8B8B8E;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);">{dl['case_title']}</td>
-          <td style="padding:8px 12px;color:#E5484D;font-size:13px;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.04);">{dl['deadline_date']}</td>
+          <td style="padding:8px 12px;color:#ECECEE;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);">{_escape(dl['title'])}</td>
+          <td style="padding:8px 12px;color:#8B8B8E;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);">{_escape(dl['case_title'])}</td>
+          <td style="padding:8px 12px;color:#E5484D;font-size:13px;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.04);">{_escape(dl['deadline_date'])}</td>
         </tr>"""
 
+    safe_name = _escape(user_name)
     content = f"""
       <h2 style="color:#ECECEE;font-size:16px;margin:0 0 16px;">Sure Hatirlatmasi</h2>
       <p style="color:#8B8B8E;font-size:14px;line-height:1.6;margin:0 0 16px;">
-        Merhaba <strong style="color:#ECECEE;">{user_name}</strong>,
+        Merhaba <strong style="color:#ECECEE;">{safe_name}</strong>,
         yaklasan sureleriniz bulunmaktadir:
       </p>
       <table style="width:100%;border-collapse:collapse;">

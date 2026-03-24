@@ -6,6 +6,7 @@ Sadece platform_admin rolüne sahip kullanıcılar erişebilir.
 
 import asyncio
 import json
+import secrets
 import time
 import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -415,25 +416,45 @@ async def embedding_breakdown(
     }
 
 
+@router.post("/sse-ticket")
+async def create_sse_ticket(
+    admin: User = Depends(require_platform_admin),
+):
+    """Generate a one-time SSE connection ticket (30s TTL).
+
+    The ticket replaces sending the JWT as a query parameter,
+    avoiding token exposure in server logs and browser history.
+    """
+    ticket = secrets.token_urlsafe(32)
+    try:
+        import redis as r
+        rc = r.from_url(settings.redis_url, socket_timeout=5)
+        rc.setex(f"sse_ticket:{ticket}", 30, str(admin.id))
+    except Exception:
+        raise HTTPException(status_code=503, detail="Redis unavailable")
+    return {"ticket": ticket}
+
+
 @router.get("/ingest/stream")
 async def ingest_stream(
-    token: str = "",
-    db: AsyncSession = Depends(get_db),
+    ticket: str = "",
 ):
-    """SSE stream -- anlik ingestion durumu. Token query param ile auth."""
-    # SSE EventSource header gönderemediği için token query param'dan alınır
-    if not token:
-        raise HTTPException(status_code=401, detail="Token gerekli")
+    """SSE stream -- anlik ingestion durumu. One-time ticket ile auth."""
+    if not ticket:
+        raise HTTPException(status_code=401, detail="Ticket gerekli")
     try:
-        import jwt as pyjwt
-        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-        user_id = uuid.UUID(payload["sub"])
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if not user or user.role != "platform_admin":
-            raise HTTPException(status_code=403, detail="Yetkisiz")
+        import redis as r
+        rc = r.from_url(settings.redis_url, socket_timeout=5)
+        ticket_key = f"sse_ticket:{ticket}"
+        user_id_str = rc.get(ticket_key)
+        if not user_id_str:
+            raise HTTPException(status_code=401, detail="Ticket gecersiz veya suresi dolmus")
+        # Delete immediately — one-time use
+        rc.delete(ticket_key)
+    except HTTPException:
+        raise
     except Exception:
-        raise HTTPException(status_code=401, detail="Geçersiz token")
+        raise HTTPException(status_code=401, detail="Ticket dogrulama hatasi")
     async def event_generator():
         import redis.asyncio as aioredis
 

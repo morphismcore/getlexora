@@ -23,33 +23,74 @@ security = HTTPBearer()
 settings = get_settings()
 
 
-# ── Login Rate Limiting ──────────────────────────────────────────────
+# ── Redis-based Rate Limiting ────────────────────────────────────────
 
-_login_attempts: dict[str, tuple[int, float]] = {}  # email -> (count, first_attempt_time)
+import logging as _logging
+
+_rate_limit_logger = _logging.getLogger(__name__)
+
+
+def _get_redis_client():
+    """Get synchronous Redis client. Returns None if connection fails."""
+    try:
+        import redis as _redis
+        client = _redis.from_url(settings.redis_url, socket_connect_timeout=2)
+        client.ping()
+        return client
+    except Exception as exc:
+        _rate_limit_logger.warning("Redis unavailable for rate limiting: %s", exc)
+        return None
+
+
+def _redis_rate_check(key: str, max_attempts: int, window_seconds: int = 1800) -> bool:
+    """Check if rate limit exceeded. Returns True if BLOCKED. Fail-open if Redis is down."""
+    client = _get_redis_client()
+    if client is None:
+        return False  # fail open
+    try:
+        current = client.get(key)
+        if current is not None and int(current) >= max_attempts:
+            return True
+        return False
+    except Exception:
+        return False  # fail open
+
+
+def _redis_rate_increment(key: str, window_seconds: int = 1800):
+    """Atomically increment rate limit counter with expiry."""
+    client = _get_redis_client()
+    if client is None:
+        return
+    try:
+        pipe = client.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, window_seconds)
+        pipe.execute()
+    except Exception as exc:
+        _rate_limit_logger.warning("Redis rate increment failed: %s", exc)
+
+
+def _redis_rate_clear(key: str):
+    """Clear rate limit counter (e.g. on successful login)."""
+    client = _get_redis_client()
+    if client is None:
+        return
+    try:
+        client.delete(key)
+    except Exception:
+        pass
 
 
 def _check_lockout(email: str) -> bool:
-    import time
-    if email in _login_attempts:
-        count, first_time = _login_attempts[email]
-        if time.time() - first_time > 1800:  # 30 min reset
-            del _login_attempts[email]
-            return False
-        return count >= 5
-    return False
+    return _redis_rate_check(f"ratelimit:login:{email}", max_attempts=5, window_seconds=1800)
 
 
 def _record_failed_login(email: str):
-    import time
-    if email in _login_attempts:
-        count, first_time = _login_attempts[email]
-        _login_attempts[email] = (count + 1, first_time)
-    else:
-        _login_attempts[email] = (1, time.time())
+    _redis_rate_increment(f"ratelimit:login:{email}", window_seconds=1800)
 
 
 def _clear_login_attempts(email: str):
-    _login_attempts.pop(email, None)
+    _redis_rate_clear(f"ratelimit:login:{email}")
 
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────
@@ -234,28 +275,15 @@ async def me(current_user: User = Depends(get_current_user)):
 # ── Şifre Sıfırlama ───────────────────────────────────────────────
 
 import secrets
-import time as _time
-
-_reset_attempts: dict[str, tuple[int, float]] = {}  # email -> (count, first_time)
 
 
 def _check_reset_rate_limit(email: str) -> bool:
-    """30 dakikada max 3 şifre sıfırlama talebi."""
-    if email in _reset_attempts:
-        count, first_time = _reset_attempts[email]
-        if _time.time() - first_time > 1800:
-            del _reset_attempts[email]
-            return False
-        return count >= 3
-    return False
+    """30 dakikada max 3 şifre sıfırlama talebi (Redis-based)."""
+    return _redis_rate_check(f"ratelimit:reset:{email}", max_attempts=3, window_seconds=1800)
 
 
 def _record_reset_attempt(email: str):
-    if email in _reset_attempts:
-        count, first_time = _reset_attempts[email]
-        _reset_attempts[email] = (count + 1, first_time)
-    else:
-        _reset_attempts[email] = (1, _time.time())
+    _redis_rate_increment(f"ratelimit:reset:{email}", window_seconds=1800)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -315,23 +343,36 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
 @router.post("/reset-password")
 async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     """Token ile şifre sıfırla."""
+    # Token entropy check — must be at least 32 chars (secrets.token_urlsafe(48) = 64 chars)
+    if len(body.token) < 32:
+        raise HTTPException(status_code=400, detail="Gecersiz sifirlama linki")
+
+    # Fetch token without filtering on used — check expiry FIRST
     result = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.token == body.token,
-            PasswordResetToken.used == False,
         )
     )
     token_obj = result.scalar_one_or_none()
 
     if not token_obj:
-        raise HTTPException(status_code=400, detail="Gecersiz veya kullanilmis sifirlama linki")
+        raise HTTPException(status_code=400, detail="Gecersiz sifirlama linki")
 
+    # 1. Check expiry BEFORE checking if used (prevents timing info leak)
     if token_obj.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         token_obj.used = True
         await db.flush()
         raise HTTPException(status_code=400, detail="Sifirlama linkinin suresi dolmus. Yeni bir talep olusturun.")
 
-    # Kullanıcıyı bul ve şifreyi güncelle
+    # 2. Now check if already used
+    if token_obj.used:
+        raise HTTPException(status_code=400, detail="Bu sifirlama linki zaten kullanilmis")
+
+    # 3. Mark token as used IMMEDIATELY and flush (prevents race condition)
+    token_obj.used = True
+    await db.flush()
+
+    # 4. Kullanıcıyı bul ve şifreyi güncelle
     user_result = await db.execute(select(User).where(User.id == token_obj.user_id))
     user = user_result.scalar_one_or_none()
 
@@ -339,7 +380,6 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
         raise HTTPException(status_code=400, detail="Kullanici bulunamadi")
 
     user.hashed_password = hash_password(body.new_password)
-    token_obj.used = True
     await db.flush()
 
     return {"message": "Sifreniz basariyla degistirildi. Giris yapabilirsiniz."}
@@ -536,14 +576,30 @@ async def update_firm_member_role(
     if not current_user.firm_id:
         raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
 
+    # Kendi rolünü değiştiremez
+    if user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Kendi rolünüzü değiştiremezsiniz")
+
     allowed_roles = {"partner", "avukat", "stajyer", "asistan"}
     if body.role not in allowed_roles:
         raise HTTPException(status_code=400, detail=f"Geçersiz rol. İzin verilen: {', '.join(allowed_roles)}")
+
+    # Partner, admin rolü atayamaz
+    if current_user.role == "partner" and body.role == "admin":
+        raise HTTPException(status_code=403, detail="Partner, admin rolü atayamaz")
+
+    # platform_admin rolü hiç atanamaz (firma seviyesinden)
+    if body.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="Platform admin rolü firma içinden atanamaz")
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user or user.firm_id != current_user.firm_id:
         raise HTTPException(status_code=404, detail="Kullanıcı firmada bulunamadı")
+
+    # platform_admin'in rolü değiştirilemez
+    if user.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="Platform admin kullanıcısının rolü değiştirilemez")
 
     user.role = body.role
     await db.flush()

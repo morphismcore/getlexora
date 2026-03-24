@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -74,6 +74,13 @@ export default function DavalarPage() {
   const [deleting, setDeleting] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const detailAbortRef = useRef<AbortController | null>(null);
+
+  const headers = useMemo((): Record<string, string> =>
+    token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {},
+    [token]
+  );
 
   useEffect(() => {
     if (toast) {
@@ -86,8 +93,17 @@ export default function DavalarPage() {
   useEffect(() => {
     const t = localStorage.getItem("lexora_token");
     setToken(t);
+    tokenRef.current = t;
     if (t) fetchCases(t);
     else setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cleanup abort controllers on unmount
+  useEffect(() => {
+    return () => {
+      detailAbortRef.current?.abort();
+    };
   }, []);
 
   const fetchCases = useCallback(async (authToken: string) => {
@@ -126,18 +142,30 @@ export default function DavalarPage() {
 
   const fetchCaseDetail = useCallback(async (caseId: string) => {
     if (!token) return;
+
+    // Abort any in-flight detail request
+    detailAbortRef.current?.abort();
+    const controller = new AbortController();
+    detailAbortRef.current = controller;
+
     setDetailLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/v1/cases/${caseId}`, {
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error("Detay yüklenemedi");
       const data = await res.json();
-      setSelectedCase(data);
-    } catch {
+      if (!controller.signal.aborted) {
+        setSelectedCase(data);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       // Keep existing selection
     } finally {
-      setDetailLoading(false);
+      if (!controller.signal.aborted) {
+        setDetailLoading(false);
+      }
     }
   }, [token]);
 
@@ -149,7 +177,7 @@ export default function DavalarPage() {
     try {
       const res = await fetch(`${API_URL}/api/v1/cases`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers,
         body: JSON.stringify({
           title: form.get("title"),
           case_type: form.get("case_type"),
@@ -168,7 +196,7 @@ export default function DavalarPage() {
     } finally {
       setCreateLoading(false);
     }
-  }, [token, fetchCases, createLoading]);
+  }, [token, fetchCases, createLoading, headers]);
 
   const handleDeleteCase = useCallback(async () => {
     if (!token || !selectedCase) return;
@@ -176,7 +204,7 @@ export default function DavalarPage() {
     try {
       const res = await fetch(`${API_URL}/api/v1/cases/${selectedCase.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
       });
       if (!res.ok) throw new Error("Dava silinemedi");
       setShowDeleteConfirm(false);
@@ -187,7 +215,7 @@ export default function DavalarPage() {
     } finally {
       setDeleting(false);
     }
-  }, [token, selectedCase, fetchCases]);
+  }, [token, selectedCase, fetchCases, headers]);
 
   const filteredCases = statusFilter === "all" ? cases : cases.filter((c) => c.status === statusFilter);
 

@@ -416,6 +416,7 @@ export default function AramaPage() {
 
   const [selectedResult, setSelectedResult] = useState<IctihatResult | null>(null);
   const [kararDetail, setKararDetail] = useState<KararDetail | null>(null);
+  const [kararCache, setKararCache] = useState<Record<string, KararDetail>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
@@ -601,6 +602,13 @@ export default function AramaPage() {
   const handleSelectResult = useCallback(async (result: IctihatResult) => {
     setSelectedResult(result);
     setMobileShowDetail(true);
+
+    // Check cache first
+    if (kararCache[result.karar_id]) {
+      setKararDetail(kararCache[result.karar_id]);
+      return;
+    }
+
     setDetailLoading(true);
     setKararDetail(null);
 
@@ -608,7 +616,7 @@ export default function AramaPage() {
       const res = await fetch(`${API_URL}/api/v1/search/karar/${result.karar_id}`);
       if (!res.ok) throw new Error("Karar yüklenemedi");
       const raw = await res.json();
-      setKararDetail({
+      const detail: KararDetail = {
         id: raw.document_id,
         mahkeme: result.mahkeme,
         daire: result.daire,
@@ -617,7 +625,9 @@ export default function AramaPage() {
         tarih: result.tarih,
         ozet: result.ozet || (raw.content || "").slice(0, 500),
         tam_metin: raw.content || "",
-      });
+      };
+      setKararDetail(detail);
+      setKararCache(prev => ({ ...prev, [result.karar_id]: detail }));
     } catch {
       setKararDetail({
         id: result.karar_id,
@@ -632,7 +642,7 @@ export default function AramaPage() {
     } finally {
       setDetailLoading(false);
     }
-  }, []);
+  }, [kararCache]);
 
   const handleSuggestedQuery = (q: string) => {
     setQuery(q);

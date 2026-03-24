@@ -5,32 +5,60 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/ui/auth-provider";
 import { motion, AnimatePresence } from "motion/react";
 
+// Floating icon SVG components
+const FloatingIconSvg = ({ index }: { index: number }) => {
+  switch (index) {
+    case 0: // Scales of justice
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M12 3v18M3 7l3 7c0 1.66 1.34 2 3 2s3-.34 3-2l3-7M15 7l3 7c0 1.66 1.34 2 3 2s3-.34 3-2l3-7" />
+          <circle cx="12" cy="3" r="1" />
+        </svg>
+      );
+    case 1: // Book
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15z" />
+        </svg>
+      );
+    case 2: // Shield
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      );
+    case 3: // Gavel
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M14.5 2l5 5-5 5-5-5 5-5zM3 21l6-6M2 22l1-1" />
+          <rect x="8" y="8" width="8" height="2" rx="1" transform="rotate(45 12 9)" />
+        </svg>
+      );
+    case 4: // Paragraph
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M13 4v16M17 4v16M13 4h4a4 4 0 010 8h-4" />
+        </svg>
+      );
+    case 5: // Pillar
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="w-full h-full">
+          <path d="M6 2h12l-2 4H8L6 2zM8 6v12M16 6v12M6 18h12l2 4H4l2-4z" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
+
 // Floating icon data
 const FLOATING_ICONS = [
-  { // Scales of justice
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M12 3v18M3 7l3 7c0 1.66 1.34 2 3 2s3-.34 3-2l3-7M15 7l3 7c0 1.66 1.34 2 3 2s3-.34 3-2l3-7"/><circle cx="12" cy="3" r="1"/></svg>`,
-    x: 15, y: 20, size: 40, delay: 0,
-  },
-  { // Book
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15z"/></svg>`,
-    x: 75, y: 60, size: 36, delay: 0.5,
-  },
-  { // Shield
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-    x: 30, y: 70, size: 32, delay: 1,
-  },
-  { // Gavel
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M14.5 2l5 5-5 5-5-5 5-5zM3 21l6-6M2 22l1-1"/><rect x="8" y="8" width="8" height="2" rx="1" transform="rotate(45 12 9)"/></svg>`,
-    x: 65, y: 25, size: 34, delay: 1.5,
-  },
-  { // Paragraph
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M13 4v16M17 4v16M13 4h4a4 4 0 010 8h-4"/></svg>`,
-    x: 50, y: 85, size: 28, delay: 2,
-  },
-  { // Pillar
-    svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 2h12l-2 4H8L6 2zM8 6v12M16 6v12M6 18h12l2 4H4l2-4z"/></svg>`,
-    x: 85, y: 80, size: 30, delay: 0.8,
-  },
+  { x: 15, y: 20, size: 40, delay: 0 },
+  { x: 75, y: 60, size: 36, delay: 0.5 },
+  { x: 30, y: 70, size: 32, delay: 1 },
+  { x: 65, y: 25, size: 34, delay: 1.5 },
+  { x: 50, y: 85, size: 28, delay: 2 },
+  { x: 85, y: 80, size: 30, delay: 0.8 },
 ];
 
 const TYPEWRITER_TEXT = "Hukuk Arastirma Asistani";
@@ -148,8 +176,9 @@ export default function GirisPage() {
                 x: { duration: 1.2, ease: "easeOut" },
                 y: { duration: 1.2, ease: "easeOut" },
               }}
-              dangerouslySetInnerHTML={{ __html: icon.svg }}
-            />
+            >
+              <FloatingIconSvg index={i} />
+            </motion.div>
           ))}
         </div>
 

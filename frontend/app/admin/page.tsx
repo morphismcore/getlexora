@@ -2229,37 +2229,59 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
 
   useEffect(() => { fetchBreakdown(); fetchProgress(); }, [fetchBreakdown, fetchProgress]);
 
-  // SSE connection
+  // SSE connection — uses one-time ticket instead of JWT in URL
   useEffect(() => {
     if (!token) return;
 
-    const es = new EventSource(`${apiUrl}/api/v1/admin/ingest/stream?token=${token}`);
+    let es: EventSource | null = null;
+    let cancelled = false;
 
-    es.onmessage = (event) => {
+    const connect = async () => {
       try {
-        const data: IngestionState = JSON.parse(event.data);
-        setState(data);
+        // Get a short-lived SSE ticket
+        const ticketRes = await fetch(`${apiUrl}/api/v1/admin/sse-ticket`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!ticketRes.ok || cancelled) return;
+        const { ticket } = await ticketRes.json();
 
-        if (data.new_logs && data.new_logs.length > 0) {
-          setLogs((prev) => {
-            const combined = [...prev, ...data.new_logs!];
-            return combined.slice(-200);
-          });
-        }
+        if (cancelled) return;
 
-        // Refresh breakdown when embedding count changes
-        if (data.embedded > 0 && data.embedded % 50 === 0) {
-          fetchBreakdown();
-        }
+        es = new EventSource(`${apiUrl}/api/v1/admin/ingest/stream?ticket=${ticket}`);
+
+        es.onmessage = (event) => {
+          try {
+            const data: IngestionState = JSON.parse(event.data);
+            setState(data);
+
+            if (data.new_logs && data.new_logs.length > 0) {
+              setLogs((prev) => {
+                const combined = [...prev, ...data.new_logs!];
+                return combined.slice(-200);
+              });
+            }
+
+            // Refresh breakdown when embedding count changes
+            if (data.embedded > 0 && data.embedded % 50 === 0) {
+              fetchBreakdown();
+            }
+          } catch { /* ignore */ }
+        };
+
+        es.onerror = () => {
+          // Reconnect after 5s
+          setTimeout(() => {}, 5000);
+        };
       } catch { /* ignore */ }
     };
 
-    es.onerror = () => {
-      // Reconnect after 5s
-      setTimeout(() => {}, 5000);
-    };
+    connect();
 
-    return () => es.close();
+    return () => {
+      cancelled = true;
+      if (es) es.close();
+    };
   }, [token, apiUrl, fetchBreakdown]);
 
   // Elapsed time counter
