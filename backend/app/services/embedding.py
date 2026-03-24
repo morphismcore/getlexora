@@ -16,7 +16,7 @@ MODEL_NAME = "BAAI/bge-m3"
 # Model version: BAAI/bge-m3 (pinned 2026-03, dim=1024)
 MODEL_REVISION = "5617a9f61b028005a4858fdac845db406aefb181"
 
-# Lazy load — model sadece ilk kullanımda yüklenir
+# Lazy load — model ilk kullanımda yüklenir (startup'ta preload edilebilir)
 _model = None
 _model_dimension: int | None = None
 
