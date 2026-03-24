@@ -8,7 +8,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, or_
+from sqlalchemy import and_, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -131,17 +131,24 @@ class CaseDetailResponse(CaseResponse):
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
-async def _get_user_case(
+async def _verify_case_access(
     case_id: uuid.UUID, user: User, db: AsyncSession
 ) -> Case:
-    """Fetch a case and verify ownership."""
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.user_id == user.id)
-    )
+    """Verify user has access to this case. Returns case or raises 404."""
+    result = await db.execute(select(Case).where(Case.id == case_id))
     case = result.scalar_one_or_none()
-    if case is None:
+    if not case:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dava bulunamadı")
-    return case
+
+    # Owner always has access
+    if case.user_id == user.id:
+        return case
+
+    # Firm member access (only if user is active in the same firm)
+    if user.firm_id and case.firm_id == user.firm_id and user.is_active:
+        return case
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dava bulunamadı")
 
 
 # ── Case CRUD ──────────────────────────────────────────────────────────
@@ -178,17 +185,27 @@ async def list_cases(
     db: AsyncSession = Depends(get_db),
 ):
     """Kullanıcının ve bürosunun dava dosyalarını listele."""
+    stmt = select(Case).order_by(Case.updated_at.desc())
+
     if current_user.firm_id:
-        # Firmadaysa firma davalarını da göster
-        from sqlalchemy import or_
-        stmt = select(Case).where(
-            or_(Case.user_id == current_user.id, Case.firm_id == current_user.firm_id)
+        # User belongs to a firm — show their cases AND firm cases
+        # But only if user is active member of the firm
+        stmt = stmt.where(
+            or_(
+                Case.user_id == current_user.id,
+                and_(
+                    Case.firm_id == current_user.firm_id,
+                    current_user.is_active == True,  # noqa: E712  — Must be active member
+                ),
+            )
         )
     else:
-        stmt = select(Case).where(Case.user_id == current_user.id)
+        # Individual user — only their own cases
+        stmt = stmt.where(Case.user_id == current_user.id)
+
     if status_filter:
         stmt = stmt.where(Case.status == status_filter)
-    stmt = stmt.order_by(Case.updated_at.desc())
+
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -200,13 +217,13 @@ async def get_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Dava detaylarını belgeler ve sürelerle birlikte getir."""
-    from sqlalchemy import or_
+    # Verify access first
+    await _verify_case_access(case_id, current_user, db)
+
+    # Now fetch with eager-loaded relations
     result = await db.execute(
         select(Case)
-        .where(
-            Case.id == case_id,
-            or_(Case.user_id == current_user.id, Case.firm_id == current_user.firm_id) if current_user.firm_id else Case.user_id == current_user.id,
-        )
+        .where(Case.id == case_id)
         .options(
             selectinload(Case.documents),
             selectinload(Case.deadlines),
@@ -214,8 +231,6 @@ async def get_case(
         )
     )
     case = result.scalar_one_or_none()
-    if case is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dava bulunamadı")
     return case
 
 
@@ -227,7 +242,7 @@ async def update_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Dava dosyasını güncelle."""
-    case = await _get_user_case(case_id, current_user, db)
+    case = await _verify_case_access(case_id, current_user, db)
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(case, field, value)
@@ -243,7 +258,7 @@ async def delete_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Dava dosyasını kapat (soft delete — status kapandı)."""
-    case = await _get_user_case(case_id, current_user, db)
+    case = await _verify_case_access(case_id, current_user, db)
     case.status = "kapandi"
     await db.flush()
 
@@ -259,7 +274,7 @@ async def add_deadline(
     db: AsyncSession = Depends(get_db),
 ):
     """Davaya süre/takvim ekle."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     deadline = Deadline(
         case_id=case_id,
         title=body.title,
@@ -281,7 +296,7 @@ async def list_deadlines(
     db: AsyncSession = Depends(get_db),
 ):
     """Davanın sürelerini listele."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(Deadline)
         .where(Deadline.case_id == case_id)
@@ -298,7 +313,7 @@ async def update_deadline(
     db: AsyncSession = Depends(get_db),
 ):
     """Süreyi güncelle veya tamamlandı olarak işaretle."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(Deadline).where(Deadline.id == deadline_id, Deadline.case_id == case_id)
     )
@@ -318,7 +333,7 @@ async def delete_deadline(
     db: AsyncSession = Depends(get_db),
 ):
     """Süreyi sil."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(Deadline).where(Deadline.id == deadline_id, Deadline.case_id == case_id)
     )
@@ -340,7 +355,7 @@ async def save_search_to_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Aramayı davaya kaydet."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     saved = SavedSearch(
         user_id=current_user.id,
         case_id=case_id,
@@ -453,7 +468,7 @@ async def create_event(
     db: AsyncSession = Depends(get_db),
 ):
     """Davaya olay ekle ve ilgili süreleri otomatik hesapla."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
 
     # Use DB-driven calculator with fallback
     db_calc = DeadlineCalculator(db_session=db)
@@ -530,7 +545,7 @@ async def list_events(
     db: AsyncSession = Depends(get_db),
 ):
     """Davanın olaylarını sürelerle birlikte listele (en yeniden eskiye)."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(CaseEvent)
         .where(CaseEvent.case_id == case_id)
@@ -561,7 +576,7 @@ async def delete_event(
     db: AsyncSession = Depends(get_db),
 ):
     """Olayı ve bağlı süreleri sil."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(CaseEvent).where(CaseEvent.id == event_id, CaseEvent.case_id == case_id)
     )
@@ -584,7 +599,7 @@ async def override_deadline(
     db: AsyncSession = Depends(get_db),
 ):
     """Süre tarihini manuel olarak değiştir (zorunlu gerekçe)."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
     result = await db.execute(
         select(Deadline).where(Deadline.id == deadline_id, Deadline.case_id == case_id)
     )
@@ -622,7 +637,7 @@ async def recalculate_event_deadlines(
     db: AsyncSession = Depends(get_db),
 ):
     """Olay tarihi değiştiğinde süreleri yeniden hesapla."""
-    await _get_user_case(case_id, current_user, db)
+    await _verify_case_access(case_id, current_user, db)
 
     # Fetch event
     result = await db.execute(

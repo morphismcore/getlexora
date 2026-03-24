@@ -6,16 +6,18 @@ AI kullanmaz, pure extraction.
 import uuid
 from pathlib import Path
 
+import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import and_, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.models.database import Case, CaseDocument, User
 from app.models.db import get_db
 from app.api.routes.auth import get_current_user
 from app.services.document_processor import DocumentProcessor
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 # 20 MB limit
@@ -165,9 +167,10 @@ async def analyze_document(file: UploadFile = File(...)):
     try:
         result = _extract_and_analyze(file_bytes, file_type, file.filename or "unknown")
     except Exception as e:
+        logger.error("document_analyze_error", error=str(e), file_name=file.filename)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Belge işlenemedi: {str(e)}",
+            detail="Belge işlenemedi. Lütfen dosyanızı kontrol edip tekrar deneyin.",
         )
 
     return result
@@ -184,15 +187,22 @@ async def upload_to_case(
     Belgeyi bir davaya ekle (auth gerektirir).
     Dosyayi analiz eder ve dava dosyasina kaydeder.
     """
-    # Verify case ownership
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.user_id == current_user.id)
-    )
+    # Verify case access (owner or active firm member)
+    result = await db.execute(select(Case).where(Case.id == case_id))
     case = result.scalar_one_or_none()
     if case is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dava bulunamadi.",
+            detail="Dava bulunamadı.",
+        )
+    has_access = (
+        case.user_id == current_user.id
+        or (current_user.firm_id and case.firm_id == current_user.firm_id and current_user.is_active)
+    )
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dava bulunamadı.",
         )
 
     file_bytes, file_type = await _read_and_validate(file)
@@ -200,9 +210,10 @@ async def upload_to_case(
     try:
         analysis = _extract_and_analyze(file_bytes, file_type, file.filename or "unknown")
     except Exception as e:
+        logger.error("document_process_error", error=str(e), case_id=str(case_id), file_name=file.filename)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Belge işlenemedi: {str(e)}",
+            detail="Belge işlenemedi. Lütfen dosyanızı kontrol edip tekrar deneyin.",
         )
 
     # Save document record — sanitize file_type to prevent path traversal

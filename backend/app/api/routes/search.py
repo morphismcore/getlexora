@@ -4,10 +4,12 @@ Arama API endpoint'leri.
 RAG soru-cevap: LLM gerektirir (opsiyonel).
 """
 
+import json
+
+import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import json
 
 from app.models.schemas import (
     SearchRequest,
@@ -18,6 +20,7 @@ from app.models.schemas import (
 from app.api.deps import get_rag_pipeline, get_yargi_service, get_mevzuat_service, get_citation_verifier, get_optional_user
 from app.models.database import User
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/search", tags=["search"])
 
 
@@ -34,7 +37,8 @@ async def search_ictihat(
     try:
         return await rag.search(request)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Arama hatası: {str(e)}")
+        logger.error("ictihat_search_error", error=str(e), query=request.query)
+        raise HTTPException(status_code=500, detail="Arama sırasında bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.post("/ask", response_model=RAGResponse)
@@ -50,7 +54,8 @@ async def ask_question(
     try:
         return await rag.ask(query=request.query, search_request=request)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"RAG hatası: {str(e)}")
+        logger.error("rag_ask_error", error=str(e), query=request.query)
+        raise HTTPException(status_code=500, detail="Soru-cevap sırasında bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.post("/ask/stream")
@@ -61,7 +66,14 @@ async def ask_question_stream(
 ):
     """Streaming RAG soru-cevap. LLM GEREKTİRİR."""
     if not rag.llm_available:
-        return {"error": "ANTHROPIC_API_KEY tanımlı değil. Streaming kullanılamaz."}
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY tanımlı değil. Streaming kullanılamaz.")
+
+    # Validate all dependencies before starting the stream
+    if not rag.llm:
+        raise HTTPException(status_code=503, detail="AI servisi şu anda kullanılamıyor")
+
+    if not rag.vector_store:
+        raise HTTPException(status_code=503, detail="Arama servisi kullanılamıyor")
 
     async def event_stream():
         try:
@@ -75,16 +87,41 @@ async def ask_question_stream(
 
             full_answer = ""
             async for chunk in rag.llm.generate_stream(query=request.query, context=context):
+                if chunk is None:
+                    continue
                 full_answer += chunk
                 yield f"data: {json.dumps({'type': 'text', 'data': chunk})}\n\n"
+
+            # Post-generation citation re-verification against context
+            context_sources = [
+                {
+                    "esas_no": s.esas_no or "",
+                    "karar_no": s.karar_no or "",
+                    "content": s.ozet or "",
+                    "ozet": s.ozet or "",
+                }
+                for s in search_response.sonuclar
+            ]
+            post_check = rag._verify_response_citations(full_answer, context_sources)
+            if post_check["unverified"]:
+                warning_text = "\n\n⚠️ Dikkat: Yanıtta doğrulanamayan atıflar tespit edildi. Lütfen kontrol ediniz."
+                yield f"data: {json.dumps({'type': 'text', 'data': warning_text})}\n\n"
 
             yield f"data: {json.dumps({'type': 'verification_start'})}\n\n"
             verification = await rag.verifier.verify_all(full_answer)
             yield f"data: {json.dumps({'type': 'verification', 'data': verification.model_dump()})}\n\n"
+            yield f"data: {json.dumps({'type': 'post_citation_check', 'data': post_check})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
+        except GeneratorExit:
+            # Client disconnected, clean exit
+            pass
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+            logger.error("rag_stream_error", error=str(e))
+            try:
+                yield f"data: {json.dumps({'type': 'error', 'data': 'Bir hata oluştu. Lütfen tekrar deneyin.'})}\n\n"
+            except Exception:
+                pass
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -103,7 +140,8 @@ async def search_mevzuat(
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Mevzuat arama hatası: {str(e)}")
+        logger.error("mevzuat_search_error", error=str(e), query=request.query)
+        raise HTTPException(status_code=500, detail="Mevzuat araması sırasında bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.get("/mevzuat/{mevzuat_id}")
@@ -124,7 +162,8 @@ async def get_mevzuat_content(
             return {"mevzuat_id": mevzuat_id, "content": clean, "html": result["content"]}
         return {"mevzuat_id": mevzuat_id, "content": "", "error": "İçerik alınamadı"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Mevzuat içerik hatası: {str(e)}")
+        logger.error("mevzuat_content_error", error=str(e), mevzuat_id=mevzuat_id)
+        raise HTTPException(status_code=500, detail="Mevzuat içeriği alınırken bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.get("/karar/{document_id}")
@@ -146,7 +185,8 @@ async def get_karar(
             return {"document_id": document_id, "content": clean, "html": content}
         return {"document_id": document_id, "content": "", "error": "İçerik alınamadı"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Karar getirme hatası: {str(e)}")
+        logger.error("karar_fetch_error", error=str(e), document_id=document_id)
+        raise HTTPException(status_code=500, detail="Karar metni alınırken bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 class VerifyRequest(BaseModel):
@@ -164,4 +204,5 @@ async def verify_text(
         report = await verifier.verify_all(request.text)
         return report
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Doğrulama hatası: {str(e)}")
+        logger.error("verify_text_error", error=str(e))
+        raise HTTPException(status_code=500, detail="Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin.")

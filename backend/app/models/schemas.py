@@ -106,6 +106,7 @@ class RAGResponse(BaseModel):
     verification: VerificationReport | None = None
     confidence_score: float
     warning: str | None = None
+    post_citation_check: dict | None = None
 
 
 # --- Mevzuat ---

@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select, or_
+from sqlalchemy import and_, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -119,7 +119,10 @@ async def upcoming_deadlines(
     if current_user.firm_id:
         case_filter = or_(
             Case.user_id == current_user.id,
-            Case.firm_id == current_user.firm_id,
+            and_(
+                Case.firm_id == current_user.firm_id,
+                current_user.is_active == True,  # noqa: E712  — Must be active member
+            ),
         )
     else:
         case_filter = Case.user_id == current_user.id

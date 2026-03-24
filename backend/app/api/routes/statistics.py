@@ -4,6 +4,7 @@ Daire bazlı karar dağılımı, yıl trendi, konu karşılaştırma.
 AI/LLM gerektirmez — sadece Bedesten API verisi üzerinde matematik.
 """
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -12,6 +13,7 @@ from app.models.database import User
 
 from app.services.statistics import CourtStatisticsService
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
 
@@ -37,7 +39,8 @@ async def get_court_stats(
     try:
         return await service.get_court_stats(court_type=court_type, topic=topic)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"İstatistik hatası: {str(e)}")
+        logger.error("court_stats_error", error=str(e), topic=topic, court_type=court_type)
+        raise HTTPException(status_code=500, detail="İstatistik alınırken bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.get("/chamber/{daire_adi}")
@@ -50,7 +53,8 @@ async def get_chamber_profile(
     try:
         return await service.get_chamber_profile(daire=daire_adi, court_type=court_type)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Daire profili hatası: {str(e)}")
+        logger.error("chamber_profile_error", error=str(e), daire=daire_adi, court_type=court_type)
+        raise HTTPException(status_code=500, detail="Daire profili alınırken bir hata oluştu. Lütfen tekrar deneyin.")
 
 
 @router.post("/compare")
@@ -65,4 +69,5 @@ async def compare_topics(
             court_type=request.court_type,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Karşılaştırma hatası: {str(e)}")
+        logger.error("topic_compare_error", error=str(e), topics=request.topics, court_type=request.court_type)
+        raise HTTPException(status_code=500, detail="Karşılaştırma sırasında bir hata oluştu. Lütfen tekrar deneyin.")

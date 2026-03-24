@@ -352,9 +352,9 @@ class YargiService:
                     item_esas = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
                     item_karar = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
 
-                    if esas_no and esas_no in item_esas:
+                    if esas_no and esas_no.strip() == item_esas.strip():
                         return {"verified": True, "match": self._normalize_result(item, "yargitay")}
-                    if karar_no and karar_no in item_karar:
+                    if karar_no and karar_no.strip() == item_karar.strip():
                         return {"verified": True, "match": self._normalize_result(item, "yargitay")}
 
                 return {

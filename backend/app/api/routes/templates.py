@@ -4,11 +4,13 @@ Dilekçe şablon API endpoint'leri.
 AI kullanmaz — pure template filling.
 """
 
+import structlog
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.template_engine import TemplateEngine
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/templates", tags=["templates"])
 
 engine = TemplateEngine()
@@ -48,6 +50,7 @@ async def generate_document(template_id: str, req: GenerateRequest):
     try:
         document = engine.generate(template_id, req.values)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error("template_generate_error", error=str(e), template_id=template_id)
+        raise HTTPException(status_code=400, detail="Şablon doldurulurken bir hata oluştu. Lütfen alanları kontrol edip tekrar deneyin.")
 
     return GenerateResponse(document=document, template_name=tpl["name"])

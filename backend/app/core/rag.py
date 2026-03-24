@@ -4,6 +4,7 @@ Arama: LLM olmadan çalışır (Bedesten API + Vector DB).
 Soru-cevap: LLM gerektirir (opsiyonel).
 """
 
+import re
 import time
 import structlog
 
@@ -209,6 +210,25 @@ class RAGPipeline:
         # 3. LLM'den yanıt üret
         answer = await self.llm.generate(query=query, context=context)
 
+        # 3b. Post-generation citation re-verification against provided context
+        context_sources = [
+            {
+                "esas_no": s.esas_no or "",
+                "karar_no": s.karar_no or "",
+                "content": s.ozet or "",
+                "ozet": s.ozet or "",
+            }
+            for s in search_response.sonuclar
+        ]
+        post_verification = self._verify_response_citations(answer, context_sources)
+        if post_verification["unverified"]:
+            logger.warning(
+                "rag_unverified_citations",
+                count=len(post_verification["unverified"]),
+                unverified=post_verification["unverified"],
+            )
+            answer += "\n\n⚠️ Dikkat: Yanıtta doğrulanamayan atıflar tespit edildi. Lütfen kontrol ediniz."
+
         # 4. Citation verification
         verification = await self.verifier.verify_all(answer)
 
@@ -216,6 +236,11 @@ class RAGPipeline:
         source_confidence = min(len(search_response.sonuclar) / 5, 1.0)
         citation_confidence = verification.overall_confidence
         confidence = (source_confidence * 0.4) + (citation_confidence * 0.6)
+
+        # Reduce confidence if post-verification found issues
+        if post_verification["unverified"]:
+            penalty = len(post_verification["unverified"]) * 0.1
+            confidence = max(0.0, confidence - penalty)
 
         # 6. Uyarı
         warning = None
@@ -230,10 +255,18 @@ class RAGPipeline:
             verification=verification,
             confidence_score=round(confidence, 2),
             warning=warning,
+            post_citation_check=post_verification,
         )
 
-    def _build_context(self, results: list[IctihatResult], max_chars: int = 200000) -> str:
-        """Arama sonuçlarından LLM context'i oluştur."""
+    def _build_context(self, results: list[IctihatResult], max_chars: int = 600_000) -> str:
+        """
+        Arama sonuçlarından LLM context'i oluştur.
+
+        Turkish text averages ~3.5 chars per token (more compact than English).
+        Claude Sonnet 4 has 200K context. Reserve 20K for system prompt + query + response.
+        That gives us ~180K tokens = ~630,000 chars for context.
+        max_chars=600_000 (~170K tokens) provides a safe margin.
+        """
         context_parts = []
         total_len = 0
 
@@ -253,6 +286,56 @@ Mahkeme: {r.mahkeme}
             total_len += len(part)
 
         return "\n".join(context_parts)
+
+    def _verify_response_citations(self, response_text: str, context_sources: list[dict]) -> dict:
+        """Post-generation: verify that every citation in the response exists in the provided context."""
+        # Extract citations from response
+        citation_patterns = [
+            r'(\d+)\.\s*(?:Hukuk|Ceza)\s*Dairesi.*?(\d{4}/\d+)\s*E\.',  # Yargıtay
+            r'Yargıtay.*?(\d{4}/\d+)\s*E\.\s*,?\s*(\d{4}/\d+)\s*K\.',
+            r'(\d{4}/\d+)\s*E\.\s*,?\s*(\d{4}/\d+)\s*K\.',
+            r'AYM.*?(\d{4}/\d+)',
+        ]
+
+        found_citations = []
+        for pattern in citation_patterns:
+            matches = re.findall(pattern, response_text)
+            found_citations.extend(matches)
+
+        if not found_citations:
+            return {"verified": True, "citations_found": 0, "unverified": [], "verified_count": 0}
+
+        # Build set of known citations from context
+        known_citations = set()
+        for source in context_sources:
+            esas = source.get("esas_no", "")
+            karar = source.get("karar_no", "")
+            if esas:
+                known_citations.add(esas.strip())
+            if karar:
+                known_citations.add(karar.strip())
+            # Also add from content text
+            content = source.get("content", "") or source.get("ozet", "")
+            for pattern in citation_patterns:
+                for match in re.findall(pattern, content):
+                    if isinstance(match, tuple):
+                        known_citations.update(m.strip() for m in match if m)
+                    else:
+                        known_citations.add(match.strip())
+
+        # Check each found citation
+        unverified = []
+        for citation in found_citations:
+            citation_str = citation if isinstance(citation, str) else "/".join(citation)
+            if not any(citation_str.strip() in kc for kc in known_citations):
+                unverified.append(citation_str)
+
+        return {
+            "verified": len(unverified) == 0,
+            "citations_found": len(found_citations),
+            "unverified": unverified,
+            "verified_count": len(found_citations) - len(unverified),
+        }
 
     def _merge_results(
         self,
