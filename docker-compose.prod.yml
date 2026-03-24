@@ -45,6 +45,47 @@ services:
         limits:
           memory: 2G
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker worker --loglevel=info --concurrency=1 --pool=solo
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    environment:
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - qdrant
+      - postgres
+    volumes:
+      - ingestion_data:/app/data
+    restart: always
+    networks:
+      - default
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker beat --loglevel=info
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - default
+
   qdrant:
     image: qdrant/qdrant:v1.13.2
     volumes:

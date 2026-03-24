@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 interface ConfidenceBarProps {
   score: number;
   showLabel?: boolean;
+  size?: "sm" | "md" | "lg";
 }
 
 function getFillColor(score: number): string {
@@ -19,18 +20,32 @@ function getLabelColor(score: number): string {
   return "text-success";
 }
 
-export default function ConfidenceBar({ score, showLabel = true }: ConfidenceBarProps) {
+function getGlowColor(score: number): string {
+  if (score < 40) return "rgba(229,72,77,0.25)";
+  if (score < 70) return "rgba(255,178,36,0.25)";
+  return "rgba(61,214,140,0.25)";
+}
+
+const sizeMap = {
+  sm: { bar: "h-[2px]", label: "text-[10px]", gap: "gap-2" },
+  md: { bar: "h-[3px]", label: "text-[12px]", gap: "gap-2.5" },
+  lg: { bar: "h-[5px]", label: "text-[13px]", gap: "gap-3" },
+};
+
+export default function ConfidenceBar({ score, showLabel = true, size = "md" }: ConfidenceBarProps) {
   const clamped = Math.max(0, Math.min(100, score));
+  const s = sizeMap[size];
 
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex-1 h-[3px] rounded-full bg-border-subtle overflow-hidden">
+    <div className={`flex items-center ${s.gap}`}>
+      <div className={`flex-1 ${s.bar} rounded-full bg-border-subtle overflow-hidden`}>
         <motion.div
-          className="h-full rounded-full"
+          className={`h-full rounded-full`}
           style={{
             background: `linear-gradient(90deg, var(--color-destructive), var(--color-warning), var(--color-success))`,
             backgroundSize: "200% 100%",
             backgroundPosition: clamped < 40 ? "0% 0%" : clamped < 70 ? "50% 0%" : "100% 0%",
+            boxShadow: `0 0 8px ${getGlowColor(clamped)}, 0 0 20px ${getGlowColor(clamped)}`,
           }}
           initial={{ width: 0 }}
           animate={{ width: `${clamped}%` }}
@@ -38,9 +53,14 @@ export default function ConfidenceBar({ score, showLabel = true }: ConfidenceBar
         />
       </div>
       {showLabel && (
-        <span className={`text-[12px] font-medium tabular-nums ${getLabelColor(clamped)}`}>
+        <motion.span
+          className={`${s.label} font-medium tabular-nums ${getLabelColor(clamped)}`}
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+        >
           %{clamped}
-        </span>
+        </motion.span>
       )}
     </div>
   );

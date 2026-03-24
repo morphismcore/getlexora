@@ -222,7 +222,7 @@ export default function DavalarPage() {
       <div className="shrink-0 border-b border-white/[0.06] bg-[#09090B] px-4 md:px-5 pt-14 md:pt-4 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[#ECECEE]">Dava Dosyaları</h1>
+            <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Dava Dosyalari</h1>
             <p className="text-[12px] text-[#5C5C5F] mt-0.5">
               {cases.length} dava dosyası
             </p>

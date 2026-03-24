@@ -214,7 +214,7 @@ export default function DogrulamaPage() {
   }, []);
 
   return (
-    <div className="h-screen overflow-auto p-4 pt-14 md:p-6 md:pt-6 space-y-5">
+    <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
       {/* Toast notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
@@ -223,7 +223,7 @@ export default function DogrulamaPage() {
       )}
       {/* Header */}
       <div>
-        <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[#ECECEE]">Atıf Doğrulama</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Atif Dogrulama</h1>
         <p className="text-[12px] text-[#5C5C5F] mt-1">
           Hukuki metinlerdeki atıf ve referansları doğrulayın
         </p>
@@ -236,7 +236,7 @@ export default function DogrulamaPage() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Hukuki metninizi buraya yapıştırın. Sistem metindeki içtihat atıfları, kanun referansları ve mevzuat göndermelerini otomatik olarak tespit edip doğrulayacaktır."
           rows={12}
-          className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-4 py-3 text-[14px] font-mono text-[#ECECEE] placeholder:text-[#5C5C5F] placeholder:font-sans focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150 resize-y leading-relaxed"
+          className="w-full bg-[#111113] border border-white/[0.06] rounded-2xl px-4 py-3 text-[14px] font-mono text-[#ECECEE] placeholder:text-[#5C5C5F] placeholder:font-sans focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#16161A] transition-all duration-200 resize-y leading-relaxed"
         />
 
         <div className="flex items-center justify-between">

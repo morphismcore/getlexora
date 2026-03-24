@@ -1,70 +1,32 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-interface MevzuatResult {
-  mevzuat_id: string;
-  kanun_adi: string;
-  kanun_no: number;
-  tur: string;
-  resmi_gazete_tarihi: string | null;
-  resmi_gazete_sayisi: string | null;
-}
+interface MevzuatResult { mevzuat_id: string; kanun_adi: string; kanun_no: number; tur: string; resmi_gazete_tarihi: string | null; resmi_gazete_sayisi: string | null; }
+interface MevzuatResponse { sonuclar: MevzuatResult[]; toplam: number; }
 
-interface MevzuatResponse {
-  sonuclar: MevzuatResult[];
-  toplam: number;
-}
+const POPULAR_LAWS = [
+  { no: "4857", name: "Is Kanunu", color: "#6C6CFF" },
+  { no: "5237", name: "Turk Ceza Kanunu", color: "#E5484D" },
+  { no: "6098", name: "Turk Borclar Kanunu", color: "#3DD68C" },
+  { no: "6100", name: "Hukuk Muhakemeleri K.", color: "#A78BFA" },
+  { no: "5271", name: "Ceza Muhakemesi K.", color: "#FFB224" },
+  { no: "2004", name: "Icra Iflas Kanunu", color: "#E5484D" },
+  { no: "6102", name: "Turk Ticaret Kanunu", color: "#6C6CFF" },
+  { no: "2709", name: "Anayasa", color: "#FFB224" },
+];
 
-function ShimmerBlock({ className }: { className?: string }) {
-  return (
-    <div className={`relative overflow-hidden bg-[#1A1A1F] rounded ${className}`}>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/[0.03] to-transparent" />
-    </div>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 space-y-2.5">
-      <div className="flex items-center gap-2">
-        <ShimmerBlock className="h-[18px] w-16" />
-        <ShimmerBlock className="h-[14px] w-20" />
-      </div>
-      <ShimmerBlock className="h-[16px] w-3/4" />
-      <ShimmerBlock className="h-[13px] w-1/2" />
-    </div>
-  );
-}
-
-function getTurBadgeColor(tur: string): string {
+function getTurBadge(tur: string) {
   switch (tur.toLowerCase()) {
-    case "kanun":
-      return "bg-[#6C6CFF]/10 text-[#6C6CFF]";
-    case "khk":
-    case "kanun hükmünde kararname":
-      return "bg-[#A78BFA]/10 text-[#A78BFA]";
-    case "yönetmelik":
-      return "bg-[#3DD68C]/10 text-[#3DD68C]";
-    case "tüzük":
-      return "bg-[#FFB224]/10 text-[#FFB224]";
-    default:
-      return "bg-white/[0.04] text-[#8B8B8E]";
+    case "kanun": return "bg-[#6C6CFF]/10 text-[#6C6CFF]";
+    case "khk": case "kanun hukmunde kararname": return "bg-[#A78BFA]/10 text-[#A78BFA]";
+    case "yonetmelik": return "bg-[#3DD68C]/10 text-[#3DD68C]";
+    default: return "bg-white/[0.04] text-[#8B8B8E]";
   }
 }
-
-const listContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.02 } },
-};
-
-const listItem = {
-  hidden: { opacity: 0, y: 4 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
-};
 
 export default function MevzuatPage() {
   const [query, setQuery] = useState("");
@@ -75,231 +37,184 @@ export default function MevzuatPage() {
   const [mevzuatContent, setMevzuatContent] = useState<string | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
 
-  const handleViewContent = async (item: MevzuatResult) => {
-    setSelectedMevzuat(item);
-    setContentLoading(true);
-    setMevzuatContent(null);
+  const handleSearch = useCallback(async (searchQuery?: string) => {
+    const q = (searchQuery || query).trim();
+    if (!q) return;
+    setLoading(true); setError(null); setResults(null); setSelectedMevzuat(null);
     try {
-      const res = await fetch(`${API_URL}/api/v1/search/mevzuat/${item.mevzuat_id}`);
-      if (!res.ok) throw new Error("İçerik yüklenemedi");
-      const data = await res.json();
-      setMevzuatContent(data.content || "İçerik bulunamadı.");
-    } catch {
-      setMevzuatContent("Mevzuat içeriği yüklenirken hata oluştu.");
-    } finally {
-      setContentLoading(false);
-    }
-  };
-
-  const handleSearch = useCallback(async () => {
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setResults(null);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
-    try {
-      const q = query.trim();
-      const maddeMatch = q.match(/(\d+)\s*(?:madde|md\.?)\s*(\d+)/i);
       const isNumber = /^\d+$/.test(q);
+      const maddeMatch = q.match(/(\d+)\s*(?:madde|md\.?)\s*(\d+)/i);
       let body: Record<string, string>;
-      if (maddeMatch) {
-        body = { query: "", kanun_no: maddeMatch[1], madde_no: maddeMatch[2] };
-      } else if (isNumber) {
-        body = { query: "", kanun_no: q };
-      } else {
-        body = { query: q };
-      }
+      if (maddeMatch) body = { query: "", kanun_no: maddeMatch[1], madde_no: maddeMatch[2] };
+      else if (isNumber) body = { query: "", kanun_no: q };
+      else body = { query: q };
 
       const res = await fetch(`${API_URL}/api/v1/search/mevzuat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      clearTimeout(timeout);
-
-      if (!res.ok) throw new Error(`Arama başarısız (${res.status})`);
-      const data: MevzuatResponse = await res.json();
-      setResults(data);
+      if (!res.ok) throw new Error(`Arama basarisiz (${res.status})`);
+      setResults(await res.json());
     } catch (err) {
-      clearTimeout(timeout);
-      if (err instanceof Error && err.name === "AbortError") {
-        setError("İstek zaman aşımına uğradı. Lütfen tekrar deneyin.");
-      } else {
-        setError(err instanceof Error ? err.message : "Bilinmeyen hata oluştu");
-      }
-    } finally {
-      setLoading(false);
-    }
+      setError(err instanceof Error ? err.message : "Hata olustu");
+    } finally { setLoading(false); }
   }, [query]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch();
+  const handleViewContent = async (item: MevzuatResult) => {
+    setSelectedMevzuat(item); setContentLoading(true); setMevzuatContent(null);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/search/mevzuat/${item.mevzuat_id}`);
+      if (!res.ok) throw new Error("Icerik yuklenemedi");
+      const data = await res.json();
+      setMevzuatContent(data.content || "Icerik bulunamadi.");
+    } catch { setMevzuatContent("Mevzuat icerigi yuklenirken hata olustu."); }
+    finally { setContentLoading(false); }
   };
 
   return (
-    <div className="h-screen overflow-auto p-4 pt-14 md:p-6 md:pt-6 space-y-5">
+    <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[#ECECEE]">Mevzuat</h1>
-        <p className="text-[12px] text-[#5C5C5F] mt-1">
-          Kanun, yönetmelik ve diğer mevzuat arama
-        </p>
+        <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Mevzuat</h1>
+        <p className="text-[13px] text-[#5C5C5F] mt-1">Kanun, yonetmelik ve diger mevzuat arama</p>
       </div>
 
       {/* Search */}
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C5C5F]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Kanun adı, numarası veya madde arayın (ör: 4857, 4857 madde 18)"
-            className="w-full bg-[#16161A] border border-white/[0.06] rounded-lg pl-9 pr-4 py-2 text-[14px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150"
-          />
+      <div className="relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5C5C5F]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         </div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Kanun adi, numarasi veya madde arayin (or: 4857, is kanunu, 4857 madde 18)"
+          className="w-full bg-[#111113] border border-white/[0.06] rounded-2xl pl-12 pr-24 py-4 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#16161A] transition-all duration-200"
+        />
         <button
-          onClick={handleSearch}
+          onClick={() => handleSearch()}
           disabled={loading || !query.trim()}
-          className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[13px] font-medium text-white transition-colors duration-150"
+          className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[13px] font-medium text-white transition-all"
         >
-          {loading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Aranıyor</span>
-            </div>
-          ) : (
-            "Ara"
-          )}
+          {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Ara"}
         </button>
       </div>
 
+      {/* Popular Laws */}
+      {!results && !loading && !error && (
+        <div className="space-y-4">
+          <h2 className="text-[13px] font-semibold text-[#8B8B8E]">Sik Aranan Kanunlar</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {POPULAR_LAWS.map((law, i) => (
+              <motion.button
+                key={law.no}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => { setQuery(law.no); handleSearch(law.no); }}
+                className="text-left bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.12] hover:bg-[#16161A] transition-all group"
+              >
+                <span className="text-[20px] font-bold tabular-nums" style={{ color: law.color }}>{law.no}</span>
+                <p className="text-[12px] text-[#8B8B8E] mt-1 group-hover:text-[#ECECEE] transition-colors">{law.name}</p>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Status */}
       {results && !loading && (
-        <p className="text-[12px] text-[#5C5C5F]">
-          {results.toplam} sonuç bulundu
-        </p>
+        <p className="text-[12px] text-[#5C5C5F]">{results.toplam} sonuc bulundu</p>
       )}
 
       {/* Loading */}
       {loading && (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
+        <div className="space-y-2">{[1,2,3,4].map(i => (
+          <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 animate-pulse">
+            <div className="h-4 bg-[#1A1A1F] rounded w-1/4 mb-2" /><div className="h-5 bg-[#1A1A1F] rounded w-3/4 mb-2" /><div className="h-3 bg-[#1A1A1F] rounded w-1/2" />
+          </div>
+        ))}</div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 text-[13px] text-[#E5484D]">
+        <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
           {error}
-          <button
-            onClick={handleSearch}
-            className="block mt-2 text-[12px] text-[#E5484D]/80 hover:text-[#E5484D] underline underline-offset-2 transition-colors"
-          >
-            Tekrar Dene
-          </button>
+          <button onClick={() => handleSearch()} className="block mt-2 text-[12px] underline underline-offset-2 hover:text-[#E5484D]">Tekrar Dene</button>
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && !results && !error && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <svg className="w-10 h-10 text-[#5C5C5F]/40 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          <p className="text-[13px] text-[#8B8B8E]">Kanun adı veya numarası girin</p>
-          <p className="text-[12px] text-[#5C5C5F] mt-1">
-            Örnek: &quot;İş Kanunu&quot;, &quot;4857&quot;, &quot;Türk Ticaret Kanunu&quot;
-          </p>
-        </div>
-      )}
-
-      {/* Results */}
+      {/* Results + Content Side Panel */}
       {results && results.sonuclar.length > 0 && (
-        <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
-          {results.sonuclar.map((result) => (
-            <motion.div
-              key={result.mevzuat_id}
-              variants={listItem}
-              onClick={() => handleViewContent(result)}
-              className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] hover:bg-[#1A1A1F] transition-all duration-150 hover:-translate-y-px cursor-pointer"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${getTurBadgeColor(result.tur)}`}>
-                  {result.tur}
-                </span>
-                {result.kanun_no != null && (
-                  <span className="text-[12px] font-mono text-[#8B8B8E]">No: {result.kanun_no}</span>
-                )}
-              </div>
-
-              <h3 className="text-[14px] font-semibold text-[#ECECEE] mb-2">
-                {result.kanun_adi}
-              </h3>
-
-              <div className="flex items-center gap-4 text-[12px] text-[#5C5C5F]">
-                {result.resmi_gazete_tarihi && (
-                  <span>RG: {result.resmi_gazete_tarihi}</span>
-                )}
-                {result.resmi_gazete_sayisi && (
-                  <span>Sayı: {result.resmi_gazete_sayisi}</span>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* Mevzuat içerik detay paneli */}
-      {selectedMevzuat && (
-        <div className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${getTurBadgeColor(selectedMevzuat.tur)}`}>
-                {selectedMevzuat.tur}
-              </span>
-              <h3 className="text-[14px] font-semibold text-[#ECECEE] mt-1">{selectedMevzuat.kanun_adi}</h3>
-              {selectedMevzuat.kanun_no && <p className="text-[12px] text-[#5C5C5F]">No: {selectedMevzuat.kanun_no}</p>}
-            </div>
-            <button onClick={() => { setSelectedMevzuat(null); setMevzuatContent(null); }} className="text-[12px] text-[#5C5C5F] hover:text-[#ECECEE]">Kapat</button>
+        <div className="flex gap-6">
+          {/* Result List */}
+          <div className={`space-y-2 ${selectedMevzuat ? "w-2/5 hidden md:block" : "w-full"}`}>
+            {results.sonuclar.map((r, i) => (
+              <motion.div
+                key={r.mevzuat_id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => handleViewContent(r)}
+                className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                  selectedMevzuat?.mevzuat_id === r.mevzuat_id
+                    ? "bg-[#6C6CFF]/[0.04] border-[#6C6CFF]/30"
+                    : "bg-[#111113] border-white/[0.06] hover:border-white/[0.10] hover:bg-[#16161A]"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${getTurBadge(r.tur)}`}>{r.tur}</span>
+                  {r.kanun_no && <span className="text-[12px] font-mono text-[#8B8B8E]">No: {r.kanun_no}</span>}
+                </div>
+                <h3 className="text-[14px] font-semibold text-[#ECECEE]">{r.kanun_adi}</h3>
+                <div className="flex items-center gap-4 mt-2 text-[11px] text-[#5C5C5F]">
+                  {r.resmi_gazete_tarihi && <span>RG: {r.resmi_gazete_tarihi}</span>}
+                  {r.resmi_gazete_sayisi && <span>Sayi: {r.resmi_gazete_sayisi}</span>}
+                </div>
+              </motion.div>
+            ))}
           </div>
-          <div className="border-t border-white/[0.06] pt-3">
-            {contentLoading ? (
-              <div className="flex items-center gap-2 py-6 justify-center">
-                <div className="w-4 h-4 border-2 border-[#6C6CFF]/30 border-t-[#6C6CFF] rounded-full animate-spin" />
-                <span className="text-[12px] text-[#5C5C5F]">Mevzuat metni yükleniyor...</span>
-              </div>
-            ) : mevzuatContent ? (
-              <div className="max-h-[500px] overflow-y-auto">
-                <pre className="text-[13px] text-[#ECECEE] leading-relaxed whitespace-pre-wrap font-sans">{mevzuatContent}</pre>
-              </div>
-            ) : null}
-          </div>
+
+          {/* Content Panel */}
+          <AnimatePresence>
+            {selectedMevzuat && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="flex-1 bg-[#111113] border border-white/[0.06] rounded-2xl overflow-hidden"
+              >
+                <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+                  <div>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${getTurBadge(selectedMevzuat.tur)}`}>{selectedMevzuat.tur}</span>
+                    <h3 className="text-[15px] font-semibold text-[#ECECEE] mt-1">{selectedMevzuat.kanun_adi}</h3>
+                    {selectedMevzuat.kanun_no && <p className="text-[12px] text-[#5C5C5F]">No: {selectedMevzuat.kanun_no}</p>}
+                  </div>
+                  <button onClick={() => { setSelectedMevzuat(null); setMevzuatContent(null); }} className="p-1.5 text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <div className="p-5 max-h-[600px] overflow-y-auto">
+                  {contentLoading ? (
+                    <div className="flex items-center gap-2 py-12 justify-center">
+                      <div className="w-4 h-4 border-2 border-[#6C6CFF]/30 border-t-[#6C6CFF] rounded-full animate-spin" />
+                      <span className="text-[12px] text-[#5C5C5F]">Metin yukleniyor...</span>
+                    </div>
+                  ) : mevzuatContent ? (
+                    <pre className="text-[13px] text-[#ECECEE] leading-[1.8] whitespace-pre-wrap font-[family-name:var(--font-serif)]">{mevzuatContent}</pre>
+                  ) : null}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
       {/* No results */}
       {results && results.sonuclar.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-[13px] text-[#8B8B8E]">Sonuç bulunamadı</p>
-          <p className="text-[12px] text-[#5C5C5F] mt-1">
-            Farklı anahtar kelimeler veya kanun numarası deneyin
-          </p>
+        <div className="text-center py-16">
+          <p className="text-[14px] text-[#8B8B8E]">Sonuc bulunamadi</p>
+          <p className="text-[12px] text-[#5C5C5F] mt-1">Farkli anahtar kelimeler veya kanun numarasi deneyin</p>
         </div>
       )}
     </div>

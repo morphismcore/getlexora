@@ -9,6 +9,7 @@ import json
 import math
 import os
 import re
+import traceback
 from datetime import datetime
 
 import structlog
@@ -34,18 +35,24 @@ _ingest_state = {
     "source": None,
     "task": None,
     "started_at": None,
+    "last_update": None,
     "fetched": 0,
     "embedded": 0,
     "errors": 0,
     "total_topics": 0,
     "completed_topics": 0,
+    "progress_pct": 0,
 }
 
 
 def _update_state(**kwargs):
-    """Ingestion state güncelle."""
+    """Ingestion state guncelle — last_update ve progress_pct otomatik."""
     global _ingest_state
     _ingest_state.update(kwargs)
+    _ingest_state["last_update"] = datetime.now().isoformat()
+    total = _ingest_state.get("total_topics", 0)
+    completed = _ingest_state.get("completed_topics", 0)
+    _ingest_state["progress_pct"] = round((completed / total) * 100) if total > 0 else 0
 
 
 def _log(level: str, message: str):
@@ -60,7 +67,7 @@ def _log(level: str, message: str):
         _ingest_logs = _ingest_logs[-MAX_LOG_LINES:]
     # Ayrıca structlog'a da yaz
     if level == "error":
-        logger.error("ingest_log", msg=message)
+        logger.error("ingest_log", msg=message, stack=traceback.format_exc() if "Error" in message or "error" in message else None)
     else:
         logger.info("ingest_log", msg=message)
 

@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter, Depends
 from app.config import get_settings
 from app.api.deps import get_cache_service
@@ -12,38 +14,84 @@ async def health():
 
 @router.get("/health/details")
 async def health_details():
-    """Tüm bağımlılıkların durumunu kontrol et."""
+    """Tum bagimliliklarin durumunu kontrol et — response_time_ms dahil."""
     settings = get_settings()
     checks = {}
 
-    # Qdrant
+    # Qdrant — koleksiyon bazinda point count
+    t0 = time.monotonic()
     try:
         from qdrant_client import QdrantClient
         client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=5)
-        client.get_collections()
-        checks["qdrant"] = "ok"
+        collections = client.get_collections().collections
+        collection_details = {}
+        for col in collections:
+            try:
+                info = client.get_collection(col.name)
+                collection_details[col.name] = info.points_count or 0
+            except Exception:
+                collection_details[col.name] = -1
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["qdrant"] = {
+            "status": "ok",
+            "response_time_ms": elapsed,
+            "collections": collection_details,
+            "total_points": sum(v for v in collection_details.values() if v >= 0),
+        }
     except Exception as e:
-        checks["qdrant"] = f"error: {str(e)}"
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["qdrant"] = {"status": "error", "error": str(e), "response_time_ms": elapsed}
 
-    # Redis
+    # Redis — ping + memory info
+    t0 = time.monotonic()
     try:
         import redis as r
         rc = r.from_url(settings.redis_url, socket_timeout=5)
         rc.ping()
-        checks["redis"] = "ok"
+        info = rc.info(section="memory")
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["redis"] = {
+            "status": "ok",
+            "response_time_ms": elapsed,
+            "used_memory_human": info.get("used_memory_human", "unknown"),
+        }
     except Exception as e:
-        checks["redis"] = f"error: {str(e)}"
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["redis"] = {"status": "error", "error": str(e), "response_time_ms": elapsed}
+
+    # PostgreSQL — SELECT 1
+    t0 = time.monotonic()
+    try:
+        from sqlalchemy import text
+        from app.models.db import async_session
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["postgres"] = {"status": "ok", "response_time_ms": elapsed}
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["postgres"] = {"status": "error", "error": str(e), "response_time_ms": elapsed}
 
     # Bedesten API
+    t0 = time.monotonic()
     try:
         import httpx
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(f"{settings.bedesten_base_url}")
-            checks["bedesten"] = "ok" if resp.status_code < 500 else f"status: {resp.status_code}"
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            checks["bedesten"] = {
+                "status": "ok" if resp.status_code < 500 else "error",
+                "http_status": resp.status_code,
+                "response_time_ms": elapsed,
+            }
     except Exception as e:
-        checks["bedesten"] = f"error: {str(e)}"
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        checks["bedesten"] = {"status": "error", "error": str(e), "response_time_ms": elapsed}
 
-    all_ok = all(v == "ok" for v in checks.values())
+    all_ok = all(
+        (c.get("status") if isinstance(c, dict) else c) == "ok"
+        for c in checks.values()
+    )
     return {"status": "ok" if all_ok else "degraded", "checks": checks}
 
 

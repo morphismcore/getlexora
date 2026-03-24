@@ -68,3 +68,51 @@ health:
 
 health-detail:
 	curl -s http://localhost:8000/health/details | python3 -m json.tool
+
+# === PRODUCTION DEPLOY ===
+
+# Sunucuya dosyalari gonder
+deploy-sync:
+	rsync -avz --delete \
+		--exclude='.git' \
+		--exclude='node_modules' \
+		--exclude='.next' \
+		--exclude='__pycache__' \
+		--exclude='.env' \
+		--exclude='*.pyc' \
+		--exclude='.venv' \
+		--exclude='OPTIMIZATION_ROADMAP.md' \
+		./ root@204.168.136.223:/opt/lexora/
+
+# Sunucuda build et ve baslat
+deploy-build:
+	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml up -d --build"
+
+# Tam deploy: sync + build
+deploy: deploy-sync deploy-build
+	@echo "Deploy tamamlandi! https://getlexora.net"
+
+# Sadece frontend deploy
+deploy-frontend:
+	rsync -avz --delete \
+		--exclude='node_modules' \
+		--exclude='.next' \
+		./frontend/ root@204.168.136.223:/opt/lexora/frontend/
+	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml up -d --build frontend"
+
+# Sadece backend deploy
+deploy-backend:
+	rsync -avz --delete \
+		--exclude='__pycache__' \
+		--exclude='*.pyc' \
+		--exclude='.venv' \
+		./backend/ root@204.168.136.223:/opt/lexora/backend/
+	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml up -d --build backend"
+
+# Sunucu loglari
+deploy-logs:
+	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml logs -f --tail=50"
+
+# Sunucu durumu
+deploy-status:
+	ssh root@204.168.136.223 "cd /opt/lexora && docker compose -f docker-compose.prod.yml ps"

@@ -117,7 +117,7 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[8px]"
+            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
             onClick={() => setOpen(false)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -126,7 +126,7 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
 
           {/* Dialog */}
           <motion.div
-            className="relative w-full max-w-[560px] mx-4 bg-elevated border border-border-default rounded-2xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-[560px] mx-4 bg-[#111113]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -8 }}
@@ -185,11 +185,12 @@ export default function CommandPalette({ groups }: CommandPaletteProps) {
                           data-active={isActive}
                           onClick={() => handleSelect(item)}
                           onMouseEnter={() => setActiveIndex(currentIndex)}
-                          className={`flex items-center gap-3 w-full px-4 h-9 text-left transition-colors ${
+                          className={`flex items-center gap-3 w-full px-4 h-10 text-left transition-all duration-100 rounded-lg mx-1 ${
                             isActive
-                              ? "bg-[rgba(255,255,255,0.06)] text-text-primary"
-                              : "text-text-secondary hover:text-text-primary"
+                              ? "bg-[#6C6CFF]/10 text-[#ECECEE] shadow-[inset_0_0_0_1px_rgba(108,108,255,0.15)]"
+                              : "text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03]"
                           }`}
+                          style={{ width: "calc(100% - 8px)" }}
                         >
                           {item.icon && (
                             <span className="flex-shrink-0 text-text-tertiary">

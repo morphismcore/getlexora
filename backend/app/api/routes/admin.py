@@ -1,11 +1,12 @@
 """
 Platform admin API endpoint'leri.
-Kullanıcı yönetimi, sistem durumu, embedding istatistikleri.
+Kullanıcı yönetimi, sistem durumu, embedding istatistikleri, monitoring.
 Sadece platform_admin rolüne sahip kullanıcılar erişebilir.
 """
 
 import asyncio
 import json
+import time
 import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -19,9 +20,18 @@ from app.models.database import User, Firm, Case, Deadline, SavedSearch
 from app.models.db import get_db
 from app.api.deps import get_vector_store, get_cache_service, get_ingestion_pipeline
 from app.ingestion.ingest import _ingest_state, _ingest_logs
+from app.tasks.ingestion_tasks import (
+    ingest_topics_task,
+    ingest_aym_task,
+    ingest_aihm_task,
+    REDIS_CHANNEL,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 settings = get_settings()
+
+# App start time for uptime calculation
+_app_start_time = time.time()
 
 
 # ── Guard ──────────────────────────────────────────────
@@ -221,27 +231,25 @@ async def embedding_stats(
 async def trigger_ingest(
     admin: User = Depends(require_platform_admin),
 ):
-    """İçtihat embedding ingestion başlat."""
-    from app.api.deps import get_ingestion_pipeline
+    """Ictihat embedding ingestion baslat (Celery worker)."""
     from app.ingestion.ingest import DEFAULT_TOPICS
 
-    pipeline = get_ingestion_pipeline()
+    result = ingest_topics_task.delay(topics=DEFAULT_TOPICS, pages_per_topic=3)
 
-    import asyncio
-    asyncio.create_task(pipeline.ingest_topics(topics=DEFAULT_TOPICS, pages_per_topic=3))
-
-    return {"status": "started", "type": "ictihat", "topics": len(DEFAULT_TOPICS), "pages_per_topic": 3}
+    return {
+        "status": "started",
+        "type": "ictihat",
+        "task_id": result.id,
+        "topics": len(DEFAULT_TOPICS),
+        "pages_per_topic": 3,
+    }
 
 
 @router.post("/ingest/mevzuat")
 async def trigger_mevzuat_ingest(
     admin: User = Depends(require_platform_admin),
 ):
-    """Mevzuat embedding ingestion başlat."""
-    from app.api.deps import get_ingestion_pipeline
-
-    pipeline = get_ingestion_pipeline()
-
+    """Mevzuat embedding ingestion baslat (Celery worker)."""
     mevzuat_topics = [
         "iş kanunu", "türk ceza kanunu", "türk borçlar kanunu", "türk medeni kanunu",
         "hukuk muhakemeleri kanunu", "ceza muhakemesi kanunu", "icra iflas kanunu",
@@ -250,10 +258,15 @@ async def trigger_mevzuat_ingest(
         "noterlik kanunu", "tapu kanunu", "kat mülkiyeti kanunu",
     ]
 
-    import asyncio
-    asyncio.create_task(pipeline.ingest_topics(topics=mevzuat_topics, pages_per_topic=3))
+    result = ingest_topics_task.delay(topics=mevzuat_topics, pages_per_topic=3)
 
-    return {"status": "started", "type": "mevzuat", "topics": len(mevzuat_topics), "pages_per_topic": 3}
+    return {
+        "status": "started",
+        "type": "mevzuat",
+        "task_id": result.id,
+        "topics": len(mevzuat_topics),
+        "pages_per_topic": 3,
+    }
 
 
 @router.get("/logs")
@@ -342,18 +355,50 @@ async def ingest_stream(
     except Exception:
         raise HTTPException(status_code=401, detail="Geçersiz token")
     async def event_generator():
-        last_log_count = 0
-        while True:
-            current_logs = _ingest_logs.copy()
-            new_logs = current_logs[last_log_count:] if last_log_count < len(current_logs) else []
-            last_log_count = len(current_logs)
+        import redis.asyncio as aioredis
 
-            data = {
-                **_ingest_state,
-                "new_logs": new_logs[-10:],
-            }
-            yield f"data: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
-            await asyncio.sleep(2)
+        last_log_count = 0
+
+        # Redis pub/sub for cross-process Celery worker events
+        redis_client = None
+        pubsub = None
+        try:
+            redis_client = aioredis.from_url(settings.redis_url if hasattr(settings, "redis_url") else "redis://localhost:6379/0")
+            pubsub = redis_client.pubsub()
+            await pubsub.subscribe(REDIS_CHANNEL)
+        except Exception:
+            pubsub = None
+
+        try:
+            while True:
+                # In-process state (backward compat)
+                current_logs = _ingest_logs.copy()
+                new_logs = current_logs[last_log_count:] if last_log_count < len(current_logs) else []
+                last_log_count = len(current_logs)
+
+                data = {
+                    **_ingest_state,
+                    "new_logs": new_logs[-10:],
+                }
+
+                # Check Redis pub/sub for Celery worker events
+                if pubsub:
+                    try:
+                        msg = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=0.1)
+                        if msg and msg["type"] == "message":
+                            celery_event = json.loads(msg["data"])
+                            data["celery_event"] = celery_event
+                    except (asyncio.TimeoutError, Exception):
+                        pass
+
+                yield f"data: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+                await asyncio.sleep(2)
+        finally:
+            if pubsub:
+                await pubsub.unsubscribe(REDIS_CHANNEL)
+                await pubsub.aclose()
+            if redis_client:
+                await redis_client.aclose()
 
     return StreamingResponse(
         event_generator(),
@@ -379,45 +424,215 @@ async def ingest_state_endpoint(
 
 @router.post("/ingest/aym")
 async def admin_ingest_aym(
-    background_tasks: BackgroundTasks,
-    pipeline=Depends(get_ingestion_pipeline),
     admin: User = Depends(require_platform_admin),
 ):
-    """AYM bireysel basvuru kararlarini ingest et."""
-    from app.ingestion.ingest import _ingest_running
-    if _ingest_running:
-        raise HTTPException(status_code=409, detail="Bir ingestion zaten calisiyor.")
-
-    async def run():
-        import app.ingestion.ingest as ing
-        ing._ingest_running = True
-        try:
-            await pipeline.ingest_aym(pages=10, ihlal_only=True)
-        finally:
-            ing._ingest_running = False
-
-    background_tasks.add_task(run)
-    return {"status": "started", "source": "aym"}
+    """AYM bireysel basvuru kararlarini ingest et (Celery worker)."""
+    result = ingest_aym_task.delay(pages=10, ihlal_only=True)
+    return {"status": "started", "source": "aym", "task_id": result.id}
 
 
 @router.post("/ingest/aihm")
 async def admin_ingest_aihm(
-    background_tasks: BackgroundTasks,
-    pipeline=Depends(get_ingestion_pipeline),
     admin: User = Depends(require_platform_admin),
 ):
-    """AIHM Turkiye kararlarini ingest et."""
-    from app.ingestion.ingest import _ingest_running
-    if _ingest_running:
-        raise HTTPException(status_code=409, detail="Bir ingestion zaten calisiyor.")
+    """AIHM Turkiye kararlarini ingest et (Celery worker)."""
+    result = ingest_aihm_task.delay(max_results=500)
+    return {"status": "started", "source": "aihm", "task_id": result.id}
 
-    async def run():
-        import app.ingestion.ingest as ing
-        ing._ingest_running = True
-        try:
-            await pipeline.ingest_aihm(max_results=500, turkish_only=False)
-        finally:
-            ing._ingest_running = False
 
-    background_tasks.add_task(run)
-    return {"status": "started", "source": "aihm"}
+@router.get("/ingest/task/{task_id}")
+async def get_task_status(
+    task_id: str,
+    admin: User = Depends(require_platform_admin),
+):
+    """Celery task durumunu sorgula."""
+    from app.worker import celery_app
+
+    result = celery_app.AsyncResult(task_id)
+    response = {
+        "task_id": task_id,
+        "state": result.state,
+        "ready": result.ready(),
+    }
+
+    if result.state == "PROGRESS":
+        response["meta"] = result.info
+    elif result.state == "SUCCESS":
+        response["result"] = result.result
+    elif result.state == "FAILURE":
+        response["error"] = str(result.result) if result.result else "Bilinmeyen hata"
+
+    return response
+
+
+@router.post("/ingest/cancel/{task_id}")
+async def cancel_task(
+    task_id: str,
+    admin: User = Depends(require_platform_admin),
+):
+    """Celery task'i iptal et."""
+    from app.worker import celery_app
+
+    celery_app.control.revoke(task_id, terminate=True, signal="SIGTERM")
+    return {"status": "cancelled", "task_id": task_id}
+
+
+# ── Monitoring ────────────────────────────────────────
+
+@router.get("/monitoring")
+async def monitoring_dashboard(
+    admin: User = Depends(require_platform_admin),
+):
+    """Sistem monitoring verisi — CPU, RAM, disk, servis durumlari, embedding istatistikleri."""
+    import psutil
+    from app.main import request_metrics
+
+    uptime_seconds = round(time.time() - _app_start_time)
+    memory = psutil.virtual_memory()
+    disk = psutil.disk_usage("/")
+
+    # Service health checks with response_ms
+    services = {}
+
+    # Qdrant
+    t0 = time.monotonic()
+    qdrant_points = 0
+    try:
+        vs = get_vector_store()
+        ictihat = await vs.get_collection_info("ictihat_embeddings")
+        mevzuat_info = await vs.get_collection_info("mevzuat_embeddings")
+        qdrant_points = (ictihat.get("points_count", 0) or 0) + (mevzuat_info.get("points_count", 0) or 0)
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["qdrant"] = {"status": "ok", "response_ms": elapsed}
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["qdrant"] = {"status": "error", "response_ms": elapsed, "error": str(e)}
+
+    # Redis
+    t0 = time.monotonic()
+    redis_memory_mb = 0
+    try:
+        import redis as r
+        rc = r.from_url(settings.redis_url, socket_timeout=5)
+        rc.ping()
+        info = rc.info(section="memory")
+        redis_memory_mb = round(info.get("used_memory", 0) / (1024 * 1024), 1)
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["redis"] = {"status": "ok", "response_ms": elapsed, "memory_mb": redis_memory_mb}
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["redis"] = {"status": "error", "response_ms": elapsed, "error": str(e)}
+
+    # PostgreSQL
+    t0 = time.monotonic()
+    try:
+        from sqlalchemy import text
+        from app.models.db import async_session
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["postgres"] = {"status": "ok", "response_ms": elapsed}
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["postgres"] = {"status": "error", "response_ms": elapsed, "error": str(e)}
+
+    # Bedesten
+    t0 = time.monotonic()
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{settings.bedesten_base_url}")
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            services["bedesten"] = {
+                "status": "ok" if resp.status_code < 500 else "error",
+                "response_ms": elapsed,
+            }
+    except Exception as e:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["bedesten"] = {"status": "error", "response_ms": elapsed, "error": str(e)}
+
+    # Embedding breakdown by source
+    by_source = {}
+    try:
+        vs = get_vector_store()
+        for source in ["yargitay", "danistay", "aym", "aihm"]:
+            by_source[source] = await vs.count_by_filter("ictihat_embeddings", "mahkeme", source)
+    except Exception:
+        pass
+
+    # Last ingestion info from Redis
+    last_ingestion = None
+    daily_new_count = 0
+    try:
+        import redis as r
+        rc_sync = r.from_url(settings.redis_url, socket_timeout=5)
+        last_ts = rc_sync.get("monitoring:last_ingestion")
+        if last_ts:
+            last_ingestion = last_ts.decode() if isinstance(last_ts, bytes) else str(last_ts)
+        daily_count = rc_sync.get("monitoring:daily_new_count")
+        if daily_count:
+            daily_new_count = int(daily_count)
+    except Exception:
+        pass
+
+    return {
+        "uptime_seconds": uptime_seconds,
+        "requests_total": request_metrics.total,
+        "requests_per_minute": request_metrics.requests_per_minute,
+        "avg_response_time_ms": request_metrics.avg_response_time_ms,
+        "error_rate_pct": request_metrics.error_rate_pct,
+        "active_connections": 0,
+        "memory_usage_mb": round(memory.used / (1024 * 1024)),
+        "cpu_percent": psutil.cpu_percent(interval=0.1),
+        "disk_usage_pct": disk.percent,
+        "services": services,
+        "ingestion": {
+            "total_embeddings": qdrant_points,
+            "by_source": by_source,
+            "last_ingestion": last_ingestion,
+            "daily_new_count": daily_new_count,
+        },
+    }
+
+
+@router.get("/monitoring/history")
+async def monitoring_history(
+    admin: User = Depends(require_platform_admin),
+):
+    """Son 24 saatlik metrik gecmisi (Redis'ten)."""
+    try:
+        import redis as r
+        rc = r.from_url(settings.redis_url, socket_timeout=5)
+        raw = rc.lrange("monitoring:history", 0, 1439)
+        history = []
+        for item in raw:
+            try:
+                data = json.loads(item)
+                history.append(data)
+            except Exception:
+                pass
+        return {"history": history, "count": len(history)}
+    except Exception as e:
+        return {"history": [], "count": 0, "error": str(e)}
+
+
+async def _store_monitoring_snapshot():
+    """Her 60 saniyede bir monitoring snapshot'i Redis'e kaydet. Scheduler'dan cagirilir."""
+    import psutil
+    try:
+        import redis as r
+        from app.main import request_metrics
+        rc = r.from_url(settings.redis_url, socket_timeout=5)
+        snapshot = {
+            "ts": time.time(),
+            "cpu_percent": psutil.cpu_percent(interval=0.1),
+            "memory_usage_mb": round(psutil.virtual_memory().used / (1024 * 1024)),
+            "requests_per_minute": request_metrics.requests_per_minute,
+            "avg_response_time_ms": request_metrics.avg_response_time_ms,
+            "error_rate_pct": request_metrics.error_rate_pct,
+            "requests_total": request_metrics.total,
+        }
+        rc.lpush("monitoring:history", json.dumps(snapshot))
+        rc.ltrim("monitoring:history", 0, 1439)  # Max 1440 entries = 24h
+    except Exception:
+        pass

@@ -76,6 +76,14 @@ function uid(): string {
   return crypto.randomUUID();
 }
 
+function subLabel(index: number): string {
+  if (index < 26) return String.fromCharCode(97 + index);
+  // aa, ab, ac... for indices >= 26
+  const first = String.fromCharCode(97 + Math.floor(index / 26) - 1);
+  const second = String.fromCharCode(97 + (index % 26));
+  return first + second;
+}
+
 function emptyHeader(): HeaderFields {
   return {
     mahkeme: "",
@@ -296,7 +304,9 @@ export default function DilekcePage() {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showNewDocConfirm, setShowNewDocConfirm] = useState(false);
 
-  // --- Auto-save to localStorage ---
+  const [autoSaveFlash, setAutoSaveFlash] = useState(false);
+
+  // --- Auto-save: debounced on change (1s) ---
   useEffect(() => {
     const timer = setTimeout(() => {
       if (doc.blocks.length > 0 || doc.header.mahkeme) {
@@ -304,11 +314,26 @@ export default function DilekcePage() {
           localStorage.setItem("lexora_dilekce_draft", JSON.stringify(doc));
           setLastSaved(new Date().toLocaleTimeString("tr-TR"));
         } catch {
-          // QuotaExceededError — localStorage dolu, sessizce devam et
+          // QuotaExceededError — sessizce devam
         }
       }
     }, 1000);
     return () => clearTimeout(timer);
+  }, [doc]);
+
+  // --- Auto-save: periodic interval (30s) with visual flash ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (doc.blocks.length > 0 || doc.header.mahkeme) {
+        try {
+          localStorage.setItem("lexora_dilekce_draft", JSON.stringify(doc));
+          setLastSaved(new Date().toLocaleTimeString("tr-TR"));
+          setAutoSaveFlash(true);
+          setTimeout(() => setAutoSaveFlash(false), 2000);
+        } catch { /* ignore */ }
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, [doc]);
 
   // --- Fetch templates on mount ---
@@ -627,7 +652,7 @@ export default function DilekcePage() {
           lines.push(`${numberedIdx}. ${block.content}`);
           if (block.children && block.children.length > 0) {
             block.children.forEach((sub, si) => {
-              const letter = String.fromCharCode(97 + si);
+              const letter = subLabel(si);
               lines.push(`   ${letter}) ${sub.content}`);
             });
           }
@@ -720,12 +745,66 @@ export default function DilekcePage() {
   const editorPanel = (
     <div className="h-full overflow-y-auto">
       <div className="p-4 space-y-5">
-        {/* Template selector */}
+        {/* Template gallery */}
         {templates.length > 0 && (
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">
-              Hazır Şablon Kullan
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-3">
+              Şablon Galerisi
             </label>
+            {/* Category cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+              {(() => {
+                const CATS: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+                  "İş Hukuku": { color: "text-[#6C6CFF]", bg: "bg-[#6C6CFF]/[0.06]", border: "border-[#6C6CFF]/20", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
+                  "Ceza Hukuku": { color: "text-[#E5484D]", bg: "bg-[#E5484D]/[0.06]", border: "border-[#E5484D]/20", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
+                  "Ticaret Hukuku": { color: "text-[#A78BFA]", bg: "bg-[#A78BFA]/[0.06]", border: "border-[#A78BFA]/20", icon: "M3 3h18v18H3zM12 8v8m-4-4h8" },
+                  "İdare Hukuku": { color: "text-[#22D3EE]", bg: "bg-[#22D3EE]/[0.06]", border: "border-[#22D3EE]/20", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" },
+                  "Aile Hukuku": { color: "text-[#F472B6]", bg: "bg-[#F472B6]/[0.06]", border: "border-[#F472B6]/20", icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" },
+                  "İcra-İflas": { color: "text-[#FFB224]", bg: "bg-[#FFB224]/[0.06]", border: "border-[#FFB224]/20", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+                };
+                const categories = Object.keys(CATS);
+                const grouped: Record<string, Template[]> = {};
+                for (const t of templates) {
+                  const cat = categories.find((c) => (t.category || "").includes(c)) || "Diğer";
+                  if (!grouped[cat]) grouped[cat] = [];
+                  grouped[cat].push(t);
+                }
+                // Also show categories with 0 templates
+                for (const c of categories) {
+                  if (!grouped[c]) grouped[c] = [];
+                }
+
+                return Object.entries(CATS).map(([cat, style]) => {
+                  const tpls = grouped[cat] || [];
+                  return (
+                    <div key={cat} className={`${style.bg} border ${style.border} rounded-xl p-3 cursor-pointer hover:scale-[1.02] transition-transform`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className={style.color} strokeLinecap="round" strokeLinejoin="round">
+                          <path d={style.icon} />
+                        </svg>
+                        <span className={`text-[12px] font-semibold ${style.color}`}>{cat}</span>
+                      </div>
+                      <p className="text-[10px] text-[#5C5C5F]">{tpls.length} şablon</p>
+                      {tpls.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {tpls.slice(0, 3).map((tpl) => (
+                            <button key={tpl.id} onClick={() => selectTemplate(tpl)}
+                              className={`block w-full text-left text-[11px] px-2 py-1 rounded-md transition-colors ${
+                                selectedTemplate?.id === tpl.id
+                                  ? `${style.bg} ${style.color} font-medium`
+                                  : "text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03]"
+                              }`}>
+                              {tpl.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            {/* Flat template list */}
             <div className="flex flex-wrap gap-1.5">
               {templates.map((tpl) => (
                 <button
@@ -983,14 +1062,14 @@ export default function DilekcePage() {
       <div className="shrink-0 border-b border-white/[0.06] bg-[#09090B] px-4 md:px-5 pt-14 md:pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[#ECECEE]">
-              Dilekçe Oluşturucu
+            <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">
+              Dilekce Olusturucu
             </h1>
             <p className="text-[12px] text-[#5C5C5F] mt-0.5">
               Blok tabanlı hukuki belge düzenleyici
               {lastSaved && (
-                <span className="ml-2 text-[11px] text-[#3DD68C]/70">
-                  Son kayıt: {lastSaved}
+                <span className={`ml-2 text-[11px] transition-colors duration-500 ${autoSaveFlash ? "text-[#3DD68C]" : "text-[#3DD68C]/50"}`}>
+                  {autoSaveFlash ? "✓ Otomatik kaydedildi" : `Son kayıt: ${lastSaved}`}
                 </span>
               )}
             </p>
@@ -1262,7 +1341,7 @@ function BlockEditor({
       {block.type === "numbered_paragraph" && (
         <div className="px-3 pb-2 space-y-1.5">
           {(block.children ?? []).map((sub, si) => {
-            const letter = String.fromCharCode(97 + si);
+            const letter = subLabel(si);
             return (
               <div
                 key={sub.id}
@@ -1402,7 +1481,7 @@ function PreviewContent({ doc }: { doc: DocumentState }) {
                 {block.children && block.children.length > 0 && (
                   <div className="ml-6 mt-1 space-y-0.5">
                     {block.children.map((sub, si) => {
-                      const letter = String.fromCharCode(97 + si);
+                      const letter = subLabel(si);
                       return (
                         <p key={sub.id} className="text-justify">
                           <span className="font-medium mr-1">

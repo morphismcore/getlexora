@@ -148,15 +148,15 @@ export default function AyarlarPage() {
     setToast("Üye çıkarıldı");
   }, [headers]);
 
-  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
+  const inputCls = "w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200";
   const isAdmin = user?.role === "admin" || user?.role === "platform_admin";
 
   return (
-    <div className="h-screen overflow-auto p-4 pt-14 md:p-6 md:pt-6 space-y-5">
+    <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
       {toast && <div className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg">{toast}</div>}
 
       <div>
-        <h1 className="text-[15px] font-semibold tracking-[-0.01em] text-[#ECECEE]">Ayarlar</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Ayarlar</h1>
         <p className="text-[12px] text-[#5C5C5F] mt-0.5">Hesap ve firma ayarlarınız</p>
       </div>
 

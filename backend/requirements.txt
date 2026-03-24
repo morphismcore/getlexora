@@ -41,6 +41,12 @@ fpdf2
 # Scheduler
 apscheduler>=3.10
 
+# Task queue
+celery[redis]>=5.3.0
+
+# System monitoring
+psutil>=5.9.0
+
 # Utils
 python-dotenv==1.1.0
 tenacity==9.1.2
