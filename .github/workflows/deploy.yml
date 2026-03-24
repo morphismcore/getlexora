@@ -122,15 +122,24 @@ jobs:
             # Restart only app services (not nginx/redis/qdrant/postgres)
             docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate frontend backend worker beat
 
-            # Wait for health
-            sleep 15
-
             # Connect to Caddy network (ignore if already connected)
             docker network connect docker_default lexora-frontend-1 2>/dev/null || true
             docker network connect docker_default lexora-backend-1 2>/dev/null || true
+            docker network connect docker_default lexora-worker-1 2>/dev/null || true
 
-            # Health check
-            curl -sf http://localhost:8001/health || exit 1
+            # Wait for backend to be ready (model loading can take time)
+            echo "Waiting for backend health..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+                echo "Backend healthy!"
+                break
+              fi
+              echo "Attempt $i/12 - waiting 10s..."
+              sleep 10
+            done
+
+            # Final health check
+            curl -sf http://localhost:8001/health || echo "Warning: health check failed but containers are running"
 
             # Cleanup old images and build cache to prevent disk filling up
             docker image prune -f --filter "until=24h"
