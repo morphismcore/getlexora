@@ -872,7 +872,7 @@ class IngestionPipeline:
                     try:
                         result = await svc.search(
                             keyword="", mevzuat_turu=tur,
-                            page=page, page_size=25,
+                            page=page, page_size=20,
                         )
                     except Exception as e:
                         _log("info", f"⚠️ Mevzuat listesi çekilemedi: {tur} sayfa {page}: {e}")
@@ -890,7 +890,7 @@ class IngestionPipeline:
                             all_items.append((no, adi, tur))
 
                     total = result.get("toplam", 0)
-                    if page * 25 >= total:
+                    if page * 20 >= total:
                         break
                     page += 1
                     await asyncio.sleep(1.0)
@@ -925,7 +925,7 @@ class IngestionPipeline:
         elif mevzuat_list is None:
             mevzuat_list = DEFAULT_MEVZUAT
 
-        cache = CacheService(self.settings.redis_url)
+        cache = CacheService()
         mevzuat_svc = MevzuatService(cache=cache)
 
         total_fetched = 0

@@ -63,7 +63,7 @@ class MevzuatService:
         POST /mevzuat/searchDocuments
         """
         inner = {
-            "pageSize": min(page_size, 25),
+            "pageSize": min(page_size, 20),
             "pageNumber": page,
             "sortFields": ["RESMI_GAZETE_TARIHI"],
             "sortDirection": "desc",
