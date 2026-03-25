@@ -258,10 +258,10 @@ def ingest_aihm_task(self, max_results: int = 500):
     retry_backoff_max=600,
     retry_jitter=True,
 )
-def ingest_mevzuat_task(self):
-    """Mevzuat ingestion — 24 temel kanun, madde bazli chunking."""
+def ingest_mevzuat_task(self, fetch_all=False):
+    """Mevzuat ingestion. fetch_all=True: Bedesten'deki tum kanun+KHK'lari ceker."""
     task_id = self.request.id
-    logger.info("celery_ingest_mevzuat_start", task_id=task_id)
+    logger.info("celery_ingest_mevzuat_start", task_id=task_id, fetch_all=fetch_all)
 
     self.update_state(state="PROGRESS", meta={
         "source": "mevzuat",
@@ -276,7 +276,7 @@ def ingest_mevzuat_task(self):
     pipeline = _create_pipeline()
 
     async def _run():
-        return await pipeline.ingest_mevzuat()
+        return await pipeline.ingest_mevzuat(fetch_all=fetch_all)
 
     try:
         loop = asyncio.new_event_loop()

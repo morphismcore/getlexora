@@ -270,13 +270,18 @@ async def trigger_ingest(
 @router.post("/ingest/mevzuat")
 async def trigger_mevzuat_ingest(
     admin: User = Depends(require_platform_admin),
+    fetch_all: bool = False,
 ):
-    """Mevzuat embedding ingestion baslat (Celery worker)."""
-    result = ingest_mevzuat_task.delay()
+    """Mevzuat embedding ingestion baslat.
+    fetch_all=true: Bedesten'deki tüm kanun+KHK'ları çeker (914+ kanun, 63+ KHK).
+    fetch_all=false: Sadece temel 36 kanun listesini çeker.
+    """
+    result = ingest_mevzuat_task.delay(fetch_all=fetch_all)
 
     return {
         "status": "started",
         "type": "mevzuat",
+        "fetch_all": fetch_all,
         "task_id": result.id,
     }
 

@@ -101,8 +101,9 @@ class MevzuatService:
             resp.raise_for_status()
             data = resp.json()
 
-            items = data.get("data", {}).get("mevzuatList", [])
-            total = data.get("data", {}).get("total", 0)
+            inner_data = data.get("data") or {}
+            items = inner_data.get("mevzuatList") or []
+            total = inner_data.get("total") or 0
 
             logger.info(
                 "mevzuat_search_ok",

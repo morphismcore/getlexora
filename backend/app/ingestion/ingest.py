@@ -855,18 +855,74 @@ class IngestionPipeline:
         _log("success", f"✅ AİHM tamamlandı — {total_embedded} embedding")
         return summary
 
+    async def _fetch_all_mevzuat_list(
+        self,
+        turleri: list[str],
+    ) -> list[tuple[str, str, str]]:
+        """Bedesten'deki tüm mevzuatı sayfa sayfa tarayıp liste oluşturur."""
+        from app.services.mevzuat import MevzuatService
+
+        svc = MevzuatService()
+        all_items = []
+
+        try:
+            for tur in turleri:
+                page = 1
+                while True:
+                    try:
+                        result = await svc.search(
+                            keyword="", mevzuat_turu=tur,
+                            page=page, page_size=25,
+                        )
+                    except Exception as e:
+                        _log("info", f"⚠️ Mevzuat listesi çekilemedi: {tur} sayfa {page}: {e}")
+                        break
+
+                    items = result.get("sonuclar", [])
+                    if not items:
+                        break
+
+                    for it in items:
+                        no = str(it.get("kanun_no", ""))
+                        adi = it.get("kanun_adi", "")
+                        mid = it.get("mevzuat_id", "")
+                        if no and adi and mid:
+                            all_items.append((no, adi, tur))
+
+                    total = result.get("toplam", 0)
+                    if page * 25 >= total:
+                        break
+                    page += 1
+                    await asyncio.sleep(1.0)
+
+                _log("info", f"📋 {tur}: {len([x for x in all_items if x[2] == tur])} mevzuat bulundu")
+        finally:
+            await svc.close()
+
+        _log("info", f"📋 Toplam {len(all_items)} mevzuat çekilecek")
+        return all_items
+
     async def ingest_mevzuat(
         self,
-        mevzuat_list: list[tuple[str, str]] | None = None,
+        mevzuat_list: list[tuple] | None = None,
+        fetch_all: bool = False,
+        mevzuat_turleri: list[str] | None = None,
     ) -> dict:
         """
         Mevzuat ingestion — Bedesten mevzuat API'den kanun metinlerini çeker,
         madde bazlı chunk'lar, embed eder, mevzuat_embeddings koleksiyonuna yükler.
+
+        fetch_all=True: Sabit liste yerine Bedesten'deki TÜM mevzuatı sayfa sayfa çeker.
+        mevzuat_turleri: fetch_all modunda hangi türleri çekeceğini belirler (default: ["kanun", "khk"])
         """
         from app.services.mevzuat import MevzuatService
         from app.services.cache import CacheService
 
-        if mevzuat_list is None:
+        if fetch_all:
+            mevzuat_list = await self._fetch_all_mevzuat_list(
+                mevzuat_turleri or ["kanun", "khk"]
+            )
+        elif mevzuat_list is None:
             mevzuat_list = DEFAULT_MEVZUAT
 
         cache = CacheService(self.settings.redis_url)
@@ -885,15 +941,23 @@ class IngestionPipeline:
         )
 
         try:
-            for idx, (kanun_no, kanun_adi) in enumerate(mevzuat_list, 1):
+            for idx, entry in enumerate(mevzuat_list, 1):
+                # Eski format (no, ad) ve yeni format (no, ad, tur) desteği
+                if len(entry) == 3:
+                    kanun_no, kanun_adi, mevzuat_turu = entry
+                else:
+                    kanun_no, kanun_adi = entry
+                    mevzuat_turu = "kanun"
+
                 _update_state(task=f"{kanun_adi} ({kanun_no})", completed_topics=idx - 1)
                 _log("info", f"📖 {kanun_adi} ({kanun_no}) çekiliyor...")
 
                 try:
-                    # Kanunu ara
+                    # Kanunu ara — tür filtresi ile doğru belgeyi bul
                     search_result = await mevzuat_svc.search(
                         keyword="",
                         mevzuat_no=kanun_no,
+                        mevzuat_turu=mevzuat_turu,
                         page_size=5,
                     )
 
@@ -917,6 +981,12 @@ class IngestionPipeline:
 
                     if not content_text or len(content_text) < 100:
                         _log("info", f"⚠️ {kanun_adi} içerik boş veya çok kısa")
+                        continue
+
+                    # PDF kontrolü — PDF parse edilemiyor, atla
+                    if content_text.lstrip()[:5] == "%PDF-":
+                        _log("info", f"⚠️ {kanun_adi} PDF formatında, HTML değil — atlanıyor")
+                        _update_state(errors=_ingest_state["errors"] + 1)
                         continue
 
                     clean = clean_legal_html(content_text)
@@ -1209,30 +1279,48 @@ DEFAULT_TOPICS = [
 ]
 
 
-# ── Temel mevzuat listesi (kanun numarası → kısa ad) ─────────
+# ── Temel mevzuat listesi (kanun numarası, kısa ad, mevzuat türü) ─────────
+# Tür: "kanun" | "khk" | "cb_kararnamesi" | "yonetmelik" | "tuzuk" | None (filtre yok)
 DEFAULT_MEVZUAT = [
-    ("2709", "Anayasa"),
-    ("5237", "Türk Ceza Kanunu"),
-    ("6098", "Türk Borçlar Kanunu"),
-    ("4721", "Türk Medeni Kanunu"),
-    ("6100", "Hukuk Muhakemeleri Kanunu"),
-    ("5271", "Ceza Muhakemesi Kanunu"),
-    ("2004", "İcra ve İflas Kanunu"),
-    ("6102", "Türk Ticaret Kanunu"),
-    ("4857", "İş Kanunu"),
-    ("2577", "İdari Yargılama Usulü Kanunu"),
-    ("6502", "Tüketicinin Korunması Hakkında Kanun"),
-    ("6698", "Kişisel Verilerin Korunması Kanunu"),
-    ("1136", "Avukatlık Kanunu"),
-    ("5510", "Sosyal Sigortalar ve Genel Sağlık Sigortası Kanunu"),
-    ("634", "Kat Mülkiyeti Kanunu"),
-    ("2942", "Kamulaştırma Kanunu"),
-    ("3194", "İmar Kanunu"),
-    ("657", "Devlet Memurları Kanunu"),
-    ("5235", "Adli Yargı İlk Derece Mahkemeleri Kuruluş Kanunu"),
-    ("7201", "Tebligat Kanunu"),
-    ("6706", "Cezai Konularda Uluslararası Adli İş Birliği Kanunu"),
-    ("7036", "İş Mahkemeleri Kanunu"),
-    ("6325", "Hukuk Uyuşmazlıklarında Arabuluculuk Kanunu"),
-    ("5326", "Kabahatler Kanunu"),
+    # Temel kanunlar
+    ("2709", "Anayasa", "kanun"),
+    ("5237", "Türk Ceza Kanunu", "kanun"),
+    ("6098", "Türk Borçlar Kanunu", "kanun"),
+    ("4721", "Türk Medeni Kanunu", "kanun"),
+    ("6100", "Hukuk Muhakemeleri Kanunu", "kanun"),
+    ("5271", "Ceza Muhakemesi Kanunu", "kanun"),
+    ("2004", "İcra ve İflas Kanunu", "kanun"),
+    ("6102", "Türk Ticaret Kanunu", "kanun"),
+    ("4857", "İş Kanunu", "kanun"),
+    ("2577", "İdari Yargılama Usulü Kanunu", "kanun"),
+    ("6502", "Tüketicinin Korunması Hakkında Kanun", "kanun"),
+    ("6698", "Kişisel Verilerin Korunması Kanunu", "kanun"),
+    ("1136", "Avukatlık Kanunu", "kanun"),
+    ("5510", "Sosyal Sigortalar ve Genel Sağlık Sigortası Kanunu", "kanun"),
+    ("634", "Kat Mülkiyeti Kanunu", "kanun"),
+    ("2942", "Kamulaştırma Kanunu", "kanun"),
+    ("3194", "İmar Kanunu", "kanun"),
+    ("657", "Devlet Memurları Kanunu", "kanun"),
+    ("5235", "Adli Yargı İlk Derece Mahkemeleri Kuruluş Kanunu", "kanun"),
+    ("7201", "Tebligat Kanunu", "kanun"),
+    ("6706", "Cezai Konularda Uluslararası Adli İş Birliği Kanunu", "kanun"),
+    ("7036", "İş Mahkemeleri Kanunu", "kanun"),
+    ("6325", "Hukuk Uyuşmazlıklarında Arabuluculuk Kanunu", "kanun"),
+    ("5326", "Kabahatler Kanunu", "kanun"),
+    # Ek önemli kanunlar
+    ("4734", "Kamu İhale Kanunu", "kanun"),
+    ("5411", "Bankacılık Kanunu", "kanun"),
+    ("6362", "Sermaye Piyasası Kanunu", "kanun"),
+    ("5549", "Suç Gelirlerinin Aklanmasının Önlenmesi Kanunu", "kanun"),
+    ("5651", "İnternet Ortamında Yapılan Yayınların Düzenlenmesi Kanunu", "kanun"),
+    ("6331", "İş Sağlığı ve Güvenliği Kanunu", "kanun"),
+    ("2886", "Devlet İhale Kanunu", "kanun"),
+    ("213", "Vergi Usul Kanunu", "kanun"),
+    ("193", "Gelir Vergisi Kanunu", "kanun"),
+    ("3065", "Katma Değer Vergisi Kanunu", "kanun"),
+    ("5520", "Kurumlar Vergisi Kanunu", "kanun"),
+    ("4706", "Hazineye Ait Taşınmaz Malların Değerlendirilmesi Kanunu", "kanun"),
+    # KHK'lar
+    ("399", "KİT Personel Rejimi KHK", "khk"),
+    ("375", "KHK/375 Ek Ödeme", "khk"),
 ]
