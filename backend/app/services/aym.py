@@ -48,7 +48,7 @@ class AymService:
     ) -> dict:
         """Bireysel başvuru kararları arama. Sonuçlar /BB/{yıl}/{sıra} formatında."""
         params = {
-            "sayfaNo": page,
+            "page": page,
             "sayfaBoyutu": page_size,
         }
         if keyword:

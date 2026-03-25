@@ -35,6 +35,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       qdrant:
         condition: service_healthy
@@ -66,6 +68,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: celery -A app.worker worker --loglevel=info --concurrency=2 --pool=threads
     logging:
       driver: json-file

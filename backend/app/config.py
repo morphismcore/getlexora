@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # Embedding (POC: lightweight model, production: BAAI/bge-m3)
     embedding_model: str = "BAAI/bge-m3"
     embedding_dim: int = 1024
+    # Remote GPU embedding API (set to enable GPU-accelerated embedding)
+    embedding_api_url: str = ""
 
     # Bedesten API (yargi-mcp source)
     bedesten_base_url: str = "https://bedesten.adalet.gov.tr"
