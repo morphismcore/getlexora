@@ -50,6 +50,11 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.scheduled_tasks.check_deadline_reminders",
         "schedule": crontab(hour=8, minute=0),  # Her gun sabah 08:00'de
     },
+    "weekly-mevzuat-refresh": {
+        "task": "app.tasks.ingestion_tasks.refresh_mevzuat_task",
+        "schedule": crontab(hour=4, minute=0, day_of_week=0),  # Her pazar 04:00
+        "kwargs": {"dry_run": False, "fetch_all": True},
+    },
 }
 
 # autodiscover replaced with explicit include in Celery() constructor

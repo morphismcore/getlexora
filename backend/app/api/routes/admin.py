@@ -34,6 +34,7 @@ from app.tasks.ingestion_tasks import (
     ingest_batch_task,
     ingest_daire_task,
     ingest_date_range_task,
+    refresh_mevzuat_task,
     REDIS_CHANNEL,
 )
 
@@ -281,6 +282,26 @@ async def trigger_mevzuat_ingest(
     return {
         "status": "started",
         "type": "mevzuat",
+        "fetch_all": fetch_all,
+        "task_id": result.id,
+    }
+
+
+@router.post("/ingest/mevzuat-refresh")
+async def trigger_mevzuat_refresh(
+    admin: User = Depends(require_platform_admin),
+    dry_run: bool = False,
+    fetch_all: bool = True,
+):
+    """Mevzuat diff-based guncelleme. Sadece degisen kanunlari gunceller.
+    dry_run=true: Degisenleri tespit eder ama guncellemez.
+    """
+    result = refresh_mevzuat_task.delay(dry_run=dry_run, fetch_all=fetch_all)
+
+    return {
+        "status": "started",
+        "type": "mevzuat_refresh",
+        "dry_run": dry_run,
         "fetch_all": fetch_all,
         "task_id": result.id,
     }

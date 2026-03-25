@@ -307,6 +307,64 @@ def ingest_mevzuat_task(self, fetch_all=False):
 @celery_app.task(
     bind=True,
     base=LexoraTask,
+    name="app.tasks.ingestion_tasks.refresh_mevzuat_task",
+    autoretry_for=(Exception,),
+    max_retries=2,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+)
+def refresh_mevzuat_task(self, dry_run=False, fetch_all=True):
+    """Mevzuat diff-based guncelleme. Sadece degisenleri gunceller."""
+    task_id = self.request.id
+    logger.info("celery_refresh_mevzuat_start", task_id=task_id, dry_run=dry_run)
+
+    self.update_state(state="PROGRESS", meta={
+        "source": "mevzuat_refresh",
+        "dry_run": dry_run,
+        "progress_pct": 0,
+    })
+    _publish_progress({
+        "task_id": task_id,
+        "state": "STARTED",
+        "source": "mevzuat_refresh",
+        "dry_run": dry_run,
+    })
+
+    pipeline = _create_pipeline()
+
+    async def _run():
+        return await pipeline.refresh_mevzuat(dry_run=dry_run, fetch_all=fetch_all)
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        _publish_progress({
+            "task_id": task_id,
+            "state": "SUCCESS",
+            "source": "mevzuat_refresh",
+            "result": result,
+        })
+        logger.info("celery_refresh_mevzuat_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        _publish_progress({
+            "task_id": task_id,
+            "state": "FAILURE",
+            "source": "mevzuat_refresh",
+            "error": str(exc),
+        })
+        logger.error("celery_refresh_mevzuat_error", task_id=task_id, error=str(exc))
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_batch_task",
     autoretry_for=(Exception,),
     max_retries=3,

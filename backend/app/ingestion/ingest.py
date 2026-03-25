@@ -991,7 +991,8 @@ class IngestionPipeline:
 
                     clean = clean_legal_html(content_text)
 
-                    # Metadata
+                    # Metadata — content_hash ile refresh karşılaştırması yapılabilir
+                    content_hash = hashlib.md5(clean.encode()).hexdigest()
                     metadata = {
                         "mevzuat_id": mevzuat_id,
                         "kanun_no": kanun_no,
@@ -999,6 +1000,8 @@ class IngestionPipeline:
                         "tur": items[0].get("tur", "Kanun"),
                         "resmi_gazete_tarihi": items[0].get("resmi_gazete_tarihi", ""),
                         "kaynak": "bedesten_mevzuat",
+                        "content_hash": content_hash,
+                        "ingested_at": datetime.now().isoformat(),
                     }
 
                     # Madde bazlı chunk'la
@@ -1060,6 +1063,207 @@ class IngestionPipeline:
             "total_embedded": total_embedded,
         }
         _log("success", f"🎉 Mevzuat tamamlandı — {total_embedded} embedding ({total_fetched} kanun)")
+        return summary
+
+    async def refresh_mevzuat(
+        self,
+        dry_run: bool = False,
+        fetch_all: bool = True,
+        mevzuat_turleri: list[str] | None = None,
+    ) -> dict:
+        """
+        Mevzuat diff-based güncelleme.
+        Bedesten'den güncel içeriği çeker, mevcut embedding'lerle hash karşılaştırır.
+        Sadece değişenleri günceller (eski chunk'ları sil → yenilerini yaz).
+
+        dry_run=True: Sadece karşılaştırma yapar, hiçbir şeyi değiştirmez.
+        """
+        from app.services.mevzuat import MevzuatService
+        from app.services.cache import CacheService
+
+        if fetch_all:
+            mevzuat_list = await self._fetch_all_mevzuat_list(
+                mevzuat_turleri or ["kanun", "khk"]
+            )
+        else:
+            mevzuat_list = DEFAULT_MEVZUAT
+
+        cache = CacheService()
+        mevzuat_svc = MevzuatService(cache=cache)
+
+        updated = 0
+        skipped = 0
+        errors = 0
+        new_added = 0
+        details = []
+
+        _log("info", f"🔄 Mevzuat refresh başladı — {len(mevzuat_list)} kanun, dry_run={dry_run}")
+        _update_state(
+            running=True, source="mevzuat_refresh", task="Mevzuat Refresh",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=len(mevzuat_list), completed_topics=0,
+        )
+
+        try:
+            for idx, entry in enumerate(mevzuat_list, 1):
+                if len(entry) == 3:
+                    kanun_no, kanun_adi, mevzuat_turu = entry
+                else:
+                    kanun_no, kanun_adi = entry
+                    mevzuat_turu = "kanun"
+
+                _update_state(task=f"Refresh: {kanun_adi} ({kanun_no})", completed_topics=idx - 1)
+
+                try:
+                    # 1) Bedesten'den güncel içeriği çek
+                    search_result = await mevzuat_svc.search(
+                        keyword="",
+                        mevzuat_no=kanun_no,
+                        mevzuat_turu=mevzuat_turu,
+                        page_size=5,
+                    )
+                    items = search_result.get("sonuclar", [])
+                    if not items:
+                        skipped += 1
+                        continue
+
+                    mevzuat_id = items[0].get("mevzuat_id", "")
+                    if not mevzuat_id:
+                        skipped += 1
+                        continue
+
+                    doc = await mevzuat_svc.get_content(mevzuat_id)
+                    content_text = doc.get("content", "")
+
+                    if not content_text or len(content_text) < 100:
+                        skipped += 1
+                        continue
+
+                    if content_text.lstrip()[:5] == "%PDF-":
+                        skipped += 1
+                        continue
+
+                    # 2) Güncel içeriğin hash'i
+                    clean = clean_legal_html(content_text)
+                    new_hash = hashlib.md5(clean.encode()).hexdigest()
+
+                    # 3) Qdrant'taki mevcut hash'i kontrol et
+                    existing = await self.vector_store.scroll_by_filter(
+                        collection=self.settings.qdrant_collection_mevzuat,
+                        field="kanun_no",
+                        value=kanun_no,
+                        limit=1,
+                    )
+
+                    old_hash = ""
+                    if existing:
+                        old_hash = existing[0].get("payload", {}).get("content_hash", "")
+
+                    # 4) Hash eşleşiyor mu?
+                    if old_hash and old_hash == new_hash:
+                        skipped += 1
+                        continue
+
+                    action = "UPDATE" if existing else "NEW"
+                    _log("info", f"{'🆕' if action == 'NEW' else '♻️'} {kanun_adi} ({kanun_no}) — {action} (hash değişti)")
+
+                    if dry_run:
+                        details.append({
+                            "kanun_no": kanun_no,
+                            "kanun_adi": kanun_adi,
+                            "action": action,
+                            "old_hash": old_hash[:8] if old_hash else "yok",
+                            "new_hash": new_hash[:8],
+                        })
+                        if action == "UPDATE":
+                            updated += 1
+                        else:
+                            new_added += 1
+                        continue
+
+                    # 5) Eski chunk'ları sil (varsa)
+                    if existing:
+                        await self.vector_store.delete_by_filter(
+                            collection=self.settings.qdrant_collection_mevzuat,
+                            field="kanun_no",
+                            value=kanun_no,
+                        )
+
+                    # 6) Yeni chunk'la ve embed et
+                    metadata = {
+                        "mevzuat_id": mevzuat_id,
+                        "kanun_no": kanun_no,
+                        "kanun_adi": kanun_adi,
+                        "tur": items[0].get("tur", "Kanun"),
+                        "resmi_gazete_tarihi": items[0].get("resmi_gazete_tarihi", ""),
+                        "kaynak": "bedesten_mevzuat",
+                        "content_hash": new_hash,
+                        "ingested_at": datetime.now().isoformat(),
+                    }
+
+                    chunks = self.chunker.chunk_mevzuat(clean, metadata)
+                    if not chunks:
+                        chunks = self.chunker.chunk_generic(clean, metadata)
+
+                    if not chunks:
+                        errors += 1
+                        continue
+
+                    texts = [c["text"] for c in chunks]
+                    embeddings = await self.embedding.embed_texts_async(texts)
+
+                    points = []
+                    for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+                        point_id = self._generate_id(f"mevzuat_{kanun_no}_{i}")
+                        points.append({
+                            "id": point_id,
+                            "dense_vector": emb["dense_vector"],
+                            "sparse_vector": emb.get("sparse_vector"),
+                            "payload": {
+                                **chunk["metadata"],
+                                "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                "ozet": chunk["text"][:500],
+                            },
+                        })
+
+                    await self.vector_store.upsert_points(
+                        collection=self.settings.qdrant_collection_mevzuat,
+                        points=points,
+                    )
+
+                    if action == "UPDATE":
+                        updated += 1
+                    else:
+                        new_added += 1
+
+                    _log("info", f"✅ {kanun_adi} — {len(points)} chunk güncellendi")
+                    _update_state(embedded=updated + new_added, completed_topics=idx)
+
+                    await asyncio.sleep(2.0)
+
+                except Exception as e:
+                    logger.error("mevzuat_refresh_error", kanun_no=kanun_no, error=str(e))
+                    _log("error", f"❌ {kanun_adi} refresh hatası: {str(e)}")
+                    errors += 1
+                    continue
+        finally:
+            await mevzuat_svc.close()
+            _update_state(running=False, source=None, task=None)
+
+        summary = {
+            "source": "mevzuat_refresh",
+            "dry_run": dry_run,
+            "total_checked": len(mevzuat_list),
+            "updated": updated,
+            "new_added": new_added,
+            "skipped_unchanged": skipped,
+            "errors": errors,
+        }
+        if dry_run and details:
+            summary["changes"] = details
+
+        _log("success", f"🎉 Mevzuat refresh tamamlandı — {updated} güncellendi, {new_added} yeni, {skipped} değişmemiş, {errors} hata")
         return summary
 
     async def ingest_batch(

@@ -263,5 +263,44 @@ class VectorStoreService:
         except Exception:
             return 0
 
+    async def delete_by_filter(self, collection: str, field: str, value: str) -> int:
+        """Belirli bir filtre ile eşleşen noktaları sil. Silinen tahmini sayıyı döner."""
+        try:
+            # Önce kaç tane olduğunu say
+            count = await self.count_by_filter(collection, field, value)
+            if count == 0:
+                return 0
+
+            await self.client.delete(
+                collection_name=collection,
+                points_selector=Filter(must=[
+                    FieldCondition(key=field, match=MatchValue(value=value))
+                ]),
+            )
+            logger.info("delete_by_filter_ok", collection=collection, field=field, value=value, deleted=count)
+            return count
+        except Exception as e:
+            logger.error("delete_by_filter_error", collection=collection, error=str(e))
+            raise
+
+    async def scroll_by_filter(
+        self, collection: str, field: str, value: str, limit: int = 10
+    ) -> list[dict]:
+        """Belirli bir filtre ile eşleşen noktaları getir (payload dahil, vektör hariç)."""
+        try:
+            result = await self.client.scroll(
+                collection_name=collection,
+                scroll_filter=Filter(must=[
+                    FieldCondition(key=field, match=MatchValue(value=value))
+                ]),
+                limit=limit,
+                with_payload=True,
+                with_vectors=False,
+            )
+            points, _next_offset = result
+            return [{"id": p.id, "payload": p.payload} for p in points]
+        except Exception:
+            return []
+
     async def close(self):
         await self.client.close()
