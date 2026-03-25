@@ -161,8 +161,8 @@ jobs:
             curl -sf http://localhost:8001/health || echo "Warning: health check failed but containers are running"
 
             # Cleanup old images and build cache to prevent disk filling up
-            docker image prune -f --filter "until=24h"
-            docker builder prune -f --filter "until=24h"
+            docker image prune -af --filter "until=2h"
+            docker builder prune -af --filter "until=2h"
 
             echo "Deploy successful!"
           DEPLOY
