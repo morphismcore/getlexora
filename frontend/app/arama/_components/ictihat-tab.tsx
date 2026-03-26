@@ -754,10 +754,22 @@ export function IctihatTab({
                       </h3>
                     </div>
                     <div
-                      className="prose prose-invert max-w-none overflow-hidden break-words"
-                      style={{ lineHeight: "1.85", textAlign: "justify" }}
+                      className="max-w-none overflow-hidden break-words"
+                      style={{ lineHeight: "1.85" }}
                     >
-                      {kararDetail.tam_metin ? (
+                      {kararDetail.html ? (
+                        <div
+                          className="legal-html-content"
+                          dangerouslySetInnerHTML={{
+                            __html: kararDetail.html
+                              .replace(/<html[^>]*>/gi, "")
+                              .replace(/<\/html>/gi, "")
+                              .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+                              .replace(/<body[^>]*>/gi, "")
+                              .replace(/<\/body>/gi, "")
+                          }}
+                        />
+                      ) : kararDetail.tam_metin ? (
                         <CitationText
                           text={kararDetail.tam_metin}
                           searchQuery={query}

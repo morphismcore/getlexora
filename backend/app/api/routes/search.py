@@ -293,9 +293,89 @@ async def download_karar(
                 headers={"Content-Disposition": f'attachment; filename="karar_{document_id}.pdf"'},
             )
 
-        # HTML — wrap in proper document for clean download
+        # HTML — wrap in professional legal document template
+        original_html = raw_bytes.decode("utf-8", errors="replace")
+        # Strip the old <html>/<head>/<body> tags from source
+        import re as _re
+        body_match = _re.search(r"<body[^>]*>(.*)</body>", original_html, _re.DOTALL | _re.IGNORECASE)
+        inner_html = body_match.group(1) if body_match else original_html
+
+        styled_html = f"""<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karar — {document_id}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{
+    font-family: 'Noto Serif', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #1a1a1a;
+    background: #fff;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }}
+  @media print {{
+    body {{ padding: 20px; max-width: 100%; }}
+  }}
+  /* Override old Bedesten styles */
+  font {{ font-family: inherit !important; font-size: inherit !important; }}
+  b font {{ font-family: inherit !important; font-size: inherit !important; }}
+  p {{ margin-bottom: 12px; text-align: justify; }}
+  b {{ font-weight: 700; }}
+  /* Header */
+  .doc-header {{
+    text-align: center;
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    border-bottom: 2px solid #1a1a1a;
+  }}
+  .doc-header h1 {{
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 8px;
+  }}
+  .doc-header .karar-no {{
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }}
+  /* Footer */
+  .doc-footer {{
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+  }}
+  /* Section styling */
+  br + br {{ display: block; margin-top: 8px; }}
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <h1>T.C. Yargı Kararı</h1>
+  <div class="karar-no">Doküman No: {document_id}</div>
+</div>
+{inner_html}
+<div class="doc-footer">
+  Bu belge Lexora (getlexora.net) üzerinden oluşturulmuştur.
+</div>
+</body>
+</html>"""
+
         return Response(
-            content=raw_bytes,
+            content=styled_html.encode("utf-8"),
             media_type="text/html; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="karar_{document_id}.html"'},
         )

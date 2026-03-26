@@ -192,6 +192,7 @@ export function useIctihatSearch() {
         tarih: result.tarih,
         ozet: result.ozet || (raw.content || "").slice(0, 500),
         tam_metin: raw.content || "",
+        html: raw.html || undefined,
       };
       setKararDetail(detail);
       setKararCache(prev => ({ ...prev, [result.karar_id]: detail }));

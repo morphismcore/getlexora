@@ -46,6 +46,7 @@ export interface KararDetail {
   karar_no: string;
   tarih: string;
   tam_metin: string;
+  html?: string;
   ozet: string;
 }
 

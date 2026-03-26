@@ -319,3 +319,44 @@ html {
 .results-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.15);
 }
+
+/* Legal HTML content from Bedesten API */
+.legal-html-content {
+  color: #ECECEE;
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.85;
+  text-align: justify;
+}
+.legal-html-content font {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+}
+.legal-html-content b,
+.legal-html-content strong {
+  color: #fff;
+  font-weight: 600;
+}
+.legal-html-content p {
+  margin-bottom: 12px;
+}
+.legal-html-content br + br {
+  display: block;
+  margin-top: 8px;
+}
+.legal-html-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+.legal-html-content td,
+.legal-html-content th {
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 14px;
+}
+.legal-html-content a {
+  color: #6C6CFF;
+  text-decoration: underline;
+}
