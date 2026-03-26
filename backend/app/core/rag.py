@@ -545,9 +545,19 @@ Ozet: {r.ozet}
         daire_counts: dict[str, int] = defaultdict(int)
         yil_counts: dict[str, int] = defaultdict(int)
 
+        # Normalize mahkeme labels
+        _mahkeme_normalize = {
+            "yargıtay": "Yargıtay", "yargitay": "Yargıtay",
+            "danıştay": "Danıştay", "danistay": "Danıştay",
+            "aym": "AYM", "aihm": "AİHM",
+            "rekabet": "Rekabet Kurumu", "kvkk": "KVKK",
+            "sigorta_tahkim": "Sigorta Tahkim",
+        }
+
         for r in results:
             if r.mahkeme:
-                mahkeme_counts[r.mahkeme] += 1
+                label = _mahkeme_normalize.get(r.mahkeme.lower().strip(), r.mahkeme)
+                mahkeme_counts[label] += 1
             if r.daire:
                 daire_counts[r.daire] += 1
             if r.tarih:

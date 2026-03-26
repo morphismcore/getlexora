@@ -633,8 +633,18 @@ class IngestionPipeline:
         "*" yerine "karar" kullanır (API wildcard desteklemiyor).
         Paralel belge çekme + daire+sayfa checkpoint ile sürdürülebilir.
         """
+        # Load ingestion config (admin panel settings)
+        from app.ingestion.config import load_ingestion_config
+        ing_config = load_ingestion_config()
+
         if court_types is None:
             court_types = ["yargitay", "danistay"]
+
+        # Use config year range if not explicitly provided
+        # Config can also have per-daire year_from overrides
+        if year_from is None:
+            # Try global config (will also check per-daire below)
+            pass
 
         # Date range parameters for Bedesten API
         api_date_from = f"01.01.{year_from}" if year_from else None
@@ -713,7 +723,18 @@ class IngestionPipeline:
                 daire_total_api = None
                 consecutive_empty = 0
 
-                _log("info", f"📋 {ct.upper()} {d_name} — sayfa {start_page}'den devam")
+                # Per-daire year config override
+                ct_config = ing_config.get(ct, {})
+                daire_year_from = year_from  # explicit param takes priority
+                if daire_year_from is None:
+                    # Check daire-specific config
+                    daire_cfg = ct_config.get("daire_config", {}).get(d_id, {})
+                    daire_year_from = daire_cfg.get("year_from") or ct_config.get("year_from")
+                daire_year_to = year_to or ct_config.get("year_to")
+                daire_date_from = f"01.01.{daire_year_from}" if daire_year_from else api_date_from
+                daire_date_to = f"31.12.{daire_year_to}" if daire_year_to else api_date_to
+
+                _log("info", f"📋 {ct.upper()} {d_name} — sayfa {start_page}'den devam" + (f" (yıl: {daire_year_from}+)" if daire_year_from else ""))
                 _update_state(task=f"{ct} {d_name} (p{start_page})")
 
                 page = start_page
@@ -725,8 +746,8 @@ class IngestionPipeline:
                             birim_adi=d_name,
                             page=page,
                             page_size=10,
-                            date_from=api_date_from,
-                            date_to=api_date_to,
+                            date_from=daire_date_from,
+                            date_to=daire_date_to,
                         )
 
                         items = result.get("data", {}).get("emsalKararList", [])

@@ -425,6 +425,33 @@ async def trigger_exhaustive_ingest(
     }
 
 
+@router.get("/ingest/config")
+async def get_ingestion_config(
+    admin: User = Depends(require_platform_admin),
+):
+    """Ingestion yapılandırmasını getir (daire bazlı yıl aralıkları, öncelikler)."""
+    from app.ingestion.config import load_ingestion_config
+    return load_ingestion_config()
+
+
+@router.put("/ingest/config")
+async def update_ingestion_config(
+    config: dict,
+    admin: User = Depends(require_platform_admin),
+):
+    """Ingestion yapılandırmasını güncelle."""
+    from app.ingestion.config import load_ingestion_config, save_ingestion_config
+    current = load_ingestion_config()
+    # Merge: sadece gönderilen alanları güncelle
+    for key, value in config.items():
+        if key in current and isinstance(current[key], dict) and isinstance(value, dict):
+            current[key].update(value)
+        else:
+            current[key] = value
+    save_ingestion_config(current)
+    return {"status": "saved", "config": current}
+
+
 @router.get("/logs")
 async def get_recent_logs(
     admin: User = Depends(require_platform_admin),
