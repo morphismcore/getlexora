@@ -130,6 +130,13 @@ class RAGResponse(BaseModel):
 # --- Mevzuat ---
 
 
+class RelatedRequest(BaseModel):
+    """Benzer karar arama isteği."""
+    karar_id: str
+    ozet: str | None = None
+    limit: int = Field(default=5, ge=1, le=20)
+
+
 class MevzuatSearchRequest(BaseModel):
     query: str = Field(default="", max_length=1000)
     kanun_no: str | None = None

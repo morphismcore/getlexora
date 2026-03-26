@@ -139,6 +139,15 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Glassmorphism */
 .glass {
   background: rgba(17, 17, 19, 0.6);

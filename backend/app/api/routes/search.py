@@ -17,8 +17,18 @@ from app.models.schemas import (
     SearchResponse,
     RAGResponse,
     MevzuatSearchRequest,
+    RelatedRequest,
+    IctihatResult,
 )
-from app.api.deps import get_rag_pipeline, get_yargi_service, get_mevzuat_service, get_citation_verifier, get_optional_user
+from app.api.deps import (
+    get_rag_pipeline,
+    get_yargi_service,
+    get_mevzuat_service,
+    get_citation_verifier,
+    get_optional_user,
+    get_vector_store,
+    get_embedding_service,
+)
 from app.models.database import User
 
 logger = structlog.get_logger(__name__)
@@ -235,3 +245,65 @@ async def verify_text(
     except Exception as e:
         logger.error("verify_text_error", error=str(e))
         raise HTTPException(status_code=500, detail="Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin.")
+
+
+@router.post("/related", response_model=list[IctihatResult])
+async def search_related(
+    request: RelatedRequest,
+    vector_store=Depends(get_vector_store),
+    embedding=Depends(get_embedding_service),
+    current_user: User | None = Depends(get_optional_user),
+):
+    """
+    Benzer kararları getir. LLM GEREKTIRMEZ.
+    ozet verilmişse embed edip arar, yoksa karar_id'den vektörü çeker.
+    """
+    try:
+        vector = None
+
+        if request.ozet:
+            # Özet verilmişse embed et
+            embeddings = await embedding.embed_texts_async([request.ozet])
+            vector = embeddings[0]["dense_vector"]
+        else:
+            # karar_id'den mevcut vektörü çek
+            vector = await vector_store.get_point_vector(
+                collection=vector_store.ictihat_collection,
+                karar_id=request.karar_id,
+            )
+            if vector is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Karar bulunamadı: {request.karar_id}",
+                )
+
+        results = await vector_store.search_by_vector(
+            collection=vector_store.ictihat_collection,
+            vector=vector,
+            limit=request.limit,
+            exclude_ids=[request.karar_id],
+        )
+
+        return [
+            IctihatResult(
+                karar_id=r["payload"].get("karar_id", str(r["id"])),
+                mahkeme=r["payload"].get("mahkeme", ""),
+                daire=r["payload"].get("daire"),
+                esas_no=r["payload"].get("esas_no"),
+                karar_no=r["payload"].get("karar_no"),
+                tarih=r["payload"].get("tarih"),
+                ozet=r["payload"].get("ozet", ""),
+                anahtar_ilke=r["payload"].get("anahtar_ilke"),
+                relevance_score=r["score"],
+            )
+            for r in results
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("related_search_error", error=str(e), karar_id=request.karar_id)
+        raise HTTPException(
+            status_code=500,
+            detail="Benzer karar araması sırasında bir hata oluştu.",
+        )

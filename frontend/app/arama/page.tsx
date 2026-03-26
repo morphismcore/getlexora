@@ -105,6 +105,8 @@ const MAHKEME_VALUE_MAP: Record<string, string> = {
   "Bölge Adliye Mahkemesi": "bam",
   "AYM": "aym",
   "AİHM": "aihm",
+  "Rekabet": "rekabet",
+  "KVKK": "kvkk",
 };
 
 const COURT_STYLES: Record<string, { bg: string; text: string; glow: string; label: string }> = {
@@ -117,6 +119,10 @@ const COURT_STYLES: Record<string, { bg: string; text: string; glow: string; lab
   aihm:      { bg: "bg-[#3DD68C]/10", text: "text-[#3DD68C]", glow: "shadow-[0_0_8px_rgba(61,214,140,0.15)]", label: "AİHM" },
   bam:       { bg: "bg-[#FFB224]/10", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", label: "BAM" },
   "Bölge Adliye Mahkemesi": { bg: "bg-[#FFB224]/10", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", label: "BAM" },
+  rekabet:   { bg: "bg-[#30A46C]/10", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", label: "Rekabet" },
+  "Rekabet": { bg: "bg-[#30A46C]/10", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", label: "Rekabet" },
+  kvkk:      { bg: "bg-[#F76B15]/10", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", label: "KVKK" },
+  "KVKK":    { bg: "bg-[#F76B15]/10", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", label: "KVKK" },
 };
 
 const DEFAULT_COURT_STYLE = { bg: "bg-white/[0.06]", text: "text-[#8B8B8E]", glow: "", label: "" };
@@ -156,6 +162,17 @@ const DAIRELER = [
 ];
 
 const KAYNAKLAR = ["Tümü", "Bedesten", "AYM", "AİHM"];
+
+/* Source filter bar tabs — shown above results */
+const SOURCE_TABS = [
+  { key: "Tümü", mahkemeValue: "", label: "Tümü" },
+  { key: "Yargıtay", mahkemeValue: "Yargıtay", label: "Yargıtay" },
+  { key: "Danıştay", mahkemeValue: "Danıştay", label: "Danıştay" },
+  { key: "AYM", mahkemeValue: "AYM", label: "AYM" },
+  { key: "AİHM", mahkemeValue: "AİHM", label: "AİHM" },
+  { key: "Rekabet", mahkemeValue: "Rekabet", label: "Rekabet" },
+  { key: "KVKK", mahkemeValue: "KVKK", label: "KVKK" },
+] as const;
 const SIRALAMALAR = ["Alaka düzeyi", "Tarih (yeni→eski)", "Tarih (eski→yeni)"];
 
 const TYPEWRITER_QUERIES = [
@@ -618,6 +635,7 @@ export default function AramaPage() {
   const [kaynak, setKaynak] = useState("Tümü");
   const [siralama, setSiralama] = useState("Alaka düzeyi");
   const [showFilters, setShowFilters] = useState(false);
+  const [mobileFilterDrawer, setMobileFilterDrawer] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [bookmarks, setBookmarks] = useState<Set<string>>(() => {
@@ -1394,27 +1412,47 @@ export default function AramaPage() {
 
             {/* Filter toggle — only for ictihat */}
             {activeTab === "ictihat" && (
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] transition-all ${
-                  showFilters
-                    ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
-                    : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
-                }`}
-              >
-                <FilterIcon />
-                Filtreler
-                {activeFilterCount > 0 && (
-                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#6C6CFF] text-[9px] font-bold text-white">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+              <>
+                {/* Desktop: toggle inline filter panel */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] transition-all ${
+                    showFilters
+                      ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
+                      : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <FilterIcon />
+                  Filtreler
+                  {activeFilterCount > 0 && (
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#6C6CFF] text-[9px] font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                {/* Mobile: open bottom sheet drawer */}
+                <button
+                  onClick={() => setMobileFilterDrawer(true)}
+                  className={`flex md:hidden items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] transition-all ${
+                    activeFilterCount > 0
+                      ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
+                      : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
+                  }`}
+                >
+                  <FilterIcon />
+                  Filtreler
+                  {activeFilterCount > 0 && (
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#6C6CFF] text-[9px] font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {/* Filter panel — ictihat only */}
+        {/* Filter panel — ictihat only, desktop only (mobile uses drawer) */}
         <AnimatePresence>
           {showFilters && activeTab === "ictihat" && (
             <motion.div
@@ -1422,7 +1460,7 @@ export default function AramaPage() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="overflow-hidden border-t border-white/[0.06]"
+              className="overflow-hidden border-t border-white/[0.06] hidden md:block"
             >
               <div className="px-4 md:px-6 py-3">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -1526,6 +1564,51 @@ export default function AramaPage() {
                 }`}
               >
                 <div className="p-3 md:p-4 space-y-2.5">
+
+                  {/* Source filter bar */}
+                  {(results || loading) && (
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                      {SOURCE_TABS.map((tab) => {
+                        const isActive = tab.key === "Tümü"
+                          ? mahkeme === "Tümü"
+                          : mahkeme === tab.mahkemeValue;
+                        const style = tab.key === "Tümü" ? null : getCourtStyle(tab.mahkemeValue);
+                        const facetCount = results?.facets?.mahkeme?.find(
+                          (f) => f.value.toLowerCase() === (MAHKEME_VALUE_MAP[tab.mahkemeValue] || "").toLowerCase()
+                        )?.count;
+                        return (
+                          <button
+                            key={tab.key}
+                            onClick={() => {
+                              if (tab.key === "Tümü") {
+                                setMahkeme("Tümü");
+                              } else {
+                                setMahkeme(isActive ? "Tümü" : tab.mahkemeValue);
+                              }
+                              setCurrentPage(1);
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap border transition-all shrink-0 ${
+                              isActive
+                                ? style
+                                  ? `${style.bg} ${style.text} border-current/20 ${style.glow}`
+                                  : "bg-[#6C6CFF]/10 text-[#6C6CFF] border-[#6C6CFF]/20 shadow-[0_0_8px_rgba(108,108,255,0.15)]"
+                                : "bg-[#111113] text-[#8B8B8E] border-white/[0.06] hover:border-white/[0.12] hover:text-[#ECECEE]"
+                            }`}
+                          >
+                            {style && (
+                              <span className={`w-2 h-2 rounded-full ${isActive ? "bg-current" : style.text} opacity-60`} />
+                            )}
+                            {tab.label}
+                            {facetCount !== undefined && (
+                              <span className={`text-[10px] tabular-nums ${isActive ? "opacity-70" : "text-[#5C5C5F]"}`}>
+                                ({facetCount})
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* Status bar */}
                   {results && !loading && (
@@ -2528,6 +2611,123 @@ export default function AramaPage() {
         )}
 
       </div>
+
+      {/* ── Mobile Filter Drawer ── */}
+      <AnimatePresence>
+        {mobileFilterDrawer && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 z-40 md:hidden"
+              onClick={() => setMobileFilterDrawer(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-[#111113] border-t border-white/[0.08] rounded-t-2xl max-h-[85vh] overflow-y-auto md:hidden"
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-white/[0.15]" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
+                <h3 className="text-[15px] font-semibold text-[#ECECEE]">Filtreler</h3>
+                <button
+                  onClick={() => setMobileFilterDrawer(false)}
+                  className="p-1.5 text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors"
+                >
+                  <CloseIcon size={16} />
+                </button>
+              </div>
+
+              {/* Filter fields */}
+              <div className="px-5 py-4 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Mahkeme</label>
+                  <FilterSelect value={mahkeme} onChange={(v) => { setMahkeme(v); setCurrentPage(1); }} options={MAHKEMELER} prefix="Mahkeme" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Daire</label>
+                  <FilterSelect value={daire} onChange={(v) => { setDaire(v); setCurrentPage(1); }} options={DAIRELER} prefix="Daire" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Baslangic Tarihi</label>
+                    <input
+                      type="date"
+                      value={tarihBaslangic}
+                      onChange={(e) => { setTarihBaslangic(e.target.value); setCurrentPage(1); }}
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 transition-all [color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Bitis Tarihi</label>
+                    <input
+                      type="date"
+                      value={tarihBitis}
+                      onChange={(e) => { setTarihBitis(e.target.value); setCurrentPage(1); }}
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 transition-all [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Kaynak</label>
+                  <FilterSelect value={kaynak} onChange={(v) => { setKaynak(v); setCurrentPage(1); }} options={KAYNAKLAR} prefix="Kaynak" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">Siralama</label>
+                  <FilterSelect value={siralama} onChange={(v) => { setSiralama(v); setCurrentPage(1); }} options={SIRALAMALAR} prefix="Sıralama" />
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div className="px-5 py-4 border-t border-white/[0.06] flex items-center gap-3">
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={() => {
+                      setMahkeme("Tümü");
+                      setDaire("Tümü");
+                      setTarihBaslangic("");
+                      setTarihBitis("");
+                      setKaynak("Tümü");
+                      setSiralama("Alaka düzeyi");
+                      setCurrentPage(1);
+                    }}
+                    className="px-4 py-2.5 text-[13px] text-[#E5484D] hover:text-[#FF6B6F] transition-colors"
+                  >
+                    Temizle
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setMobileFilterDrawer(false);
+                    if (query.trim() && results) {
+                      handleSearch();
+                    }
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] rounded-xl text-[13px] font-medium text-white transition-all active:scale-[0.98]"
+                >
+                  Uygula
+                  {activeFilterCount > 0 && (
+                    <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/20 text-[10px] font-bold">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Toast ── */}
       <AnimatePresence>

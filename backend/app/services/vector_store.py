@@ -319,5 +319,86 @@ class VectorStoreService:
         except Exception:
             return []
 
+    async def search_by_vector(
+        self,
+        collection: str,
+        vector: list[float],
+        limit: int = 5,
+        exclude_ids: list[str] | None = None,
+        filters: dict | None = None,
+    ) -> list[dict]:
+        """
+        Önceden hesaplanmış bir vektör ile benzerlik araması yap.
+        exclude_ids ile kaynak dokümanı sonuçlardan çıkar.
+        """
+        # Build must conditions from filters
+        must_conditions = []
+        if filters:
+            filter_obj = self._build_filter(filters)
+            if filter_obj and filter_obj.must:
+                must_conditions.extend(filter_obj.must)
+
+        # Build must_not conditions to exclude source document(s)
+        must_not_conditions = []
+        if exclude_ids:
+            must_not_conditions.append(
+                FieldCondition(key="karar_id", match=MatchAny(any=exclude_ids))
+            )
+
+        query_filter = None
+        if must_conditions or must_not_conditions:
+            query_filter = Filter(
+                must=must_conditions if must_conditions else None,
+                must_not=must_not_conditions if must_not_conditions else None,
+            )
+
+        try:
+            result = await self.client.query_points(
+                collection_name=collection,
+                query=vector,
+                using="dense",
+                query_filter=query_filter,
+                limit=limit,
+            )
+            return [
+                {
+                    "id": p.id,
+                    "score": p.score,
+                    "payload": p.payload,
+                }
+                for p in result.points
+            ]
+        except Exception as e:
+            logger.error("search_by_vector_error", collection=collection, error=str(e))
+            return []
+
+    async def get_point_vector(
+        self,
+        collection: str,
+        karar_id: str,
+    ) -> list[float] | None:
+        """karar_id payload alanına göre noktayı bul ve dense vektörünü döndür."""
+        try:
+            result = await self.client.scroll(
+                collection_name=collection,
+                scroll_filter=Filter(must=[
+                    FieldCondition(key="karar_id", match=MatchValue(value=karar_id))
+                ]),
+                limit=1,
+                with_payload=False,
+                with_vectors=True,
+            )
+            points, _ = result
+            if not points:
+                return None
+            vectors = points[0].vector
+            # vectors is a dict like {"dense": [...], "sparse": {...}}
+            if isinstance(vectors, dict):
+                return vectors.get("dense")
+            return vectors
+        except Exception as e:
+            logger.error("get_point_vector_error", karar_id=karar_id, error=str(e))
+            return None
+
     async def close(self):
         await self.client.close()
