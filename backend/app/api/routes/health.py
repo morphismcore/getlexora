@@ -1,4 +1,6 @@
+import json
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from app.config import get_settings
@@ -7,6 +9,19 @@ from app.api.routes.auth import get_current_user
 from app.models.database import User
 
 router = APIRouter(tags=["health"])
+
+# ── Source definitions for landing page stats ──────────────────────────
+_ICTIHAT_SOURCES = [
+    {"name": "Yargıtay",        "key": "yargitay",  "color": "#6C6CFF"},
+    {"name": "Danıştay",        "key": "danistay",  "color": "#A78BFA"},
+    {"name": "AYM",             "key": "aym",       "color": "#E5484D"},
+    {"name": "AİHM",            "key": "aihm",      "color": "#3DD68C"},
+    {"name": "Rekabet Kurulu",  "key": "rekabet",   "color": "#30A46C"},
+    {"name": "KVKK",            "key": "kvkk",      "color": "#F76B15"},
+]
+_MEVZUAT_SOURCE = {"name": "Mevzuat", "key": "mevzuat", "color": "#FFB224"}
+_SOURCES_CACHE_KEY = "lexora:sources_stats"
+_SOURCES_CACHE_TTL = 300  # 5 minutes
 
 
 @router.get("/health")
@@ -135,3 +150,88 @@ async def health_cache(current_user: User = Depends(get_current_user)):
         return {"status": "unavailable", "error": "Cache service not initialized"}
     stats = await cache.get_stats()
     return stats
+
+
+@router.get("/health/sources")
+async def health_sources():
+    """Veri kaynağı istatistikleri — landing page için. Public, auth gerektirmez.
+    Qdrant'tan gerçek sayıları çeker, Redis'te 5 dk cache'ler."""
+    settings = get_settings()
+
+    # ── 1. Try Redis cache first ───────────────────────────────────────
+    try:
+        import redis as r
+        rc = r.from_url(settings.redis_url, socket_timeout=3)
+        cached = rc.get(_SOURCES_CACHE_KEY)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        rc = None  # Redis unavailable, continue without cache
+
+    # ── 2. Fetch live counts from Qdrant ───────────────────────────────
+    try:
+        from qdrant_client import QdrantClient
+        from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+        client = QdrantClient(
+            url=f"http://{settings.qdrant_host}:{settings.qdrant_port}",
+            timeout=10,
+        )
+
+        # Per-mahkeme counts from ictihat collection
+        sources = []
+        total_ictihat = 0
+        for src in _ICTIHAT_SOURCES:
+            try:
+                result = client.count(
+                    collection_name=settings.qdrant_collection_ictihat,
+                    count_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="mahkeme",
+                                match=MatchValue(value=src["key"]),
+                            )
+                        ]
+                    ),
+                    exact=True,
+                )
+                count = result.count
+            except Exception:
+                count = 0
+            sources.append({**src, "count": count})
+            total_ictihat += count
+
+        # Mevzuat collection total
+        try:
+            mevzuat_info = client.get_collection(settings.qdrant_collection_mevzuat)
+            mevzuat_count = mevzuat_info.points_count or 0
+        except Exception:
+            mevzuat_count = 0
+
+        sources.append({**_MEVZUAT_SOURCE, "count": mevzuat_count})
+
+        total = total_ictihat + mevzuat_count
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        payload = {
+            "sources": sources,
+            "total_ictihat": total_ictihat,
+            "total_mevzuat": mevzuat_count,
+            "total": total,
+            "updated_at": now,
+        }
+
+        # ── 3. Cache in Redis ──────────────────────────────────────────
+        try:
+            if rc is not None:
+                rc.setex(_SOURCES_CACHE_KEY, _SOURCES_CACHE_TTL, json.dumps(payload))
+        except Exception:
+            pass  # cache write failure is non-critical
+
+        return payload
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Qdrant bağlantı hatası: {str(e)}",
+        )

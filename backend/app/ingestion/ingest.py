@@ -1314,7 +1314,7 @@ class IngestionPipeline:
 
     async def ingest_aihm(
         self,
-        max_results: int = 500,
+        max_results: int = 50000,
         turkish_only: bool = False,
     ) -> dict:
         """AİHM Türkiye aleyhine kararları ingest et."""
@@ -1323,18 +1323,24 @@ class IngestionPipeline:
         hudoc = HudocService()
         total_fetched = 0
         total_embedded = 0
+        total_skipped = 0
         batch_size = 50
 
-        _log("info", f"🇪🇺 AİHM ingestion başladı — max: {max_results}")
+        # Checkpoint: kaldığımız yerden devam et
+        checkpoint = self._load_checkpoint()
+        start_offset = checkpoint.get("aihm_last_offset", 0)
+        seen_ids: set[str] = set(checkpoint.get("aihm_seen_ids", []))
+
+        _log("info", f"🇪🇺 AİHM ingestion başladı — max: {max_results}, offset: {start_offset}, seen: {len(seen_ids)}")
         _update_state(
             running=True, source="aihm", task="HUDOC",
             started_at=datetime.now().isoformat(),
             fetched=0, embedded=0, errors=0,
-            total_topics=max_results // 50, completed_topics=0,
+            total_topics=max_results // batch_size, completed_topics=start_offset // batch_size,
         )
 
         try:
-            for start in range(0, max_results, batch_size):
+            for start in range(start_offset, max_results, batch_size):
                 try:
                     result = await hudoc.search_judgments(
                         start=start,
@@ -1355,6 +1361,12 @@ class IngestionPipeline:
                         if not itemid:
                             continue
 
+                        # Dedup: zaten işlenmiş kararları atla
+                        karar_id = item.get("karar_id", f"aihm_{itemid}")
+                        if karar_id in seen_ids:
+                            total_skipped += 1
+                            continue
+
                         try:
                             content = await hudoc.get_document(itemid)
                             if not content or len(content) < self.settings.min_karar_chars:
@@ -1369,7 +1381,7 @@ class IngestionPipeline:
                                 continue
 
                         metadata = {
-                            "karar_id": item.get("karar_id", f"aihm_{itemid}"),
+                            "karar_id": karar_id,
                             "mahkeme": "aihm",
                             "daire": item.get("daire_tipi", ""),
                             "esas_no": item.get("basvuru_no", ""),
@@ -1386,6 +1398,7 @@ class IngestionPipeline:
                             chunks = self.chunker.chunk_generic(content, metadata)
                         all_chunks.extend(chunks)
 
+                        seen_ids.add(karar_id)
                         await asyncio.sleep(2.0)
 
                     if all_chunks:
@@ -1415,7 +1428,13 @@ class IngestionPipeline:
                         total_embedded += len(points)
                     _update_state(embedded=total_embedded, completed_topics=(start // batch_size) + 1)
 
-                    _log("info", f"🌍 AİHM batch {start}-{start+batch_size} — {total_embedded} embedding")
+                    # Checkpoint kaydet (her batch sonrası)
+                    checkpoint["aihm_last_offset"] = start + batch_size
+                    checkpoint["aihm_seen_ids"] = list(seen_ids)
+                    checkpoint["last_update"] = datetime.now().isoformat()
+                    self._save_checkpoint(checkpoint)
+
+                    _log("info", f"🌍 AİHM batch {start}-{start+batch_size} — {total_embedded} embedding, {total_skipped} atlandı")
                     await asyncio.sleep(3.0)
 
                 except Exception as e:
@@ -1430,8 +1449,10 @@ class IngestionPipeline:
             "source": "aihm",
             "total_fetched": total_fetched,
             "total_embedded": total_embedded,
+            "total_skipped": total_skipped,
+            "last_offset": checkpoint.get("aihm_last_offset", 0),
         }
-        _log("success", f"✅ AİHM tamamlandı — {total_embedded} embedding")
+        _log("success", f"✅ AİHM tamamlandı — {total_embedded} embedding, {total_skipped} atlandı")
         return summary
 
     async def _fetch_all_mevzuat_list(

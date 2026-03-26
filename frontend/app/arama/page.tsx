@@ -110,23 +110,23 @@ const MAHKEME_VALUE_MAP: Record<string, string> = {
   "KVKK": "kvkk",
 };
 
-const COURT_STYLES: Record<string, { bg: string; text: string; glow: string; label: string }> = {
-  yargitay:  { bg: "bg-[#6C6CFF]/10", text: "text-[#6C6CFF]", glow: "shadow-[0_0_8px_rgba(108,108,255,0.15)]", label: "Yargıtay" },
-  "Yargıtay":  { bg: "bg-[#6C6CFF]/10", text: "text-[#6C6CFF]", glow: "shadow-[0_0_8px_rgba(108,108,255,0.15)]", label: "Yargıtay" },
-  danistay:  { bg: "bg-[#A78BFA]/10", text: "text-[#A78BFA]", glow: "shadow-[0_0_8px_rgba(167,139,250,0.15)]", label: "Danıştay" },
-  "Danıştay":  { bg: "bg-[#A78BFA]/10", text: "text-[#A78BFA]", glow: "shadow-[0_0_8px_rgba(167,139,250,0.15)]", label: "Danıştay" },
-  aym:       { bg: "bg-[#E5484D]/10", text: "text-[#E5484D]", glow: "shadow-[0_0_8px_rgba(229,72,77,0.15)]", label: "AYM" },
-  "Anayasa Mahkemesi": { bg: "bg-[#E5484D]/10", text: "text-[#E5484D]", glow: "shadow-[0_0_8px_rgba(229,72,77,0.15)]", label: "AYM" },
-  aihm:      { bg: "bg-[#3DD68C]/10", text: "text-[#3DD68C]", glow: "shadow-[0_0_8px_rgba(61,214,140,0.15)]", label: "AİHM" },
-  bam:       { bg: "bg-[#FFB224]/10", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", label: "BAM" },
-  "Bölge Adliye Mahkemesi": { bg: "bg-[#FFB224]/10", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", label: "BAM" },
-  rekabet:   { bg: "bg-[#30A46C]/10", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", label: "Rekabet" },
-  "Rekabet": { bg: "bg-[#30A46C]/10", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", label: "Rekabet" },
-  kvkk:      { bg: "bg-[#F76B15]/10", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", label: "KVKK" },
-  "KVKK":    { bg: "bg-[#F76B15]/10", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", label: "KVKK" },
+const COURT_STYLES: Record<string, { bg: string; text: string; glow: string; hoverBorder: string; barColor: string; label: string }> = {
+  yargitay:  { bg: "bg-[#6C6CFF]/20", text: "text-[#6C6CFF]", glow: "shadow-[0_0_8px_rgba(108,108,255,0.15)]", hoverBorder: "hover:border-[#6C6CFF]/25 hover:shadow-[0_0_12px_rgba(108,108,255,0.08)]", barColor: "#6C6CFF", label: "Yargıtay" },
+  "Yargıtay":  { bg: "bg-[#6C6CFF]/20", text: "text-[#6C6CFF]", glow: "shadow-[0_0_8px_rgba(108,108,255,0.15)]", hoverBorder: "hover:border-[#6C6CFF]/25 hover:shadow-[0_0_12px_rgba(108,108,255,0.08)]", barColor: "#6C6CFF", label: "Yargıtay" },
+  danistay:  { bg: "bg-[#A78BFA]/20", text: "text-[#A78BFA]", glow: "shadow-[0_0_8px_rgba(167,139,250,0.15)]", hoverBorder: "hover:border-[#A78BFA]/25 hover:shadow-[0_0_12px_rgba(167,139,250,0.08)]", barColor: "#A78BFA", label: "Danıştay" },
+  "Danıştay":  { bg: "bg-[#A78BFA]/20", text: "text-[#A78BFA]", glow: "shadow-[0_0_8px_rgba(167,139,250,0.15)]", hoverBorder: "hover:border-[#A78BFA]/25 hover:shadow-[0_0_12px_rgba(167,139,250,0.08)]", barColor: "#A78BFA", label: "Danıştay" },
+  aym:       { bg: "bg-[#E5484D]/20", text: "text-[#E5484D]", glow: "shadow-[0_0_8px_rgba(229,72,77,0.15)]", hoverBorder: "hover:border-[#E5484D]/25 hover:shadow-[0_0_12px_rgba(229,72,77,0.08)]", barColor: "#E5484D", label: "AYM" },
+  "Anayasa Mahkemesi": { bg: "bg-[#E5484D]/20", text: "text-[#E5484D]", glow: "shadow-[0_0_8px_rgba(229,72,77,0.15)]", hoverBorder: "hover:border-[#E5484D]/25 hover:shadow-[0_0_12px_rgba(229,72,77,0.08)]", barColor: "#E5484D", label: "AYM" },
+  aihm:      { bg: "bg-[#3DD68C]/20", text: "text-[#3DD68C]", glow: "shadow-[0_0_8px_rgba(61,214,140,0.15)]", hoverBorder: "hover:border-[#3DD68C]/25 hover:shadow-[0_0_12px_rgba(61,214,140,0.08)]", barColor: "#3DD68C", label: "AİHM" },
+  bam:       { bg: "bg-[#FFB224]/20", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", hoverBorder: "hover:border-[#FFB224]/25 hover:shadow-[0_0_12px_rgba(255,178,36,0.08)]", barColor: "#FFB224", label: "BAM" },
+  "Bölge Adliye Mahkemesi": { bg: "bg-[#FFB224]/20", text: "text-[#FFB224]", glow: "shadow-[0_0_8px_rgba(255,178,36,0.15)]", hoverBorder: "hover:border-[#FFB224]/25 hover:shadow-[0_0_12px_rgba(255,178,36,0.08)]", barColor: "#FFB224", label: "BAM" },
+  rekabet:   { bg: "bg-[#30A46C]/20", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", hoverBorder: "hover:border-[#30A46C]/25 hover:shadow-[0_0_12px_rgba(48,164,108,0.08)]", barColor: "#30A46C", label: "Rekabet" },
+  "Rekabet": { bg: "bg-[#30A46C]/20", text: "text-[#30A46C]", glow: "shadow-[0_0_8px_rgba(48,164,108,0.15)]", hoverBorder: "hover:border-[#30A46C]/25 hover:shadow-[0_0_12px_rgba(48,164,108,0.08)]", barColor: "#30A46C", label: "Rekabet" },
+  kvkk:      { bg: "bg-[#F76B15]/20", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", hoverBorder: "hover:border-[#F76B15]/25 hover:shadow-[0_0_12px_rgba(247,107,21,0.08)]", barColor: "#F76B15", label: "KVKK" },
+  "KVKK":    { bg: "bg-[#F76B15]/20", text: "text-[#F76B15]", glow: "shadow-[0_0_8px_rgba(247,107,21,0.15)]", hoverBorder: "hover:border-[#F76B15]/25 hover:shadow-[0_0_12px_rgba(247,107,21,0.08)]", barColor: "#F76B15", label: "KVKK" },
 };
 
-const DEFAULT_COURT_STYLE = { bg: "bg-white/[0.06]", text: "text-[#8B8B8E]", glow: "", label: "" };
+const DEFAULT_COURT_STYLE = { bg: "bg-white/[0.06]", text: "text-[#8B8B8E]", glow: "", hoverBorder: "hover:border-white/[0.15]", barColor: "#8B8B8E", label: "" };
 
 function getCourtStyle(mahkeme: string) {
   if (!mahkeme) return DEFAULT_COURT_STYLE;
@@ -238,6 +238,24 @@ function highlightText(text: string, queryStr: string): ReactNode[] {
 
 function formatDuration(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatTurkishDate(dateStr: string): string {
+  if (!dateStr) return "";
+  try {
+    // Handle both "DD.MM.YYYY" and "YYYY-MM-DD" formats
+    let d: Date;
+    if (dateStr.includes(".")) {
+      const [day, month, year] = dateStr.split(".");
+      d = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      d = new Date(dateStr);
+    }
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
 }
 
 function formatLegalText(text: string, searchQuery?: string): ReactNode[] {
@@ -459,6 +477,67 @@ function RelevanceBar({ score }: { score: number }) {
   );
 }
 
+/* ─── Source Distribution Bar ─── */
+function SourceDistributionBar({ results }: { results: IctihatResult[] }) {
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    results.forEach((r) => {
+      const key = r.mahkeme || "diger";
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .map(([mahkeme, count]) => ({
+        mahkeme,
+        count,
+        style: getCourtStyle(mahkeme),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [results]);
+
+  const total = results.length;
+  if (total === 0 || counts.length <= 1) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="bg-[#111113] border border-white/[0.06] rounded-xl p-3 mb-2"
+    >
+      {/* Segmented bar */}
+      <div className="flex h-[6px] rounded-full overflow-hidden gap-[2px] mb-2.5">
+        {counts.map(({ mahkeme, count, style }) => (
+          <motion.div
+            key={mahkeme}
+            className="h-full rounded-full first:rounded-l-full last:rounded-r-full"
+            style={{ backgroundColor: style.barColor, opacity: 0.85 }}
+            initial={{ width: 0 }}
+            animate={{ width: `${(count / total) * 100}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+        ))}
+      </div>
+      {/* Labels */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {counts.map(({ mahkeme, count, style }) => (
+          <div key={mahkeme} className="flex items-center gap-1.5">
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: style.barColor }}
+            />
+            <span className="text-[11px] text-[#8B8B8E]">
+              {style.label || mahkeme}
+            </span>
+            <span className="text-[11px] font-semibold text-[#ECECEE] tabular-nums">
+              {count}
+            </span>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 /* ─── Memoized Search Result Card ─── */
 const SearchResultCard = React.memo(function SearchResultCard({
   result,
@@ -489,30 +568,32 @@ const SearchResultCard = React.memo(function SearchResultCard({
     }
   }, [result.ozet]);
 
+  const formattedDate = useMemo(() => formatTurkishDate(result.tarih), [result.tarih]);
+
   return (
     <motion.button
       key={result.karar_id}
       variants={listItem}
       onClick={() => onSelect(result)}
-      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 relative overflow-hidden min-w-0 ${
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-5 transition-all duration-200 relative overflow-hidden min-w-0 ${
         isSelected
           ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
-          : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
+          : `border-white/[0.06] ${court.hoverBorder} hover:bg-[#141418]`
       }`}
     >
       {/* Top row: court badge + daire + bookmark + copy */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} ${court.glow}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text}`}>
           {court.label || result.mahkeme}
         </span>
         {result.daire && (
-          <span className="text-[11px] text-[#8B8B8E] font-medium">{result.daire}</span>
+          <span className="text-[11px] text-[#8B8B8E]/80 font-medium px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">{result.daire}</span>
         )}
         {result.kaynak === "aym" && result.mahkeme !== "aym" && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/10 text-[#E5484D]">AYM</span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/20 text-[#E5484D]">AYM</span>
         )}
         {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/20 text-[#3DD68C]">AİHM</span>
         )}
         <div className="ml-auto flex items-center gap-1">
           {onCopyOzet && (
@@ -522,7 +603,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
               onClick={(e) => { e.stopPropagation(); onCopyOzet(result.ozet); }}
               onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onCopyOzet(result.ozet); } }}
               className="shrink-0 p-1 rounded-md transition-all text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
-              title="Özeti kopyala"
+              title="Ozeti kopyala"
             >
               <CopyIcon />
             </span>
@@ -537,24 +618,30 @@ const SearchResultCard = React.memo(function SearchResultCard({
                 ? "text-[#6C6CFF] hover:text-[#8B8BFF]"
                 : "text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
             }`}
-            title={isBookmarked ? "Kayıttan kaldır" : "Kaydet"}
+            title={isBookmarked ? "Kayittan kaldir" : "Kaydet"}
           >
             <BookmarkIcon filled={isBookmarked} />
           </span>
         </div>
       </div>
 
-      {/* Case numbers row */}
-      <div className="flex items-center gap-3 text-[12px] mb-2">
-        <span className="font-mono text-[#ECECEE]">
-          <span className="text-[#5C5C5F] text-[10px] mr-0.5">E.</span>
+      {/* Case numbers row — prominent monospace display */}
+      <div className="flex items-baseline gap-3 mb-2.5">
+        <span className="font-mono text-[14px] font-medium text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[10px] font-sans mr-1">E.</span>
           {result.esas_no}
         </span>
-        <span className="font-mono text-[#ECECEE]">
-          <span className="text-[#5C5C5F] text-[10px] mr-0.5">K.</span>
+        <span className="text-[#3A3A3F] text-[10px]">/</span>
+        <span className="font-mono text-[14px] font-medium text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[10px] font-sans mr-1">K.</span>
           {result.karar_no}
         </span>
-        <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums">{result.tarih}</span>
+        <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums flex items-center gap-1">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="opacity-50">
+            <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {formattedDate}
+        </span>
       </div>
 
       {/* Summary with highlights */}
@@ -570,7 +657,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
           tabIndex={0}
           onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setExpanded((v) => !v); } }}
-          className="inline-block mt-1 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] cursor-pointer transition-colors"
+          className="inline-block mt-1.5 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] cursor-pointer transition-colors"
         >
           {expanded ? "Kapat" : "Devamini gor"}
         </span>
@@ -1752,9 +1839,14 @@ export default function AramaPage() {
                     </motion.div>
                   )}
 
+                  {/* Source distribution bar */}
+                  {hasResults && !loading && (
+                    <SourceDistributionBar results={results.sonuclar} />
+                  )}
+
                   {/* Results list */}
                   {hasResults && (
-                    <motion.div className="space-y-2" variants={listContainer} initial="hidden" animate="show">
+                    <motion.div className="space-y-2.5" variants={listContainer} initial="hidden" animate="show">
                       {results.sonuclar.map((result) => (
                         <SearchResultCard
                           key={result.karar_id}

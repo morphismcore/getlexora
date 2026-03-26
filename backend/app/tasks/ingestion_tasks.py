@@ -260,7 +260,7 @@ def ingest_rekabet_task(self, max_pages: int = 1100):
     retry_backoff_max=600,
     retry_jitter=True,
 )
-def ingest_aihm_task(self, max_results: int = 500):
+def ingest_aihm_task(self, max_results: int = 50000):
     """AIHM Turkiye aleyhine kararlari ingestion."""
     task_id = self.request.id
     logger.info("celery_ingest_aihm_start", task_id=task_id, max_results=max_results)

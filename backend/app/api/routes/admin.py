@@ -675,7 +675,7 @@ async def admin_ingest_aihm(
     admin: User = Depends(require_platform_admin),
 ):
     """AIHM Turkiye kararlarini ingest et (Celery worker)."""
-    result = ingest_aihm_task.delay(max_results=500)
+    result = ingest_aihm_task.delay(max_results=50000)
     return {"status": "started", "source": "aihm", "task_id": result.id}
 
 
