@@ -9,10 +9,8 @@ interface FirmMember { id: string; email: string; full_name: string; role: strin
 interface FirmInfo { id: string; name: string; tax_id: string | null; address: string | null; phone: string | null; email: string | null; max_users: number; }
 
 const ROLES = [
-  { value: "partner", label: "Partner" },
-  { value: "avukat", label: "Avukat" },
-  { value: "stajyer", label: "Stajyer" },
-  { value: "asistan", label: "Asistan" },
+  { value: "yonetici", label: "Yönetici" },
+  { value: "kullanici", label: "Kullanıcı" },
 ];
 
 export default function AyarlarPage() {

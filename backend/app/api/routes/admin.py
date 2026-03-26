@@ -154,7 +154,7 @@ async def update_user_role(
     db: AsyncSession = Depends(get_db),
 ):
     """Kullanıcı rolünü değiştir."""
-    valid_roles = {"platform_admin", "admin", "partner", "avukat", "stajyer", "asistan"}
+    valid_roles = {"platform_admin", "admin", "yonetici", "kullanici"}
     if body.role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Geçersiz rol. Geçerli roller: {', '.join(valid_roles)}")
     result = await db.execute(select(User).where(User.id == user_id))
@@ -176,7 +176,11 @@ async def list_firms(
 ):
     """Tüm firmaları listele. firm_type ile filtrelenebilir (kurumsal/bireysel)."""
     stmt = (
-        select(Firm, func.count(User.id).label("member_count"))
+        select(
+            Firm,
+            func.count(User.id).label("member_count"),
+            func.count(User.id).filter(User.is_active == True).label("active_member_count"),
+        )
         .outerjoin(User, User.firm_id == Firm.id)
     )
     if firm_type in ("kurumsal", "bireysel"):
@@ -192,11 +196,12 @@ async def list_firms(
             "email": f.email,
             "max_users": f.max_users,
             "firm_type": f.firm_type,
-            "member_count": count,
+            "member_count": total,
+            "active_member_count": active,
             "is_active": f.is_active,
             "created_at": f.created_at.isoformat() if f.created_at else None,
         }
-        for f, count in rows
+        for f, total, active in rows
     ]
 
 

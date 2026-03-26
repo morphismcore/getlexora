@@ -580,8 +580,8 @@ async def invite_to_firm(
     db: AsyncSession = Depends(get_db),
 ):
     """Mevcut kullanıcıyı firmaya davet et (admin/partner only)."""
-    if current_user.role not in ("admin", "partner"):
-        raise HTTPException(status_code=403, detail="Sadece admin veya partner davet yapabilir")
+    if current_user.role not in ("admin", "yonetici"):
+        raise HTTPException(status_code=403, detail="Sadece admin veya yonetici davet yapabilir")
     if not current_user.firm_id:
         raise HTTPException(status_code=400, detail="Önce bir firma oluşturun")
 
@@ -603,7 +603,7 @@ async def invite_to_firm(
         raise HTTPException(status_code=409, detail="Kullanıcı zaten bir firmaya bağlı")
 
     user.firm_id = current_user.firm_id
-    user.role = "avukat"
+    user.role = "kullanici"
     await db.flush()
     return {"status": "ok", "message": f"{user.full_name} firmaya eklendi"}
 
@@ -612,7 +612,7 @@ async def invite_to_firm(
 
 
 class FirmRoleUpdateRequest(BaseModel):
-    role: str = Field(..., description="partner, avukat, stajyer, asistan")
+    role: str = Field(..., description="yonetici, kullanici")
 
 
 @router.put("/firm/members/{user_id}/role")
@@ -623,8 +623,8 @@ async def update_firm_member_role(
     db: AsyncSession = Depends(get_db),
 ):
     """Büro admini kendi üyesinin rolünü değiştirsin."""
-    if current_user.role not in ("admin", "partner"):
-        raise HTTPException(status_code=403, detail="Sadece admin veya partner rol değiştirebilir")
+    if current_user.role not in ("admin", "yonetici"):
+        raise HTTPException(status_code=403, detail="Sadece admin veya yonetici rol değiştirebilir")
     if not current_user.firm_id:
         raise HTTPException(status_code=400, detail="Bir firmaya bağlı değilsiniz")
 
@@ -632,13 +632,13 @@ async def update_firm_member_role(
     if user_id == current_user.id:
         raise HTTPException(status_code=403, detail="Kendi rolünüzü değiştiremezsiniz")
 
-    allowed_roles = {"partner", "avukat", "stajyer", "asistan"}
+    allowed_roles = {"yonetici", "kullanici"}
     if body.role not in allowed_roles:
         raise HTTPException(status_code=400, detail=f"Geçersiz rol. İzin verilen: {', '.join(allowed_roles)}")
 
-    # Partner, admin rolü atayamaz
-    if current_user.role == "partner" and body.role == "admin":
-        raise HTTPException(status_code=403, detail="Partner, admin rolü atayamaz")
+    # Yonetici, admin rolü atayamaz
+    if current_user.role == "yonetici" and body.role == "admin":
+        raise HTTPException(status_code=403, detail="Yonetici, admin rolü atayamaz")
 
     # platform_admin rolü hiç atanamaz (firma seviyesinden)
     if body.role == "platform_admin":
@@ -678,7 +678,7 @@ async def remove_firm_member(
         raise HTTPException(status_code=404, detail="Kullanıcı firmada bulunamadı")
 
     user.firm_id = None
-    user.role = "avukat"
+    user.role = "kullanici"
     await db.flush()
     return {"status": "ok", "message": f"{user.full_name} firmadan çıkarıldı"}
 

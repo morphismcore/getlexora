@@ -1,23 +1,19 @@
 import type { TabKey } from "./types";
 
-export const ROLES = ["platform_admin", "admin", "partner", "avukat", "stajyer", "asistan"];
+export const ROLES = ["platform_admin", "admin", "yonetici", "kullanici"];
 
 export const ROLE_LABELS: Record<string, string> = {
   platform_admin: "Platform Admin",
   admin: "Firma Admin",
-  partner: "Partner",
-  avukat: "Avukat",
-  stajyer: "Stajyer",
-  asistan: "Asistan",
+  yonetici: "Yonetici",
+  kullanici: "Kullanici",
 };
 
 export const ROLE_COLORS: Record<string, string> = {
   platform_admin: "bg-purple-500/10 text-purple-400",
   admin: "bg-[#6C6CFF]/10 text-[#6C6CFF]",
-  partner: "bg-[#FFB224]/10 text-[#FFB224]",
-  avukat: "bg-[#3DD68C]/10 text-[#3DD68C]",
-  stajyer: "bg-[#8B8B8E]/10 text-[#8B8B8E]",
-  asistan: "bg-[#8B8B8E]/10 text-[#8B8B8E]",
+  yonetici: "bg-[#FFB224]/10 text-[#FFB224]",
+  kullanici: "bg-[#3DD68C]/10 text-[#3DD68C]",
 };
 
 export const TAB_CONFIG: { key: TabKey; label: string; icon: string }[] = [

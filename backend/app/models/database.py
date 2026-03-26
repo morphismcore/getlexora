@@ -73,7 +73,7 @@ class User(Base):
     baro_sicil_no: Mapped[str | None] = mapped_column(String(50), nullable=True)
     baro: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    role: Mapped[str] = mapped_column(String(20), default="avukat", nullable=False)  # admin, partner, avukat, stajyer, asistan
+    role: Mapped[str] = mapped_column(String(20), default="kullanici", nullable=False)  # admin, yonetici, kullanici
     firm_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("firms.id", ondelete="SET NULL"), nullable=True
     )

@@ -358,6 +358,55 @@ function GenelTabContent({
         </button>
       </div>
 
+      {/* Firmalar overview */}
+      {firms.length > 0 && (
+        <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
+              <h3 className="text-[15px] font-semibold text-[#ECECEE]">Firmalar</h3>
+              <span className="text-[13px] text-[#5C5C5F]">({firms.length})</span>
+            </div>
+            <button onClick={() => onSetTab("kullanicilar")} className="text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              Tumu &rarr;
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[14px]">
+              <thead>
+                <tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[12px] uppercase tracking-wider">
+                  <th className="text-left pb-2 pr-4">Firma Adi</th>
+                  <th className="text-center pb-2 px-4">Aktif Uye</th>
+                  <th className="text-center pb-2 px-4">Toplam Uye</th>
+                  <th className="text-center pb-2 px-4">Tur</th>
+                  <th className="text-center pb-2 pl-4">Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                {firms.map((f) => (
+                  <tr key={f.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="py-2.5 pr-4 text-[#ECECEE] font-medium">{f.name}</td>
+                    <td className="py-2.5 px-4 text-center">
+                      <span className="text-[#ECECEE] font-semibold">{f.active_member_count ?? f.member_count}</span>
+                      <span className="text-[#5C5C5F]">/{f.max_users}</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-center text-[#8B8B8E]">{f.member_count}</td>
+                    <td className="py-2.5 px-4 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.firm_type === "kurumsal" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "bg-[#3DD68C]/10 text-[#3DD68C]"}`}>
+                        {f.firm_type === "kurumsal" ? "Kurumsal" : "Bireysel"}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pl-4 text-center">
+                      <span className={`w-2 h-2 rounded-full inline-block ${f.is_active ? "bg-[#3DD68C]" : "bg-[#E5484D]"}`} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* System health summary */}
       {systemHealth && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
@@ -473,7 +522,7 @@ function KullanicilarTabContent({
               <div key={f.id} className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
                 <div>
                   <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[14px] text-[#5C5C5F]">{f.email || "\u2014"} {"\u00b7"} {f.member_count}/{f.max_users} uye</p>
+                  <p className="text-[14px] text-[#5C5C5F]">{f.email || "\u2014"} {"\u00b7"} {f.active_member_count ?? f.member_count} aktif / {f.member_count} toplam / {f.max_users} max</p>
                 </div>
                 <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                   {f.is_active ? "Aktif" : "Pasif"}
@@ -499,7 +548,7 @@ function KullanicilarTabContent({
               <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
                 <div>
                   <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[14px] text-[#5C5C5F]">{f.member_count}/{f.max_users} uye</p>
+                  <p className="text-[14px] text-[#5C5C5F]">{f.active_member_count ?? f.member_count} aktif / {f.member_count} toplam / {f.max_users} max</p>
                 </div>
                 <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                   {f.is_active ? "Aktif" : "Pasif"}

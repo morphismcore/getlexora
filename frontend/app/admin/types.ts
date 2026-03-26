@@ -17,6 +17,7 @@ export interface FirmItem {
   name: string;
   email: string | null;
   member_count: number;
+  active_member_count: number;
   max_users: number;
   firm_type: string;
   is_active: boolean;
