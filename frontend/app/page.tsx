@@ -1,16 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/ui/auth-provider";
 import SkeletonDashboard from "./_components/skeleton-dashboard";
 import LandingPage from "./_components/landing-page";
-import AuthenticatedDashboard from "./_components/authenticated-dashboard";
 
 export default function DashboardPage() {
   const { token, loading } = useAuth();
+  const router = useRouter();
 
-  if (loading) return <SkeletonDashboard />;
+  useEffect(() => {
+    if (!loading && token) {
+      router.replace("/arama");
+    }
+  }, [loading, token, router]);
 
-  if (!token) return <LandingPage />;
+  if (loading || token) return <SkeletonDashboard />;
 
-  return <AuthenticatedDashboard />;
+  return <LandingPage />;
 }

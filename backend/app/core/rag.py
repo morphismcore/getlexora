@@ -535,20 +535,29 @@ Ozet: {r.ozet}
             yil=[FacetBucket(value=k, count=v) for k, v in sorted(yil_counts.items(), key=lambda x: -x[1])],
         )
 
+    # Section types that are most meaningful for display (conclusion, reasoning, judgment)
+    _PREFERRED_SECTIONS = {"sonuc", "degerlendirme", "huküm", "hüküm", "hukum"}
+
     def _merge_results(
         self,
         api_results: list[dict],
         vector_results: list[dict],
         max_results: int,
     ) -> list[IctihatResult]:
-        """API ve vector search sonuclarini birlestir."""
-        seen_ids = set()
+        """
+        API ve vector search sonuclarini birlestir.
+        Vector results are grouped by karar_id (from payload), not by chunk point ID.
+        For each karar_id, the highest-scoring chunk is kept.
+        A preferred section (sonuc/degerlendirme/huküm) is used for ozet when available.
+        """
         merged = []
 
+        # --- API results (already one per karar) ---
+        seen_karar_ids = set()
         for r in api_results:
             kid = r.get("karar_id", "")
-            if kid and kid not in seen_ids:
-                seen_ids.add(kid)
+            if kid and kid not in seen_karar_ids:
+                seen_karar_ids.add(kid)
                 merged.append(
                     IctihatResult(
                         karar_id=kid,
@@ -563,23 +572,60 @@ Ozet: {r.ozet}
                     )
                 )
 
+        # --- Vector results: group chunks by karar_id ---
+        # Each Qdrant point is a chunk; multiple chunks share the same karar_id in payload.
+        karar_groups: dict[str, list[dict]] = defaultdict(list)
         for r in vector_results:
             payload = r.get("payload", {})
-            kid = str(r.get("id", ""))
-            if kid not in seen_ids:
-                seen_ids.add(kid)
-                merged.append(
-                    IctihatResult(
-                        karar_id=kid,
-                        mahkeme=payload.get("mahkeme", ""),
-                        daire=payload.get("daire"),
-                        esas_no=payload.get("esas_no"),
-                        karar_no=payload.get("karar_no"),
-                        tarih=payload.get("tarih"),
-                        ozet=payload.get("ozet", ""),
-                        relevance_score=r.get("score", 0.3),
-                    )
+            kid = payload.get("karar_id") or str(r.get("id", ""))
+            karar_groups[kid].append(r)
+
+        for kid, chunks in karar_groups.items():
+            if kid in seen_karar_ids:
+                continue
+            seen_karar_ids.add(kid)
+
+            # Sort chunks by score descending
+            chunks.sort(key=lambda c: c.get("score", 0), reverse=True)
+            best_chunk = chunks[0]
+            best_payload = best_chunk.get("payload", {})
+            best_score = best_chunk.get("score", 0.3)
+
+            # Pick the best chunk for ozet display:
+            # Prefer a chunk from a meaningful section (sonuc, degerlendirme, huküm)
+            ozet_text = ""
+            tam_metin_text = ""
+            preferred_chunk = None
+            for c in chunks:
+                cp = c.get("payload", {})
+                section = (cp.get("section_type") or "").lower().strip()
+                if section in self._PREFERRED_SECTIONS:
+                    preferred_chunk = c
+                    break
+
+            if preferred_chunk:
+                pp = preferred_chunk.get("payload", {})
+                raw_text = pp.get("text", "") or pp.get("ozet", "")
+            else:
+                # Fall back to the highest-scoring chunk's text
+                raw_text = best_payload.get("text", "") or best_payload.get("ozet", "")
+
+            tam_metin_text = raw_text[:3000] if raw_text else ""
+            ozet_text = raw_text[:500] if raw_text else ""
+
+            merged.append(
+                IctihatResult(
+                    karar_id=kid,
+                    mahkeme=best_payload.get("mahkeme", ""),
+                    daire=best_payload.get("daire"),
+                    esas_no=best_payload.get("esas_no"),
+                    karar_no=best_payload.get("karar_no"),
+                    tarih=best_payload.get("tarih"),
+                    ozet=ozet_text,
+                    tam_metin=tam_metin_text,
+                    relevance_score=best_score,
                 )
+            )
 
         merged.sort(key=lambda x: x.relevance_score, reverse=True)
         return merged[:max_results]

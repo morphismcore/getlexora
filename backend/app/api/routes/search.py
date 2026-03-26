@@ -213,19 +213,59 @@ async def get_mevzuat_content(
 async def get_karar(
     document_id: str,
     yargi=Depends(get_yargi_service),
+    vector_store=Depends(get_vector_store),
     current_user: User | None = Depends(get_optional_user),
 ):
-    """Tam karar metnini getir. LLM GEREKTIRMEZ."""
+    """
+    Tam karar metnini getir. LLM GEREKTIRMEZ.
+    Birincil kaynak: Bedesten API.
+    Yedek kaynak: Qdrant chunk'larından birleştirme (Bedesten başarısız olursa).
+    """
+    # --- 1. Try Bedesten API first ---
+    bedesten_error = None
     try:
         doc = await yargi.get_document(document_id)
         content = doc.get("data", {}).get("decoded_content", "")
         if content:
             clean = _format_legal_text(content)
             return {"document_id": document_id, "content": clean, "html": content}
-        return {"document_id": document_id, "content": "", "error": "İçerik alınamadı"}
     except Exception as e:
-        logger.error("karar_fetch_error", error=str(e), document_id=document_id)
-        raise HTTPException(status_code=500, detail="Karar metni alınırken bir hata oluştu.")
+        bedesten_error = str(e)
+        logger.warning("karar_bedesten_failed", error=bedesten_error, document_id=document_id)
+
+    # --- 2. Fallback: reconstruct from Qdrant chunks ---
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+        chunks = await vector_store.scroll_by_filter(
+            collection=settings.qdrant_collection_ictihat,
+            field="karar_id",
+            value=document_id,
+            limit=200,
+        )
+        if chunks:
+            # Sort by chunk_index to reconstruct the document in order
+            chunks.sort(key=lambda c: c.get("payload", {}).get("chunk_index", 0))
+            parts = [c.get("payload", {}).get("text", "") for c in chunks]
+            reconstructed = "\n\n".join(p for p in parts if p)
+            if reconstructed:
+                logger.info(
+                    "karar_qdrant_fallback_ok",
+                    document_id=document_id,
+                    chunk_count=len(chunks),
+                )
+                return {
+                    "document_id": document_id,
+                    "content": reconstructed,
+                    "source": "qdrant_chunks",
+                }
+    except Exception as e2:
+        logger.error("karar_qdrant_fallback_error", error=str(e2), document_id=document_id)
+
+    # --- 3. Both sources failed ---
+    if bedesten_error:
+        logger.error("karar_all_sources_failed", document_id=document_id, bedesten_error=bedesten_error)
+    return {"document_id": document_id, "content": "", "error": "İçerik alınamadı"}
 
 
 class VerifyRequest(BaseModel):
