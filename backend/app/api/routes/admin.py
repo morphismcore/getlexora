@@ -255,9 +255,7 @@ async def system_status(
 
 
 @router.get("/ingest/active")
-async def active_ingestion_tasks(
-    admin: User = Depends(require_platform_admin),
-):
+async def active_ingestion_tasks():
     """Çalışan ingestion task'larını Celery'den sorgula."""
     try:
         from app.worker import celery_app

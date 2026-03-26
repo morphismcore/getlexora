@@ -59,47 +59,28 @@ def main():
     done_list = [(k, v) for k, v in ex.items() if v.get("done")]
     active_list = [(k, v) for k, v in ex.items() if not v.get("done") and v.get("last_page", 0) > 0]
 
-    # 4. Exhaustive flag + Celery active tasks
-    ex_on = False
-    celery_tasks = []
-    try:
-        import redis
-        rd = redis.from_url(REDIS_URL)
-        ex_on = rd.get("ingestion:exhaustive_running") == b"1"
-        # Celery active task'ları kontrol et (unacked = çalışan task'lar)
-        for key in rd.scan_iter("celery-task-meta-*"):
-            try:
-                meta = json.loads(rd.get(key) or b"{}")
-                if meta.get("status") in ("STARTED", "PROGRESS"):
-                    task_name = meta.get("task_name", meta.get("name", ""))
-                    celery_tasks.append({
-                        "name": task_name,
-                        "status": meta.get("status"),
-                        "result": meta.get("result", {}),
-                    })
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-    # Celery worker'dan aktif task kontrolü (daha güvenilir)
+    # 4. Check active tasks via backend API
     celery_active = []
+    any_ingestion_active = False
     try:
-        from celery import Celery
-        app = Celery(broker="redis://lexora-redis-1:6379/1")
-        inspect = app.control.inspect(timeout=3)
-        active = inspect.active() or {}
-        for worker_name, tasks in active.items():
-            for t in tasks:
-                celery_active.append({
-                    "name": t.get("name", "?"),
-                    "id": t.get("id", ""),
-                    "args": t.get("args", []),
-                })
+        r = httpx.get("http://lexora-backend-1:8000/api/v1/admin/ingest/active", timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            any_ingestion_active = data.get("running", False)
+            celery_active = data.get("tasks", [])
+        elif r.status_code == 401:
+            # Fallback: try Redis exhaustive flag
+            import redis
+            rd = redis.from_url(REDIS_URL)
+            any_ingestion_active = rd.get("ingestion:exhaustive_running") == b"1"
     except Exception:
-        pass
-
-    any_ingestion_active = ex_on or bool(celery_active)
+        # Fallback: try Redis
+        try:
+            import redis
+            rd = redis.from_url(REDIS_URL)
+            any_ingestion_active = rd.get("ingestion:exhaustive_running") == b"1"
+        except Exception:
+            pass
 
     # 5. GPU
     gpu_ok = False
