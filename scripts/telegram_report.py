@@ -121,75 +121,25 @@ def main():
         L.append(f"  {LABEL.get(m, m)}: {c:,}")
     L.append("")
 
-    if ex_on and active_list:
-        a_key, a_val = active_list[0]
-        name = a_key.replace("yargitay:", "Yargitay ").replace("danistay:", "Danistay ")
-        # Daire ismi
-        daire_names = {
-            "2": "Ceza/Hukuk", "4": "Ceza/Hukuk", "9": "Hukuk (Is)", "12": "Hukuk (Icra)",
-            "HGK": "Hukuk Genel Kurulu",
+    if any_ingestion_active and celery_active:
+        SOURCE_LABELS = {
+            "yargitay": "Yargitay", "danistay": "Danistay",
+            "aym": "AYM", "aihm": "AiHM",
+            "rekabet": "Rekabet", "kvkk": "KVKK",
+            "mevzuat": "Mevzuat", "batch": "Toplu",
+            "exhaustive": "Exhaustive", "daire": "Daire",
         }
-        d_id = a_key.split(":")[1] if ":" in a_key else ""
-        d_label = daire_names.get(d_id, "")
-        if d_label:
-            name = f"{name}. {d_label} Dairesi"
-
-        pg = a_val.get("last_page", 0)
-        emb = a_val.get("embedded", 0)
-        api = a_val.get("api_total", 0)
-        mx = api // 10 if api else 0
-        pct = (pg / mx * 100) if mx > 0 else 0
-        eta_h = ((mx - pg) * 8) / 3600 if mx > pg else 0
-
-        bar_full = int(pct / 10)
-        bar = "=" * bar_full + "-" * (10 - bar_full)
-
-        L.append("CEKIM DURUMU: AKTIF")
-        L.append(f"  Daire: {name}")
-        L.append(f"  [{bar}] %{pct:.1f}")
-        L.append(f"  Sayfa: {pg:,} / {mx:,}")
-        L.append(f"  Uretilen: {emb:,} embedding")
-        if eta_h > 0:
-            if eta_h < 1:
-                L.append(f"  Kalan: ~{eta_h * 60:.0f} dk")
-            elif eta_h < 24:
-                L.append(f"  Kalan: ~{eta_h:.0f} saat")
-            else:
-                L.append(f"  Kalan: ~{eta_h / 24:.1f} gun")
-    elif ex_on:
-        L.append("CEKIM DURUMU: AKTIF (basliyor...)")
-    elif celery_active:
-        # Exhaustive değil ama Celery'de çalışan ingestion task'ları var
-        TASK_LABELS = {
-            "ingest_aihm": "AiHM", "ingest_aym": "AYM",
-            "ingest_rekabet": "Rekabet", "ingest_kvkk": "KVKK",
-            "ingest_mevzuat": "Mevzuat", "ingest_topics": "Ictihat",
-            "ingest_daire": "Daire", "ingest_batch": "Toplu",
-        }
-        task_names = []
+        names = []
         for t in celery_active:
-            tname = t["name"].split(".")[-1] if t["name"] else "?"
-            label = "?"
-            for key, val in TASK_LABELS.items():
-                if key in tname:
-                    label = val
-                    break
-            task_names.append(label)
-        L.append(f"CEKIM DURUMU: AKTIF ({', '.join(task_names)})")
+            src = t.get("source", "")
+            name = t.get("name", "")
+            label = SOURCE_LABELS.get(src, name)
+            names.append(label)
+        L.append(f"CEKIM DURUMU: AKTIF ({', '.join(names)})")
+    elif any_ingestion_active:
+        L.append("CEKIM DURUMU: AKTIF")
     else:
         L.append("CEKIM DURUMU: Pasif")
-
-    L.append("")
-    done_n = len(done_list)
-    active_n = len(active_list)
-    pending = total_daire - done_n - active_n
-    L.append(f"DAIRE ILERLEME: {done_n} tamam / {active_n} aktif / {pending} bekliyor ({total_daire} toplam)")
-
-    if done_list:
-        L.append("  Biten:")
-        for k, v in done_list:
-            name = k.replace("yargitay:", "Y:").replace("danistay:", "D:")
-            L.append(f"    {name} — {v.get('embedded', 0):,}")
 
     L.append("")
     gpu_str = f"Aktif ({gpu_name})" if gpu_ok else "Kapali"
