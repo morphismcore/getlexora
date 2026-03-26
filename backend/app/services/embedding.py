@@ -103,22 +103,25 @@ class EmbeddingService:
 
     # ── Public API ──────────────────────────────────────────
 
-    def embed_texts(self, texts: list[str], batch_size: int = 8) -> list[dict]:
+    _GPU_BATCH = 128
+    _CPU_BATCH = 8
+
+    def embed_texts(self, texts: list[str], batch_size: int | None = None) -> list[dict]:
         """
         Metin listesini embed et (senkron versiyon — mevcut pipeline uyumluluğu).
         """
         if self._api_url:
-            return self._embed_texts_gpu_sync(texts, batch_size)
-        return self._embed_texts_local(texts, batch_size)
+            return self._embed_texts_gpu_sync(texts, batch_size or self._GPU_BATCH)
+        return self._embed_texts_local(texts, batch_size or self._CPU_BATCH)
 
-    async def embed_texts_async(self, texts: list[str], batch_size: int = 8) -> list[dict]:
+    async def embed_texts_async(self, texts: list[str], batch_size: int | None = None) -> list[dict]:
         """
         Metin listesini embed et (asenkron versiyon).
         GPU API varsa ona gider, yoksa thread pool'da lokal CPU.
         """
         if self._api_url:
-            return await self._embed_texts_gpu_async(texts, batch_size)
-        return await self._embed_texts_local_async(texts, batch_size)
+            return await self._embed_texts_gpu_async(texts, batch_size or self._GPU_BATCH)
+        return await self._embed_texts_local_async(texts, batch_size or self._CPU_BATCH)
 
     def embed_query(self, query: str) -> dict:
         """Tek bir sorguyu embed et."""
