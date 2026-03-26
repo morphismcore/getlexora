@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     rrf_sparse_weight: float = 0.45
 
     # Reranking (cross-encoder)
-    reranking_enabled: bool = True
+    reranking_enabled: bool = False  # CPU cross-encoder çok yavaş (~12s), GPU reranker eklenince açılacak
     reranking_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     # Query expansion
