@@ -4,12 +4,13 @@ Arama API endpoint'leri.
 RAG soru-cevap: LLM gerektirir (opsiyonel).
 """
 
+import base64
 import json
 import re
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from app.models.schemas import (
@@ -266,6 +267,43 @@ async def get_karar(
     if bedesten_error:
         logger.error("karar_all_sources_failed", document_id=document_id, bedesten_error=bedesten_error)
     return {"document_id": document_id, "content": "", "error": "İçerik alınamadı"}
+
+
+@router.get("/karar/{document_id}/download")
+async def download_karar(
+    document_id: str,
+    yargi=Depends(get_yargi_service),
+    current_user: User | None = Depends(get_optional_user),
+):
+    """Orijinal karar dosyasını indir (PDF veya HTML)."""
+    try:
+        doc = await yargi.get_document(document_id)
+        content_b64 = doc.get("data", {}).get("content", "")
+        mime_type = doc.get("data", {}).get("mimeType", "text/html")
+
+        if not content_b64:
+            raise HTTPException(status_code=404, detail="Karar dosyası bulunamadı")
+
+        raw_bytes = base64.b64decode(content_b64)
+
+        if mime_type == "application/pdf":
+            return Response(
+                content=raw_bytes,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'attachment; filename="karar_{document_id}.pdf"'},
+            )
+
+        # HTML — wrap in proper document for clean download
+        return Response(
+            content=raw_bytes,
+            media_type="text/html; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="karar_{document_id}.html"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("karar_download_error", error=str(e), document_id=document_id)
+        raise HTTPException(status_code=500, detail="Dosya indirilemedi")
 
 
 class VerifyRequest(BaseModel):

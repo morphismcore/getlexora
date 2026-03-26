@@ -672,6 +672,16 @@ export function IctihatTab({
                       {copied ? "Kopyalandı" : "Metni Kopyala"}
                     </button>
                     <button
+                      onClick={() => {
+                        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                        window.open(`${apiUrl}/api/v1/search/karar/${selectedResult.karar_id}/download`, "_blank");
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                    >
+                      <DownloadIcon />
+                      Kararı İndir
+                    </button>
+                    <button
                       onClick={() => toggleBookmark(selectedResult.karar_id)}
                       className={`flex items-center gap-1.5 px-3 py-2 text-[12px] rounded-xl border transition-all ${
                         bookmarks.has(selectedResult.karar_id)
