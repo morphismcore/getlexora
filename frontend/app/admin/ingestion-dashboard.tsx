@@ -167,12 +167,25 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
             const count = getCount(key);
             const isRunningThis = state?.running && state.source === key;
             return (
-              <div key={key} className="bg-[#09090B] border border-white/[0.06] rounded-lg p-4 flex flex-col gap-2">
+              <div
+                key={key}
+                className={`bg-[#09090B] border rounded-lg p-4 flex flex-col gap-2 transition-colors ${
+                  isRunningThis ? "border-[#3DD68C]/40 bg-[#3DD68C]/[0.03]" : "border-white/[0.06]"
+                }`}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg?.color || "#5C5C5F" }} />
+                  {isRunningThis ? (
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#3DD68C] animate-pulse" />
+                  ) : (
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg?.color || "#5C5C5F" }} />
+                  )}
                   <span className="text-[14px] font-medium text-[#ECECEE]">{cfg?.label || key}</span>
+                  {isRunningThis && <span className="text-[11px] text-[#3DD68C] font-medium ml-auto">Çalışıyor</span>}
                 </div>
                 <span className="text-[22px] font-semibold text-[#ECECEE] font-mono">{count.toLocaleString("tr-TR")}</span>
+                {count === 0 && !state?.running && (
+                  <span className="text-[11px] text-[#5C5C5F]">Henüz veri yok</span>
+                )}
                 <button
                   onClick={() => triggerIngest(INGEST_ENDPOINTS[key].endpoint, INGEST_ENDPOINTS[key].label)}
                   disabled={!!state?.running}
@@ -184,7 +197,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
                     borderWidth: "1px",
                   }}
                 >
-                  {isRunningThis ? "Calisiyor..." : "Cek"}
+                  {isRunningThis ? "Çalışıyor..." : "Çek"}
                 </button>
               </div>
             );
@@ -259,7 +272,12 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#5C5C5F]" />
+          <span className="text-[14px] text-[#5C5C5F]">Beklemede — bir kaynak seçip &quot;Çek&quot; butonuna basın</span>
+        </div>
+      )}
 
       {/* ── Section 3: Log Terminal ── */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden">
