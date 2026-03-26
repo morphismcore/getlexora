@@ -896,6 +896,8 @@ class IngestionPipeline:
                         continue
 
                 # Daire tamamlandı
+                if daire_key not in exhaustive_cp:
+                    exhaustive_cp[daire_key] = {}
                 exhaustive_cp[daire_key]["done"] = True
                 checkpoint["exhaustive"] = exhaustive_cp
                 self._save_checkpoint(checkpoint)
