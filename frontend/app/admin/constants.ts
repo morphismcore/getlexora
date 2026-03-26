@@ -69,6 +69,8 @@ export const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: s
   danistay: { label: "Danistay", color: "#A78BFA", bg: "bg-[#A78BFA]" },
   aym: { label: "AYM", color: "#E5484D", bg: "bg-[#E5484D]" },
   aihm: { label: "AIHM", color: "#3DD68C", bg: "bg-[#3DD68C]" },
+  rekabet: { label: "Rekabet", color: "#38BDF8", bg: "bg-[#38BDF8]" },
+  kvkk: { label: "KVKK", color: "#F472B6", bg: "bg-[#F472B6]" },
   mevzuat: { label: "Mevzuat", color: "#FFB224", bg: "bg-[#FFB224]" },
 };
 
