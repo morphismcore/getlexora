@@ -124,62 +124,20 @@ class RAGPipeline:
 
         daire = request.daire if hasattr(request, "daire") and request.daire else None
 
-        # 1. PARALLEL: Bedesten API + ALL synonyms + Vector search
-        # These are independent — run them ALL at the same time
-        tasks = []
-        task_labels = []
-
-        # Date filters for Bedesten API
-        date_from = request.tarih_baslangic.isoformat() if request.tarih_baslangic else None
-        date_to = request.tarih_bitis.isoformat() if request.tarih_bitis else None
-
-        # Task A: Main Bedesten search
-        tasks.append(self._search_bedesten(search_query, court_types, daire, request.max_sonuc, date_from, date_to))
-        task_labels.append("bedesten_main")
-
-        # Task B: Synonym Bedesten searches (up to 2)
-        if expansion_info and expansion_info.get("expanded_queries"):
-            for syn_query in expansion_info["expanded_queries"][1:3]:
-                tasks.append(self._search_bedesten_safe(syn_query, court_types, daire, 5, date_from, date_to))
-                task_labels.append("bedesten_synonym")
-
-        # Task C: Vector search (embedding + Qdrant in one async call)
-        # Fetch more candidates to support pagination
-        vector_limit = max(request.max_sonuc * 3, 60)
-        tasks.append(self._search_vectors(request.query, request, vector_limit))
-        task_labels.append("vector")
-
-        # Run ALL tasks in parallel
-        all_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Collect results (skip exceptions)
-        api_results = []
-        vector_results = []
+        # 1. Vector-only search — Bedesten artık sadece ingestion için kullanılır
+        # Tüm kararlar Qdrant'ta embedding olarak mevcut, API'ye gitmeye gerek yok
+        vector_limit = max(request.max_sonuc * request.sayfa * 2, 60)
         search_warnings = []
 
-        for i, result in enumerate(all_results):
-            label = task_labels[i]
-            if isinstance(result, Exception):
-                if label == "bedesten_main":
-                    search_warnings.append("Ana arama kaynagi baglantisi basarisiz oldu")
-                    logger.warning("search_bedesten_main_failed", error=str(result))
-                elif label == "bedesten_synonym":
-                    search_warnings.append("Ek arama basarisiz oldu, sonuclar kismi olabilir.")
-                    logger.warning("search_bedesten_synonym_failed", error=str(result))
-                else:
-                    logger.warning("search_vector_failed", error=str(result))
-                continue
+        try:
+            vector_results = await self._search_vectors(request.query, request, vector_limit)
+        except Exception as e:
+            logger.error("search_vector_failed", error=str(e))
+            vector_results = []
+            search_warnings.append("Arama sırasında bir hata oluştu")
 
-            if label == "vector":
-                vector_results = result if isinstance(result, list) else []
-            else:
-                # Bedesten results (main or synonym)
-                if isinstance(result, list):
-                    api_results.extend(result)
-
-        # 2. Merge — collect ALL candidates (don't slice yet, pagination needs full set)
-        merge_limit = max(request.max_sonuc * request.sayfa, 60)
-        results = self._merge_results(api_results, vector_results, merge_limit)
+        # 2. Results from vector search only (no merge needed)
+        results = self._merge_results([], vector_results, vector_limit)
 
         # 2b. Deduplicate by karar identity (esas_no + karar_no)
         results = self._deduplicate_results(results)
