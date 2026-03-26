@@ -21,6 +21,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
   const [prevBreakdown, setPrevBreakdown] = useState<EmbeddingBreakdown | null>(null);
   const [gpuConnected, setGpuConnected] = useState<boolean | null>(null);
   const [activeSource, setActiveSource] = useState<string | null>(null);
+  const [activeTasks, setActiveTasks] = useState<Array<{ id: string; name: string; source: string }>>([]);
   const [polling, setPolling] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -51,17 +52,39 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
     } catch { setGpuConnected(false); }
   }, [token, apiUrl]);
 
-  // Initial fetch
-  useEffect(() => { fetchBreakdown(); fetchGpu(); }, [fetchBreakdown, fetchGpu]);
+  // Check active tasks from Celery
+  const fetchActiveTasks = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/active`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const data = await r.json();
+        setActiveTasks(data.tasks || []);
+        if (data.running) {
+          setPolling(true);
+          if (data.tasks.length > 0) {
+            setActiveSource(data.tasks[0].source);
+          }
+        } else {
+          setPolling(false);
+          setActiveSource(null);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [token, apiUrl]);
 
-  // Polling — refresh counts every 5 seconds when active
+  // Initial fetch — check active tasks on page load
+  useEffect(() => { fetchBreakdown(); fetchGpu(); fetchActiveTasks(); }, [fetchBreakdown, fetchGpu, fetchActiveTasks]);
+
+  // Polling — refresh counts + active tasks every 5 seconds when active
   useEffect(() => {
     if (!polling) return;
     const interval = setInterval(() => {
       fetchBreakdown();
+      fetchActiveTasks();
     }, 5000);
     return () => clearInterval(interval);
-  }, [polling, fetchBreakdown]);
+  }, [polling, fetchBreakdown, fetchActiveTasks]);
 
   // Trigger ingestion
   const triggerIngest = async (key: string) => {
@@ -152,6 +175,23 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
         </div>
       </div>
 
+      {/* Active tasks banner */}
+      {activeTasks.length > 0 && (
+        <div className="bg-[#3DD68C]/[0.06] border border-[#3DD68C]/20 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#3DD68C] animate-pulse" />
+            <span className="text-[15px] font-semibold text-[#3DD68C]">{activeTasks.length} aktif çekim</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {activeTasks.map((t) => (
+              <span key={t.id} className="px-3 py-1 rounded-lg text-[13px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">
+                {SOURCE_CONFIG[t.source]?.label || t.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Source cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {SOURCES.map((key) => {
@@ -159,7 +199,8 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           const count = getCount(key);
           const prev = getPrevCount(key);
           const diff = count - prev;
-          const isActive = activeSource === key || activeSource === "batch";
+          const hasActiveTask = activeTasks.some((t) => t.source === key);
+          const isActive = hasActiveTask || activeSource === key || activeSource === "batch";
 
           return (
             <div

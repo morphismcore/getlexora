@@ -254,6 +254,42 @@ async def system_status(
     return {"checks": checks}
 
 
+@router.get("/ingest/active")
+async def active_ingestion_tasks(
+    admin: User = Depends(require_platform_admin),
+):
+    """Çalışan ingestion task'larını Celery'den sorgula."""
+    try:
+        from app.worker import celery_app
+        inspect = celery_app.control.inspect(timeout=3)
+        active = inspect.active() or {}
+        tasks = []
+        for worker_name, task_list in active.items():
+            for t in task_list:
+                name = t.get("name", "")
+                # Extract source from task name
+                source = "unknown"
+                if "aym" in name: source = "aym"
+                elif "aihm" in name: source = "aihm"
+                elif "rekabet" in name: source = "rekabet"
+                elif "kvkk" in name: source = "kvkk"
+                elif "mevzuat" in name or "refresh_mevzuat" in name: source = "mevzuat"
+                elif "batch" in name: source = "batch"
+                elif "exhaustive" in name: source = "exhaustive"
+                elif "daire" in name: source = "daire"
+                elif "topics" in name: source = "yargitay"
+                elif "date_range" in name: source = "yargitay"
+                tasks.append({
+                    "id": t.get("id", ""),
+                    "name": name.split(".")[-1],
+                    "source": source,
+                    "started": t.get("time_start"),
+                })
+        return {"running": len(tasks) > 0, "tasks": tasks}
+    except Exception as e:
+        return {"running": False, "tasks": [], "error": str(e)}
+
+
 # ── Embedding İstatistikleri ──────────────────────────
 
 @router.get("/embeddings")
