@@ -22,6 +22,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    ports: !override []
     env_file:
       - .env
     extra_hosts:
@@ -40,7 +41,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    volumes:
+    volumes: !override
       - ingestion_data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -115,6 +116,7 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.13.2
+    ports: !override []
     volumes:
       - qdrant_data:/qdrant/storage
     environment:
@@ -132,6 +134,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    ports: !override []
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -144,6 +147,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    ports: !override []
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-lexora}
       POSTGRES_USER: ${POSTGRES_USER:-lexora}
