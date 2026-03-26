@@ -9,11 +9,7 @@ import type { UserItem, FirmItem, PlatformStats, EmbeddingStats, TabKey } from "
 import { ROLES, ROLE_LABELS, TAB_CONFIG } from "./constants";
 import { HIcon } from "./components";
 
-import DeadlineRulesTab from "./deadline-rules-tab";
-import HolidaysTab from "./holidays-tab";
-import SettingsTab from "./settings-tab";
 import IngestionDashboard from "./ingestion-dashboard";
-import MonitoringDashboard from "./monitoring-dashboard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -205,13 +201,9 @@ export default function AdminPage() {
       {tab === "genel" && (
         <GenelTabContent
           pendingUsers={pendingUsers}
-          users={users}
-          firms={firms}
-          embeddings={embeddings}
           systemHealth={systemHealth}
           onApproveUser={approveUser}
           onRejectUser={rejectUser}
-          onSetTab={setTab}
         />
       )}
 
@@ -233,56 +225,6 @@ export default function AdminPage() {
         <IngestionDashboard token={token} apiUrl={API_URL} onToast={(msg: string) => showToast(msg)} />
       )}
 
-      {/* Sistem tab */}
-      {tab === "sistem" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-          {systemHealth && (
-            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
-              <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3">Servis Durumu</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
-                  <div key={key} className="bg-[#09090B] rounded-lg p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${val.status === "ok" ? "bg-[#3DD68C]" : "bg-[#E5484D] animate-pulse"}`} />
-                      <span className="text-[14px] text-[#ECECEE] capitalize">{key}</span>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${val.status === "ok" ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
-                      {val.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <MonitoringDashboard token={token} apiUrl={API_URL} />
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
-              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Sure Kurallari</h3>
-            </div>
-            <DeadlineRulesTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
-              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Tatiller</h3>
-            </div>
-            <HolidaysTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-5 rounded-full bg-[#FFB224]" />
-              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Platform Ayarlari</h3>
-            </div>
-            <SettingsTab apiUrl={API_URL} />
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }
@@ -291,23 +233,15 @@ export default function AdminPage() {
 
 function GenelTabContent({
   pendingUsers,
-  users,
-  firms,
-  embeddings,
   systemHealth,
   onApproveUser,
   onRejectUser,
-  onSetTab,
 }: {
   pendingUsers: UserItem[];
-  users: UserItem[];
-  firms: FirmItem[];
-  embeddings: EmbeddingStats | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   systemHealth: Record<string, any> | null;
   onApproveUser: (id: string) => void;
   onRejectUser: (id: string) => void;
-  onSetTab: (tab: TabKey) => void;
 }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
@@ -330,80 +264,6 @@ function GenelTabContent({
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <button onClick={() => onSetTab("kullanicilar")} className="bg-[#111113] border border-white/[0.06] hover:border-[#6C6CFF]/30 rounded-xl p-5 text-left transition-colors group">
-          <div className="w-10 h-10 rounded-xl bg-[#6C6CFF]/10 flex items-center justify-center mb-3">
-            <HIcon d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" className="w-5 h-5 text-[#6C6CFF]" />
-          </div>
-          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Kullanicilar & Firmalar</p>
-          <p className="text-[14px] text-[#5C5C5F]">{users.length} kullanici, {firms.length} firma</p>
-        </button>
-        <button onClick={() => onSetTab("veri-yonetimi")} className="bg-[#111113] border border-white/[0.06] hover:border-[#3DD68C]/30 rounded-xl p-5 text-left transition-colors group">
-          <div className="w-10 h-10 rounded-xl bg-[#3DD68C]/10 flex items-center justify-center mb-3">
-            <HIcon d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" className="w-5 h-5 text-[#3DD68C]" />
-          </div>
-          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Veri Yonetimi</p>
-          <p className="text-[14px] text-[#5C5C5F]">{(embeddings?.total || 0).toLocaleString("tr-TR")} embedding</p>
-        </button>
-        <button onClick={() => onSetTab("sistem")} className="bg-[#111113] border border-white/[0.06] hover:border-[#FFB224]/30 rounded-xl p-5 text-left transition-colors group">
-          <div className="w-10 h-10 rounded-xl bg-[#FFB224]/10 flex items-center justify-center mb-3">
-            <HIcon d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z" className="w-5 h-5 text-[#FFB224]" />
-          </div>
-          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Sistem Ayarlari</p>
-          <p className="text-[14px] text-[#5C5C5F]">Sure kurallari, tatiller, ayarlar</p>
-        </button>
-      </div>
-
-      {/* Firmalar overview */}
-      {firms.length > 0 && (
-        <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
-              <h3 className="text-[15px] font-semibold text-[#ECECEE]">Firmalar</h3>
-              <span className="text-[13px] text-[#5C5C5F]">({firms.length})</span>
-            </div>
-            <button onClick={() => onSetTab("kullanicilar")} className="text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
-              Tumu &rarr;
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[14px]">
-              <thead>
-                <tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[12px] uppercase tracking-wider">
-                  <th className="text-left pb-2 pr-4">Firma Adi</th>
-                  <th className="text-center pb-2 px-4">Aktif Uye</th>
-                  <th className="text-center pb-2 px-4">Toplam Uye</th>
-                  <th className="text-center pb-2 px-4">Tur</th>
-                  <th className="text-center pb-2 pl-4">Durum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {firms.map((f) => (
-                  <tr key={f.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2.5 pr-4 text-[#ECECEE] font-medium">{f.name}</td>
-                    <td className="py-2.5 px-4 text-center">
-                      <span className="text-[#ECECEE] font-semibold">{f.active_member_count ?? f.member_count}</span>
-                      <span className="text-[#5C5C5F]">/{f.max_users}</span>
-                    </td>
-                    <td className="py-2.5 px-4 text-center text-[#8B8B8E]">{f.member_count}</td>
-                    <td className="py-2.5 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.firm_type === "kurumsal" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "bg-[#3DD68C]/10 text-[#3DD68C]"}`}>
-                        {f.firm_type === "kurumsal" ? "Kurumsal" : "Bireysel"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pl-4 text-center">
-                      <span className={`w-2 h-2 rounded-full inline-block ${f.is_active ? "bg-[#3DD68C]" : "bg-[#E5484D]"}`} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
@@ -445,9 +305,6 @@ function KullanicilarTabContent({
   onRejectUser: (id: string) => void;
   onChangeRole: (id: string, role: string) => void;
 }) {
-  const kurumsalFirms = firms.filter((f) => f.firm_type === "kurumsal");
-  const bireyselFirms = firms.filter((f) => f.firm_type === "bireysel");
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       {/* Pending users */}
@@ -507,57 +364,47 @@ function KullanicilarTabContent({
         </div>
       </div>
 
-      {/* Kurumsal Firms */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
-          <h3 className="text-[16px] font-semibold text-[#ECECEE]">Kurumsal Burolar</h3>
-          <span className="text-[14px] text-[#5C5C5F]">({kurumsalFirms.length})</span>
-        </div>
-        {kurumsalFirms.length === 0 ? (
-          <p className="text-[14px] text-[#5C5C5F] pl-3">Henuz kurumsal buro yok.</p>
-        ) : (
-          <div className="space-y-2">
-            {kurumsalFirms.map((f) => (
-              <div key={f.id} className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
-                <div>
-                  <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[14px] text-[#5C5C5F]">{f.email || "\u2014"} {"\u00b7"} {f.active_member_count ?? f.member_count} aktif / {f.member_count} toplam / {f.max_users} max</p>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
-                  {f.is_active ? "Aktif" : "Pasif"}
-                </span>
-              </div>
-            ))}
+      {/* Firms table */}
+      {firms.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
+            <h3 className="text-[16px] font-semibold text-[#ECECEE]">Firmalar</h3>
+            <span className="text-[14px] text-[#5C5C5F]">({firms.length})</span>
           </div>
-        )}
-      </div>
-
-      {/* Bireysel Firms */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
-          <h3 className="text-[16px] font-semibold text-[#ECECEE]">Bireysel Avukatlar</h3>
-          <span className="text-[14px] text-[#5C5C5F]">({bireyselFirms.length})</span>
-        </div>
-        {bireyselFirms.length === 0 ? (
-          <p className="text-[14px] text-[#5C5C5F] pl-3">Henuz bireysel avukat yok.</p>
-        ) : (
-          <div className="space-y-2">
-            {bireyselFirms.map((f) => (
-              <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
-                <div>
-                  <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[14px] text-[#5C5C5F]">{f.active_member_count ?? f.member_count} aktif / {f.member_count} toplam / {f.max_users} max</p>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
-                  {f.is_active ? "Aktif" : "Pasif"}
-                </span>
-              </div>
-            ))}
+          <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden overflow-x-auto">
+            <table className="w-full text-[15px]">
+              <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[13px] uppercase tracking-wider">
+                <th className="text-left p-3">Firma Adi</th>
+                <th className="text-center p-3">Aktif / Max</th>
+                <th className="text-center p-3 hidden sm:table-cell">Toplam Uye</th>
+                <th className="text-center p-3">Tur</th>
+                <th className="text-center p-3">Durum</th>
+              </tr></thead>
+              <tbody>
+                {firms.map((f) => (
+                  <tr key={f.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="p-3 text-[#ECECEE] font-medium">{f.name}</td>
+                    <td className="p-3 text-center">
+                      <span className="text-[#ECECEE] font-semibold">{f.active_member_count ?? f.member_count}</span>
+                      <span className="text-[#5C5C5F]">/{f.max_users}</span>
+                    </td>
+                    <td className="p-3 text-center text-[#8B8B8E] hidden sm:table-cell">{f.member_count}</td>
+                    <td className="p-3 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.firm_type === "kurumsal" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "bg-[#3DD68C]/10 text-[#3DD68C]"}`}>
+                        {f.firm_type === "kurumsal" ? "Kurumsal" : "Bireysel"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className={`w-2 h-2 rounded-full inline-block ${f.is_active ? "bg-[#3DD68C]" : "bg-[#E5484D]"}`} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </motion.div>
   );
 }
