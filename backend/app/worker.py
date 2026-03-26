@@ -44,7 +44,7 @@ celery_app.conf.update(
 celery_app.conf.beat_schedule = {
     "daily-incremental-ingestion": {
         "task": "app.tasks.scheduled_tasks.daily_incremental",
-        "schedule": crontab(hour=3, minute=0),
+        "schedule": crontab(hour=0, minute=0),
     },
     "daily-deadline-reminders": {
         "task": "app.tasks.scheduled_tasks.check_deadline_reminders",

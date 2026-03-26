@@ -685,6 +685,12 @@ class IngestionPipeline:
             rest_items = [d for d in all_daireler if d[2] not in priority_set]
             all_daireler = priority_items + rest_items
 
+        # Set Redis flag so other tasks know exhaustive is running
+        import redis as sync_redis
+        _redis_flag = sync_redis.from_url(self.settings.redis_url, socket_timeout=2)
+        _redis_flag.set("ingestion:exhaustive_running", "1", ex=86400)
+        _redis_flag.close()
+
         _log("info", f"🚀 Exhaustive ingestion başladı — {len(all_daireler)} daire, {len(court_types)} mahkeme")
         _update_state(
             running=True, source="exhaustive",
@@ -901,6 +907,13 @@ class IngestionPipeline:
 
         finally:
             _update_state(running=False, source=None, task=None)
+            # Clear Redis exhaustive flag
+            try:
+                _redis_cleanup = sync_redis.from_url(self.settings.redis_url, socket_timeout=2)
+                _redis_cleanup.delete("ingestion:exhaustive_running")
+                _redis_cleanup.close()
+            except Exception:
+                pass
 
         summary = {
             "court_types": court_types,

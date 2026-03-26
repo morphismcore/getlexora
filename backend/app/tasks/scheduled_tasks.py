@@ -13,9 +13,22 @@ logger = structlog.get_logger()
 
 @celery_app.task(bind=True, name="app.tasks.scheduled_tasks.daily_incremental")
 def daily_incremental(self):
-    """Gunluk incremental ingestion — Celery Beat ile 03:00'te calisir."""
+    """Gunluk incremental ingestion — Celery Beat ile 00:00'da calisir."""
     task_id = self.request.id
     logger.info("daily_incremental_start", task_id=task_id)
+
+    # Skip if exhaustive task is currently running
+    try:
+        import redis as sync_redis
+        from app.config import get_settings as _get_settings
+        _r = sync_redis.from_url(_get_settings().redis_url, socket_timeout=2)
+        if _r.get("ingestion:exhaustive_running"):
+            logger.info("daily_incremental_skipped", reason="exhaustive_running", task_id=task_id)
+            _r.close()
+            return {"status": "skipped", "reason": "exhaustive_running"}
+        _r.close()
+    except Exception as e:
+        logger.warning("daily_incremental_exhaustive_check_failed", error=str(e))
 
     async def _run():
         import redis.asyncio as aioredis
