@@ -149,7 +149,7 @@ jobs:
             # Wait for backend to be ready (model loading can take time)
             echo "Waiting for backend health..."
             for i in $(seq 1 12); do
-              if curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
                 echo "Backend healthy!"
                 break
               fi
@@ -158,7 +158,7 @@ jobs:
             done
 
             # Final health check
-            curl -sf http://localhost:8001/health || echo "Warning: health check failed but containers are running"
+            curl -sf http://localhost:8000/health || echo "Warning: health check failed but containers are running"
 
             # Cleanup old images and build cache to prevent disk filling up
             docker image prune -af --filter "until=2h"

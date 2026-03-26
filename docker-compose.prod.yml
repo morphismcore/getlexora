@@ -81,8 +81,8 @@ services:
         limits:
           memory: 3G
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - CELERY_BROKER_URL=redis://lexora-redis-1:6379/1
+      - CELERY_RESULT_BACKEND=redis://lexora-redis-1:6379/2
     env_file:
       - .env
     depends_on:
