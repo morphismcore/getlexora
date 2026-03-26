@@ -50,7 +50,7 @@ def _publish_progress(state: dict):
         from app.config import get_settings
 
         settings = get_settings()
-        r = sync_redis.from_url(settings.celery_broker_url)
+        r = sync_redis.from_url(settings.redis_url)
         r.publish(REDIS_CHANNEL, json.dumps(state, ensure_ascii=False, default=str))
         r.close()
     except Exception as e:
