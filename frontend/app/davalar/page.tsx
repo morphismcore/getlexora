@@ -64,56 +64,54 @@ const STATUS_COLORS: Record<string, string> = {
 
 const CaseCard = React.memo(function CaseCard({
   c,
-  isSelected,
-  hasSelectedCase,
-  onSelect,
 }: {
   c: Case;
-  isSelected: boolean;
-  hasSelectedCase: boolean;
-  onSelect: (caseId: string) => void;
+  isSelected?: boolean;
+  hasSelectedCase?: boolean;
+  onSelect?: (caseId: string) => void;
 }) {
   const criticalDeadlines = c.deadlines?.filter((d) => !d.is_completed && new Date(d.deadline_date) <= new Date(Date.now() + 3 * 86400000)) || [];
   const hasCritical = criticalDeadlines.length > 0;
+  const nextDeadline = c.deadlines?.filter((d) => !d.is_completed).sort((a, b) => new Date(a.deadline_date).getTime() - new Date(b.deadline_date).getTime())[0];
+
   return (
     <motion.div
-      key={c.id}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex gap-0"
     >
-      <button
-        onClick={() => onSelect(c.id)}
-        className={`flex-1 text-left bg-[#111113] border rounded-l-xl p-4 transition-all duration-150 ${
-          isSelected
-            ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04]"
-            : "border-white/[0.06] hover:border-white/[0.10]"
-        } ${!hasSelectedCase ? "rounded-r-xl" : "border-r-0"}`}
-      >
-        <div className="flex items-center gap-2 mb-1.5">
-          {hasCritical && <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse shrink-0" title="Kritik sure" />}
-          <span className={`px-2 py-1 text-[12px] font-medium rounded ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
-            {c.status === "aktif" ? "Aktif" : c.status === "beklemede" ? "Beklemede" : "Kapandi"}
-          </span>
-          <span className="text-[12px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
-        </div>
-        <h3 className="text-[15px] font-medium text-[#ECECEE] line-clamp-1">{c.title}</h3>
-        <div className="flex items-center gap-3 mt-1.5 text-[13px] text-[#5C5C5F]">
-          {c.court && <span>{c.court}</span>}
-          {c.case_number && <span>E. {c.case_number}</span>}
-          {c.opponent && <span>vs. {c.opponent}</span>}
-        </div>
-      </button>
       <Link
         href={`/davalar/${c.id}`}
-        className={`shrink-0 w-10 bg-[#111113] border border-l-0 rounded-r-xl flex items-center justify-center text-[#5C5C5F] hover:text-[#6C6CFF] hover:bg-[#6C6CFF]/[0.03] transition-colors ${
-          isSelected
-            ? "border-[#6C6CFF]/30"
-            : "border-white/[0.06]"
-        } ${!hasSelectedCase ? "hidden" : ""}`}
-        title="Detay sayfasina git"
+        className="block bg-[#111113] border border-white/[0.06] rounded-xl p-5 hover:border-white/[0.12] hover:bg-[#141418] transition-all duration-150 group"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+        {/* Top row: status + type */}
+        <div className="flex items-center gap-2.5 mb-3">
+          {hasCritical && <span className="w-2.5 h-2.5 rounded-full bg-[#E5484D] animate-pulse shrink-0" title="Kritik süre" />}
+          <span className={`px-2.5 py-1 text-[13px] font-medium rounded-md ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+            {c.status === "aktif" ? "Aktif" : c.status === "beklemede" ? "Beklemede" : "Kapandı"}
+          </span>
+          <span className="text-[13px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
+          <svg className="ml-auto w-5 h-5 text-[#3A3A3F] group-hover:text-[#6C6CFF] transition-colors" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-[17px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors mb-2">{c.title}</h3>
+
+        {/* Meta row */}
+        <div className="flex items-center gap-4 text-[14px] text-[#5C5C5F]">
+          {c.court && <span>{c.court}</span>}
+          {c.case_number && <span className="font-mono">E. {c.case_number}</span>}
+          {c.opponent && <span>vs. {c.opponent}</span>}
+        </div>
+
+        {/* Next deadline */}
+        {nextDeadline && (
+          <div className={`mt-3 pt-3 border-t border-white/[0.04] flex items-center gap-2 text-[13px] ${hasCritical ? "text-[#E5484D]" : "text-[#FFB224]"}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <span className="font-medium">{nextDeadline.title}</span>
+            <span className="text-[#5C5C5F]">—</span>
+            <span>{nextDeadline.deadline_date}</span>
+          </div>
+        )}
       </Link>
     </motion.div>
   );
@@ -345,134 +343,45 @@ export default function DavalarPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Case list */}
-        <div className={`overflow-y-auto border-r border-white/[0.06] ${selectedCase ? "w-1/2 hidden md:block" : "w-full"}`}>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto">
           {loading ? (
-            <div className="p-4 space-y-2">
+            <div className="p-5 space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 animate-pulse">
-                  <div className="h-4 bg-[#1A1A1F] rounded w-3/4 mb-2" />
-                  <div className="h-3 bg-[#1A1A1F] rounded w-1/2" />
+                <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 animate-pulse">
+                  <div className="h-5 bg-[#1A1A1F] rounded w-3/4 mb-3" />
+                  <div className="h-4 bg-[#1A1A1F] rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : error ? (
             <div className="p-8 text-center">
-              <p className="text-[#E5484D] text-sm">{error}</p>
+              <p className="text-[#E5484D] text-[15px]">{error}</p>
             </div>
           ) : filteredCases.length === 0 ? (
-            <div className="p-8 text-center space-y-3">
-              <div className="w-10 h-10 mx-auto rounded-xl bg-[#111113] flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+            <div className="p-12 text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-xl bg-[#111113] flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
               </div>
-              <p className="text-[15px] text-[#5C5C5F]">Henüz dava dosyanız yok.</p>
+              <p className="text-[17px] text-[#5C5C5F]">Henüz dava dosyanız yok.</p>
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+                className="text-[15px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors font-medium"
               >
-                İlk davanızı oluşturun
+                İlk davanızı oluşturun →
               </button>
             </div>
           ) : (
-            <div className="p-3 space-y-2">
+            <div className="p-5 space-y-3">
               {filteredCases.map((c) => (
                 <CaseCard
                   key={c.id}
                   c={c}
-                  isSelected={selectedCase?.id === c.id}
-                  hasSelectedCase={!!selectedCase}
-                  onSelect={fetchCaseDetail}
                 />
               ))}
             </div>
           )}
         </div>
-
-        {/* Case detail */}
-        {selectedCase && (
-          <div className="w-full md:w-1/2 overflow-y-auto p-4 space-y-4 relative">
-            {detailLoading && (
-              <div className="absolute inset-0 bg-[#09090B]/60 z-10 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-[#6C6CFF] border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold text-[#ECECEE]">{selectedCase.title}</h2>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowDeleteConfirm(true)} className="px-2.5 py-1 text-[14px] font-medium text-[#E5484D] hover:bg-[#E5484D]/10 rounded-md transition-colors">Sil</button>
-                <button onClick={() => setSelectedCase(null)} className="text-[14px] text-[#5C5C5F] hover:text-[#ECECEE]">Kapat</button>
-              </div>
-            </div>
-
-            {/* Case info */}
-            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 space-y-2 text-[15px]">
-              <div className="flex"><span className="w-28 text-[#5C5C5F]">Mahkeme</span><span className="text-[#ECECEE]">{selectedCase.court || "—"}</span></div>
-              <div className="flex"><span className="w-28 text-[#5C5C5F]">Esas No</span><span className="text-[#ECECEE]">{selectedCase.case_number || "—"}</span></div>
-              <div className="flex"><span className="w-28 text-[#5C5C5F]">Karşı Taraf</span><span className="text-[#ECECEE]">{selectedCase.opponent || "—"}</span></div>
-              <div className="flex"><span className="w-28 text-[#5C5C5F]">Tür</span><span className="text-[#ECECEE]">{CASE_TYPES[selectedCase.case_type] || selectedCase.case_type}</span></div>
-              <div className="flex"><span className="w-28 text-[#5C5C5F]">Atanan</span><span className="text-[#ECECEE]">{selectedCase.assigned_to || "—"}</span></div>
-              {selectedCase.notes && (
-                <div className="pt-2 border-t border-white/[0.04]">
-                  <p className="text-[14px] text-[#8B8B8E]">{selectedCase.notes}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Deadlines */}
-            {selectedCase.deadlines && selectedCase.deadlines.length > 0 && (
-              <div>
-                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Süreler ({selectedCase.deadlines.length})</h3>
-                <div className="space-y-1.5">
-                  {selectedCase.deadlines.map((dl) => (
-                    <div key={dl.id} className={`bg-[#111113] border border-white/[0.06] rounded-lg p-3 flex items-center justify-between ${dl.is_completed ? "opacity-50" : ""}`}>
-                      <div>
-                        <p className="text-[15px] text-[#ECECEE]">{dl.title}</p>
-                        <p className="text-[13px] text-[#5C5C5F]">{dl.deadline_date}</p>
-                      </div>
-                      <span className={`text-[12px] font-medium px-2 py-0.5 rounded ${dl.is_completed ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
-                        {dl.is_completed ? "Tamamlandı" : "Bekliyor"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Saved searches */}
-            {selectedCase.saved_searches && selectedCase.saved_searches.length > 0 && (
-              <div>
-                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Kayıtlı Aramalar ({selectedCase.saved_searches.length})</h3>
-                <div className="space-y-1.5">
-                  {selectedCase.saved_searches.map((ss) => (
-                    <div key={ss.id} className="bg-[#111113] border border-white/[0.06] rounded-lg p-3">
-                      <p className="text-[15px] text-[#ECECEE]">{ss.query}</p>
-                      <p className="text-[13px] text-[#5C5C5F]">{ss.result_count} sonuç — {ss.search_type}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Documents */}
-            {selectedCase.documents && selectedCase.documents.length > 0 && (
-              <div>
-                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Belgeler ({selectedCase.documents.length})</h3>
-                <div className="space-y-1.5">
-                  {selectedCase.documents.map((doc) => (
-                    <div key={doc.id} className="bg-[#111113] border border-white/[0.06] rounded-lg p-3 flex items-center gap-3">
-                      <span className="text-[12px] font-medium px-2 py-1 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded">{doc.file_type.toUpperCase()}</span>
-                      <div>
-                        <p className="text-[15px] text-[#ECECEE]">{doc.file_name}</p>
-                        <p className="text-[13px] text-[#5C5C5F]">{doc.document_type}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Delete confirmation modal */}
