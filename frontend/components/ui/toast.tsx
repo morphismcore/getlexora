@@ -119,7 +119,7 @@ export default function Toast({ toast, position = "top-right" }: ToastProps) {
           transition={{ duration: 0.2 }}
           role="alert"
           aria-live="polite"
-          className={`${posClass} z-50 px-4 py-2.5 ${s.bg} border ${s.border} ${s.text} text-[13px] rounded-lg shadow-lg backdrop-blur-sm flex items-center gap-2`}
+          className={`${posClass} z-50 px-4 py-2.5 ${s.bg} border ${s.border} ${s.text} text-[15px] rounded-lg shadow-lg backdrop-blur-sm flex items-center gap-2`}
         >
           {typeIcons[type]}
           <span>{toast.message}</span>

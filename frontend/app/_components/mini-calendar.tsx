@@ -71,13 +71,13 @@ export default function MiniCalendar({ deadlines }: { deadlines: DashboardData["
   void lastDay;
 
   return (
-    <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-4">
+    <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <button onClick={prevMonth} className="w-7 h-7 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B8B8E" strokeWidth={2}><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <span className="text-[13px] font-semibold text-[#ECECEE]">{TR_MONTHS[month]} {year}</span>
+        <span className="text-[15px] font-semibold text-[#ECECEE]">{TR_MONTHS[month]} {year}</span>
         <button onClick={nextMonth} className="w-7 h-7 rounded-lg hover:bg-white/[0.06] flex items-center justify-center transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B8B8E" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
         </button>
@@ -86,7 +86,7 @@ export default function MiniCalendar({ deadlines }: { deadlines: DashboardData["
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {["Pzt","Sal","Car","Per","Cum","Cmt","Paz"].map(d => (
-          <div key={d} className="text-center text-[10px] text-[#3A3A3F] font-medium py-1">{d}</div>
+          <div key={d} className="text-center text-[12px] text-[#3A3A3F] font-medium py-1">{d}</div>
         ))}
       </div>
 
@@ -96,7 +96,7 @@ export default function MiniCalendar({ deadlines }: { deadlines: DashboardData["
           if (!cell.inMonth) {
             return (
               <div key={`out-${i}`} className="h-9 flex flex-col items-center justify-center rounded-lg">
-                <span className="text-[11px] text-[#3A3A3F]">{cell.day}</span>
+                <span className="text-[13px] text-[#3A3A3F]">{cell.day}</span>
               </div>
             );
           }
@@ -122,7 +122,7 @@ export default function MiniCalendar({ deadlines }: { deadlines: DashboardData["
                 ${hasDeadline ? "cursor-pointer hover:bg-white/[0.06]" : ""}
               `}
             >
-              <span className={`text-[11px] ${isToday ? "text-[#6C6CFF] font-bold" : "text-[#ECECEE]"}`}>
+              <span className={`text-[13px] ${isToday ? "text-[#6C6CFF] font-bold" : "text-[#ECECEE]"}`}>
                 {cell.day}
               </span>
               {hasDeadline && (
@@ -143,16 +143,16 @@ export default function MiniCalendar({ deadlines }: { deadlines: DashboardData["
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-2 border border-white/[0.08] bg-[#1A1A1F] rounded-xl p-3 space-y-2"
+          className="mt-2 border border-white/[0.08] bg-[#1A1A1F] rounded-xl p-4 space-y-2"
         >
-          <p className="text-[11px] font-semibold text-[#8B8B8E]">{tooltip.day} {TR_MONTHS[month]}</p>
+          <p className="text-[13px] font-semibold text-[#8B8B8E]">{tooltip.day} {TR_MONTHS[month]}</p>
           {tooltip.items.map(dl => {
             const urg = getDeadlineUrgency(dl.days_left);
             return (
               <Link key={dl.id} href={`/davalar/${dl.case_id}`} className="flex items-center gap-2 hover:bg-white/[0.04] rounded-md px-1.5 py-1 transition-colors">
                 <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${urg.dot}`} />
-                <span className="text-[11px] text-[#ECECEE] truncate flex-1">{dl.title}</span>
-                <span className={`text-[10px] font-medium ${urg.text}`}>{urg.label}</span>
+                <span className="text-[13px] text-[#ECECEE] truncate flex-1">{dl.title}</span>
+                <span className={`text-[12px] font-medium ${urg.text}`}>{urg.label}</span>
               </Link>
             );
           })}

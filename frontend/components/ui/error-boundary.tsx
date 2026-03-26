@@ -15,8 +15,8 @@ export default class ErrorBoundary extends Component<Props, State> {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth={1.5}><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
           </div>
           <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1">Bir hata oluştu</h2>
-          <p className="text-[13px] text-[#5C5C5F] mb-4 max-w-sm">Sayfa yüklenirken beklenmeyen bir hata meydana geldi.</p>
-          <button onClick={() => this.setState({ hasError: false, error: null })} className="px-4 py-2 text-[13px] font-medium text-white bg-[#6C6CFF] hover:bg-[#7B7BFF] rounded-xl transition-colors">
+          <p className="text-[15px] text-[#5C5C5F] mb-4 max-w-sm">Sayfa yüklenirken beklenmeyen bir hata meydana geldi.</p>
+          <button onClick={() => this.setState({ hasError: false, error: null })} className="px-4 py-2 text-[15px] font-medium text-white bg-[#6C6CFF] hover:bg-[#7B7BFF] rounded-xl transition-colors">
             Tekrar Dene
           </button>
         </div>

@@ -21,7 +21,7 @@ export function Field({
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">
+      <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">
         {label}
       </label>
       <input
@@ -29,7 +29,7 @@ export function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-1.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150"
+        className="w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-1.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150"
       />
     </div>
   );
@@ -49,7 +49,7 @@ export function AddBlockBtn({
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-white/[0.12] hover:text-[#ECECEE] transition-all duration-150"
+      className="inline-flex items-center gap-1 px-3 py-2 text-[13px] font-medium text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-white/[0.12] hover:text-[#ECECEE] transition-all duration-150"
     >
       <IconPlus className="w-3 h-3" />
       {label}
@@ -112,22 +112,22 @@ export function BlockEditor({
     >
       {/* Block header */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.02]">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#5C5C5F]">
+        <span className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F]">
           {typeLabel}
         </span>
         <div className="flex items-center gap-0.5">
           {confirmingDelete ? (
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-[#E5484D] font-medium">Silinsin mi?</span>
+              <span className="text-[12px] text-[#E5484D] font-medium">Silinsin mi?</span>
               <button
                 onClick={() => { onDelete(block.id); setConfirmingDelete(false); }}
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[#E5484D] bg-[#E5484D]/10 hover:bg-[#E5484D]/20 transition-colors"
+                className="px-1.5 py-0.5 rounded text-[12px] font-medium text-[#E5484D] bg-[#E5484D]/10 hover:bg-[#E5484D]/20 transition-colors"
               >
                 Evet
               </button>
               <button
                 onClick={() => setConfirmingDelete(false)}
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium text-[#5C5C5F] hover:text-[#ECECEE] transition-colors"
+                className="px-1.5 py-0.5 rounded text-[12px] font-medium text-[#5C5C5F] hover:text-[#ECECEE] transition-colors"
               >
                 Hayır
               </button>
@@ -156,7 +156,7 @@ export function BlockEditor({
             value={block.content}
             onChange={(e) => onUpdate(block.id, e.target.value)}
             placeholder="Bölüm başlığı (ör. AÇIKLAMALAR)"
-            className="w-full bg-transparent border-none text-[13px] font-bold text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none uppercase"
+            className="w-full bg-transparent border-none text-[15px] font-bold text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none uppercase"
           />
         ) : (
           <textarea
@@ -170,7 +170,7 @@ export function BlockEditor({
                 : "İçerik yazın..."
             }
             rows={block.content.length > 120 ? 4 : 2}
-            className="w-full bg-transparent border-none text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none resize-none leading-relaxed"
+            className="w-full bg-transparent border-none text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none resize-none leading-relaxed"
           />
         )}
       </div>
@@ -185,7 +185,7 @@ export function BlockEditor({
                 key={sub.id}
                 className="flex items-start gap-2 pl-4 border-l border-amber-500/30 ml-1"
               >
-                <span className="text-[12px] font-medium text-amber-500/70 mt-1.5 shrink-0">
+                <span className="text-[14px] font-medium text-amber-500/70 mt-1.5 shrink-0">
                   {letter})
                 </span>
                 <textarea
@@ -195,7 +195,7 @@ export function BlockEditor({
                   }
                   placeholder="Alt madde içeriği..."
                   rows={1}
-                  className="flex-1 bg-transparent border-none text-[12px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none resize-none leading-relaxed"
+                  className="flex-1 bg-transparent border-none text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none resize-none leading-relaxed"
                 />
                 <button
                   onClick={() => onDeleteSub(block.id, sub.id)}
@@ -208,7 +208,7 @@ export function BlockEditor({
           })}
           <button
             onClick={onAddSub}
-            className="ml-5 inline-flex items-center gap-1 text-[11px] text-[#5C5C5F] hover:text-amber-400 transition-colors"
+            className="ml-5 inline-flex items-center gap-1 text-[13px] text-[#5C5C5F] hover:text-amber-400 transition-colors"
           >
             <IconPlus className="w-3 h-3" />
             Alt Madde Ekle

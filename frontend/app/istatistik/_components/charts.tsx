@@ -56,14 +56,14 @@ export function DonutChart({
           );
         })}
         <text x={size / 2} y={size / 2 - 6} textAnchor="middle" className="fill-[#ECECEE] text-[20px] font-bold">{total}</text>
-        <text x={size / 2} y={size / 2 + 12} textAnchor="middle" className="fill-[#5C5C5F] text-[10px]">toplam</text>
+        <text x={size / 2} y={size / 2 + 12} textAnchor="middle" className="fill-[#5C5C5F] text-[12px]">toplam</text>
       </svg>
       <div className="space-y-1.5">
         {data.map((d, i) => (
           <div key={i} className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
-            <span className="text-[12px] text-[#8B8B8E]">{d.label}</span>
-            <span className="text-[12px] font-medium text-[#ECECEE] ml-auto tabular-nums">{d.value}</span>
+            <span className="text-[14px] text-[#8B8B8E]">{d.label}</span>
+            <span className="text-[14px] font-medium text-[#ECECEE] ml-auto tabular-nums">{d.value}</span>
           </div>
         ))}
       </div>
@@ -79,8 +79,8 @@ export function HorizontalBarChart({ data, colors }: { data: { label: string; va
       {data.map((d, i) => (
         <div key={i}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[12px] text-[#8B8B8E]">{d.label}</span>
-            <span className="text-[12px] font-medium text-[#ECECEE] tabular-nums">{d.value}</span>
+            <span className="text-[14px] text-[#8B8B8E]">{d.label}</span>
+            <span className="text-[14px] font-medium text-[#ECECEE] tabular-nums">{d.value}</span>
           </div>
           <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
             <motion.div className="h-full rounded-full" style={{ backgroundColor: colors[i % colors.length] }}
@@ -160,7 +160,7 @@ export function HeroStat({ label, target, icon, color }: { label: string; target
     <motion.div ref={ref} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 relative overflow-hidden group hover:border-white/[0.10] transition-colors">
       <div className="absolute top-3 right-3 opacity-10 group-hover:opacity-20 transition-opacity" style={{ color }}>{icon}</div>
-      <p className="text-[11px] text-[#5C5C5F] uppercase tracking-wider font-medium mb-2">{label}</p>
+      <p className="text-[13px] text-[#5C5C5F] uppercase tracking-wider font-medium mb-2">{label}</p>
       <p className="text-[32px] font-bold text-[#ECECEE] leading-none tabular-nums">{count.toLocaleString("tr-TR")}</p>
     </motion.div>
   );
@@ -174,12 +174,12 @@ export function ChamberBarChart({ data }: { data: ChamberStat[] }) {
     <div className="space-y-2">
       {data.map((item, i) => (
         <div key={i} className="flex items-center gap-3">
-          <span className="text-[12px] text-[#8B8B8E] w-[180px] truncate flex-shrink-0 text-right">{item.daire}</span>
+          <span className="text-[14px] text-[#8B8B8E] w-[180px] truncate flex-shrink-0 text-right">{item.daire}</span>
           <div className="flex-1 h-7 bg-[#16161A] rounded-md overflow-hidden relative">
             <motion.div className="h-full rounded-md bg-[#6C6CFF]"
               initial={{ width: 0 }} animate={{ width: `${Math.max((item.count / maxCount) * 100, 2)}%` }}
               transition={{ duration: 0.5, delay: i * 0.04 }} />
-            <span className="absolute inset-y-0 right-2 flex items-center text-[11px] font-medium text-[#ECECEE]">
+            <span className="absolute inset-y-0 right-2 flex items-center text-[13px] font-medium text-[#ECECEE]">
               {item.count} ({item.percentage}%)
             </span>
           </div>
@@ -197,11 +197,11 @@ export function YearBarChart({ data }: { data: YearStat[] }) {
     <div className="flex items-end gap-2 h-[140px]">
       {data.map((item, i) => (
         <div key={i} className="flex-1 flex flex-col items-center justify-end h-full min-w-0">
-          <span className="text-[11px] font-medium text-[#ECECEE] mb-1">{item.count}</span>
+          <span className="text-[13px] font-medium text-[#ECECEE] mb-1">{item.count}</span>
           <motion.div className="w-full rounded-t-md bg-[#6C6CFF]"
             initial={{ height: 0 }} animate={{ height: `${Math.max((item.count / maxCount) * 100, 4)}%` }}
             transition={{ duration: 0.5, delay: i * 0.06 }} />
-          <span className="text-[11px] text-[#5C5C5F] mt-1.5">{item.year}</span>
+          <span className="text-[13px] text-[#5C5C5F] mt-1.5">{item.year}</span>
         </div>
       ))}
     </div>

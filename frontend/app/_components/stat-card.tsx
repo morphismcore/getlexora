@@ -29,7 +29,7 @@ export default function StatCard({ label, value, color, icon, delay, sub }: { la
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="group bg-[#111113] border border-white/[0.06] rounded-2xl p-5 hover:border-white/[0.12] hover:bg-[#16161A] transition-all duration-200 hover:-translate-y-0.5"
+      className="group bg-[#111113] border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.12] hover:bg-[#16161A] transition-all duration-200 hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between mb-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${color.replace("text-", "bg-").replace("]", "]/10]")} group-hover:scale-110`}>
@@ -37,8 +37,8 @@ export default function StatCard({ label, value, color, icon, delay, sub }: { la
         </div>
       </div>
       <p className={`text-[28px] font-bold tabular-nums ${color}`}>{count.toLocaleString("tr-TR")}</p>
-      <p className="text-[12px] text-[#5C5C5F] mt-1">{label}</p>
-      {sub && <p className="text-[10px] text-[#3A3A3F] mt-0.5">{sub}</p>}
+      <p className="text-[14px] text-[#5C5C5F] mt-1">{label}</p>
+      {sub && <p className="text-[12px] text-[#3A3A3F] mt-0.5">{sub}</p>}
     </motion.div>
   );
 }

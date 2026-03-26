@@ -179,7 +179,7 @@ export default function HolidaysTab({
             <button
               key={y}
               onClick={() => setSelectedYear(y)}
-              className={`px-4 py-2 text-[13px] font-medium rounded-md transition-all ${
+              className={`px-4 py-2 text-[15px] font-medium rounded-md transition-all ${
                 selectedYear === y
                   ? "bg-[#6C6CFF]/15 text-[#6C6CFF]"
                   : "text-[#5C5C5F] hover:text-[#8B8B8E]"
@@ -192,7 +192,7 @@ export default function HolidaysTab({
         <div className="flex gap-2">
           <button
             onClick={() => setShowNewRecess(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-[#A78BFA] bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-[14px] font-medium text-[#A78BFA] bg-[#A78BFA]/10 hover:bg-[#A78BFA]/20 rounded-lg transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             Adli Tatil
@@ -202,7 +202,7 @@ export default function HolidaysTab({
               setShowNewHoliday(true);
               setHolidayForm({ date: "", name: "", type: "resmi", is_half_day: false });
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[12px] font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[14px] font-medium rounded-lg transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             Yeni Tatil
@@ -219,11 +219,11 @@ export default function HolidaysTab({
 
           return (
             <div key={monthIndex} className="bg-[#111113] border border-white/[0.06] rounded-xl p-3">
-              <h4 className="text-[12px] font-semibold text-[#ECECEE] mb-2">{MONTHS_TR[monthIndex]}</h4>
+              <h4 className="text-[14px] font-semibold text-[#ECECEE] mb-2">{MONTHS_TR[monthIndex]}</h4>
               <div className="grid grid-cols-7 gap-0.5 text-center">
                 {/* Day headers */}
                 {["Pt", "Sa", "Ca", "Pe", "Cu", "Ct", "Pa"].map((d) => (
-                  <span key={d} className="text-[9px] text-[#5C5C5F] font-medium pb-0.5">{d}</span>
+                  <span key={d} className="text-[11px] text-[#5C5C5F] font-medium pb-0.5">{d}</span>
                 ))}
                 {/* Empty slots */}
                 {Array.from({ length: startDow }, (_, i) => (
@@ -255,7 +255,7 @@ export default function HolidaysTab({
                   return (
                     <span
                       key={day}
-                      className={`text-[10px] w-6 h-6 flex items-center justify-center rounded-md ${bgColor} ${textColor} ${hasHoliday ? "font-semibold cursor-help" : ""} ${isHalf ? "relative" : ""}`}
+                      className={`text-[12px] w-6 h-6 flex items-center justify-center rounded-md ${bgColor} ${textColor} ${hasHoliday ? "font-semibold cursor-help" : ""} ${isHalf ? "relative" : ""}`}
                       title={tooltipText || undefined}
                     >
                       {day}
@@ -273,45 +273,45 @@ export default function HolidaysTab({
       <div className="flex flex-wrap gap-4 px-1">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-[#6C6CFF]/20 border border-[#6C6CFF]/40" />
-          <span className="text-[11px] text-[#8B8B8E]">Resmi Tatil</span>
+          <span className="text-[13px] text-[#8B8B8E]">Resmi Tatil</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-[#A78BFA]/20 border border-[#A78BFA]/40" />
-          <span className="text-[11px] text-[#8B8B8E]">Dini Bayram</span>
+          <span className="text-[13px] text-[#8B8B8E]">Dini Bayram</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-[#FB923C]/20 border border-[#FB923C]/40" />
-          <span className="text-[11px] text-[#8B8B8E]">Arife</span>
+          <span className="text-[13px] text-[#8B8B8E]">Arife</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-[#E5484D]/10 border border-[#E5484D]/20" />
-          <span className="text-[11px] text-[#8B8B8E]">Adli Tatil</span>
+          <span className="text-[13px] text-[#8B8B8E]">Adli Tatil</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="relative w-3 h-3 rounded bg-white/[0.04]"><span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#FB923C]" /></span>
-          <span className="text-[11px] text-[#8B8B8E]">Yarim Gun</span>
+          <span className="text-[13px] text-[#8B8B8E]">Yarim Gun</span>
         </div>
       </div>
 
       {/* Holidays table */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Tatil Listesi ({holidays.length})</h3>
+          <h3 className="text-[15px] font-semibold text-[#ECECEE]">Tatil Listesi ({holidays.length})</h3>
         </div>
         {holidays.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-[12px] text-[#5C5C5F]">{selectedYear} yili icin tatil verisi yok.</p>
+            <p className="text-[14px] text-[#5C5C5F]">{selectedYear} yili icin tatil verisi yok.</p>
             <button
               onClick={() => setShowNewHoliday(true)}
-              className="mt-3 px-4 py-2 text-[12px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 hover:bg-[#6C6CFF]/20 rounded-lg transition-colors"
+              className="mt-3 px-4 py-2 text-[14px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 hover:bg-[#6C6CFF]/20 rounded-lg transition-colors"
             >
               + Ilk tatili ekle
             </button>
           </div>
         ) : (
-          <table className="w-full text-[13px]">
+          <table className="w-full text-[15px]">
             <thead>
-              <tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[11px] uppercase tracking-wider">
+              <tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[13px] uppercase tracking-wider">
                 <th className="text-left p-3">Tarih</th>
                 <th className="text-left p-3">Ad</th>
                 <th className="text-left p-3">Tur</th>
@@ -326,20 +326,20 @@ export default function HolidaysTab({
                   const htLabel = HOLIDAY_TYPE_LABELS[h.holiday_type] || { label: h.holiday_type, color: "#8B8B8E", bg: "bg-[#8B8B8E]/10" };
                   return (
                     <tr key={h.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="p-3 text-[#ECECEE] font-mono text-[12px]">
+                      <td className="p-3 text-[#ECECEE] font-mono text-[14px]">
                         {new Date(h.date + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "short" })}
                       </td>
                       <td className="p-3 text-[#ECECEE]">{h.name}</td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 text-[10px] font-medium rounded-md" style={{ color: htLabel.color, backgroundColor: `${htLabel.color}15` }}>
+                        <span className="px-2 py-0.5 text-[12px] font-medium rounded-md" style={{ color: htLabel.color, backgroundColor: `${htLabel.color}15` }}>
                           {htLabel.label}
                         </span>
                       </td>
                       <td className="p-3">
                         {h.is_half_day ? (
-                          <span className="text-[#FB923C] text-[11px]">Evet</span>
+                          <span className="text-[#FB923C] text-[13px]">Evet</span>
                         ) : (
-                          <span className="text-[#5C5C5F] text-[11px]">—</span>
+                          <span className="text-[#5C5C5F] text-[13px]">—</span>
                         )}
                       </td>
                       <td className="p-3 text-right">
@@ -371,11 +371,11 @@ export default function HolidaysTab({
       {/* Judicial Recesses section */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Adli Tatil Donemleri</h3>
+          <h3 className="text-[15px] font-semibold text-[#ECECEE]">Adli Tatil Donemleri</h3>
         </div>
         {recesses.length === 0 ? (
           <div className="text-center py-6 bg-[#09090B] rounded-lg border border-dashed border-white/[0.06]">
-            <p className="text-[12px] text-[#5C5C5F]">Henuz adli tatil donemi tanimlanmamis.</p>
+            <p className="text-[14px] text-[#5C5C5F]">Henuz adli tatil donemi tanimlanmamis.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -386,12 +386,12 @@ export default function HolidaysTab({
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[14px] font-semibold text-[#ECECEE]">{recess.year}</span>
-                        <span className="text-[12px] text-[#A78BFA]">
+                        <span className="text-[16px] font-semibold text-[#ECECEE]">{recess.year}</span>
+                        <span className="text-[14px] text-[#A78BFA]">
                           {new Date(recess.start_date + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long" })} - {new Date(recess.end_date + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
                         </span>
                       </div>
-                      <div className="flex gap-4 text-[11px]">
+                      <div className="flex gap-4 text-[13px]">
                         <span className="text-[#8B8B8E]">
                           Hukuk uzatma: <span className="text-[#6C6CFF] font-medium">{recess.civil_extension_days} gun</span>
                         </span>
@@ -434,7 +434,7 @@ export default function HolidaysTab({
               type="date"
               value={holidayForm.date}
               onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
-              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]"
+              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]"
             />
           </FormField>
           <FormField label="Tatil Adi">
@@ -443,14 +443,14 @@ export default function HolidaysTab({
               value={holidayForm.name}
               onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
               placeholder="orn. Cumhuriyet Bayrami"
-              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
             />
           </FormField>
           <FormField label="Tatil Turu">
             <select
               value={holidayForm.type}
               onChange={(e) => setHolidayForm({ ...holidayForm, type: e.target.value })}
-              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+              className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
             >
               {Object.entries(HOLIDAY_TYPE_LABELS).map(([k, v]) => (
                 <option key={k} value={k} className="bg-[#16161A]">{v.label}</option>
@@ -465,13 +465,13 @@ export default function HolidaysTab({
                 onChange={(e) => setHolidayForm({ ...holidayForm, is_half_day: e.target.checked })}
                 className="accent-[#6C6CFF] w-4 h-4"
               />
-              <span className="text-[13px] text-[#ECECEE]">Yarim gun tatil</span>
+              <span className="text-[15px] text-[#ECECEE]">Yarim gun tatil</span>
             </label>
           </FormField>
           <button
             onClick={createHoliday}
             disabled={!holidayForm.date || !holidayForm.name}
-            className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[13px] font-medium rounded-lg transition-colors"
+            className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[15px] font-medium rounded-lg transition-colors"
           >
             Tatil Ekle
           </button>
@@ -525,25 +525,25 @@ function EditHolidayForm({ holiday, onSave, onCancel }: { holiday: Holiday; onSa
   return (
     <div className="space-y-5">
       <FormField label="Tarih">
-        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
+        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
       </FormField>
       <FormField label="Tatil Adi">
-        <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+        <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
       </FormField>
       <FormField label="Tatil Turu">
-        <select value={form.holiday_type} onChange={(e) => setForm({ ...form, holiday_type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
+        <select value={form.holiday_type} onChange={(e) => setForm({ ...form, holiday_type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
           {Object.entries(HOLIDAY_TYPE_LABELS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v.label}</option>)}
         </select>
       </FormField>
       <FormField label="Yarim Gun">
         <label className="flex items-center gap-2 cursor-pointer mt-1">
           <input type="checkbox" checked={form.is_half_day} onChange={(e) => setForm({ ...form, is_half_day: e.target.checked })} className="accent-[#6C6CFF] w-4 h-4" />
-          <span className="text-[13px] text-[#ECECEE]">Yarim gun tatil</span>
+          <span className="text-[15px] text-[#ECECEE]">Yarim gun tatil</span>
         </label>
       </FormField>
       <div className="flex gap-3 pt-2">
-        <button onClick={() => onSave(form)} className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[13px] font-medium rounded-lg transition-colors">Kaydet</button>
-        <button onClick={onCancel} className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[13px] font-medium rounded-lg transition-colors">Iptal</button>
+        <button onClick={() => onSave(form)} className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[15px] font-medium rounded-lg transition-colors">Kaydet</button>
+        <button onClick={onCancel} className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[15px] font-medium rounded-lg transition-colors">Iptal</button>
       </div>
     </div>
   );
@@ -565,30 +565,30 @@ function RecessFormFields({
   return (
     <div className="space-y-5">
       <FormField label="Yil">
-        <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || 2026 })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+        <input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) || 2026 })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Baslangic Tarihi">
-          <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
+          <input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
         </FormField>
         <FormField label="Bitis Tarihi">
-          <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
+          <input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 [color-scheme:dark]" />
         </FormField>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <FormField label="Hukuk Uzatma (gun)">
-          <input type="number" value={form.civil_extension_days} onChange={(e) => setForm({ ...form, civil_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+          <input type="number" value={form.civil_extension_days} onChange={(e) => setForm({ ...form, civil_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
         </FormField>
         <FormField label="Ceza Uzatma (gun)">
-          <input type="number" value={form.criminal_extension_days} onChange={(e) => setForm({ ...form, criminal_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+          <input type="number" value={form.criminal_extension_days} onChange={(e) => setForm({ ...form, criminal_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
         </FormField>
         <FormField label="Idari Uzatma (gun)">
-          <input type="number" value={form.administrative_extension_days} onChange={(e) => setForm({ ...form, administrative_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+          <input type="number" value={form.administrative_extension_days} onChange={(e) => setForm({ ...form, administrative_extension_days: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
         </FormField>
       </div>
       <div className="flex gap-3 pt-2">
-        <button onClick={() => onSave(form)} className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[13px] font-medium rounded-lg transition-colors">Kaydet</button>
-        <button onClick={onCancel} className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[13px] font-medium rounded-lg transition-colors">Iptal</button>
+        <button onClick={() => onSave(form)} className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[15px] font-medium rounded-lg transition-colors">Kaydet</button>
+        <button onClick={onCancel} className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[15px] font-medium rounded-lg transition-colors">Iptal</button>
       </div>
     </div>
   );

@@ -148,7 +148,7 @@ export function BaroDropdown({
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Baro ara..."
-                  className="w-full bg-[#111113] border border-white/[0.06] rounded-lg pl-8 pr-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                  className="w-full bg-[#111113] border border-white/[0.06] rounded-lg pl-8 pr-3 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
                 />
               </div>
             </div>
@@ -156,7 +156,7 @@ export function BaroDropdown({
             {/* List */}
             <div ref={listRef} className="max-h-52 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-4 text-center text-[12px] text-[#5C5C5F]">Sonuç bulunamadı</div>
+                <div className="px-3 py-4 text-center text-[14px] text-[#5C5C5F]">Sonuç bulunamadı</div>
               ) : (
                 filtered.map((b, i) => (
                   <button
@@ -168,7 +168,7 @@ export function BaroDropdown({
                       setOpen(false);
                     }}
                     onMouseEnter={() => setActiveIdx(i)}
-                    className={`w-full text-left px-3 py-2 text-[13px] flex items-center justify-between transition-colors ${
+                    className={`w-full text-left px-3 py-2.5 text-[15px] flex items-center justify-between transition-colors ${
                       i === activeIdx ? "bg-[#6C6CFF]/[0.08] text-[#ECECEE]" : "text-[#8B8B8E] hover:bg-white/[0.03]"
                     } ${value === b ? "text-[#6C6CFF]" : ""}`}
                   >
@@ -184,7 +184,7 @@ export function BaroDropdown({
             </div>
 
             {/* Count */}
-            <div className="px-3 py-1.5 border-t border-white/[0.06] text-[10px] text-[#5C5C5F]">
+            <div className="px-3 py-1.5 border-t border-white/[0.06] text-[12px] text-[#5C5C5F]">
               {filtered.length} baro
             </div>
           </motion.div>

@@ -16,7 +16,7 @@ export function FormatIcon({ ext, size = 32, bounce = false }: { ext: string; si
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={info.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
         <path d="M14 2v6h6" stroke={info.color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: info.color }}>{info.label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: info.color }}>{info.label}</span>
     </motion.div>
   );
 }
@@ -24,12 +24,12 @@ export function FormatIcon({ ext, size = 32, bounce = false }: { ext: string; si
 /* ─── Entity Card ─── */
 export function EntityCard({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="bg-[#09090B] border border-white/[0.04] rounded-xl p-3">
+    <div className="bg-[#09090B] border border-white/[0.04] rounded-xl p-4">
       <div className="flex items-center gap-1.5 mb-1">
         {icon}
-        <span className="text-[10px] uppercase tracking-wider text-[#5C5C5F] font-medium">{label}</span>
+        <span className="text-[12px] uppercase tracking-wider text-[#5C5C5F] font-medium">{label}</span>
       </div>
-      <p className="text-[13px] text-[#ECECEE]">{value}</p>
+      <p className="text-[15px] text-[#ECECEE]">{value}</p>
     </div>
   );
 }
@@ -39,8 +39,8 @@ export function UploadProgressBar({ progress }: { progress: number }) {
   return (
     <div className="w-full max-w-xs">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] text-[#8B8B8E]">Yükleniyor...</span>
-        <span className="text-[11px] font-mono text-[#6C6CFF] tabular-nums">%{Math.round(progress)}</span>
+        <span className="text-[13px] text-[#8B8B8E]">Yükleniyor...</span>
+        <span className="text-[13px] font-mono text-[#6C6CFF] tabular-nums">%{Math.round(progress)}</span>
       </div>
       <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
         <motion.div

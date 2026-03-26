@@ -79,7 +79,7 @@ export default function KayitPage() {
     }
   }, [form]);
 
-  const inputCls = "w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-3 text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200";
+  const inputCls = "w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-3.5 text-[16px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200";
 
   // Success state
   if (success) {
@@ -101,12 +101,12 @@ export default function KayitPage() {
             </svg>
           </motion.div>
           <div>
-            <h2 className="text-[22px] font-semibold text-[#ECECEE]">Kaydiniz Alindi!</h2>
-            <p className="text-[14px] text-[#8B8B8E] mt-2 max-w-xs mx-auto">
+            <h2 className="text-[26px] font-semibold text-[#ECECEE]">Kaydiniz Alindi!</h2>
+            <p className="text-[16px] text-[#8B8B8E] mt-2 max-w-xs mx-auto">
               Hesabiniz admin onayi bekliyor. Onaylandiginda e-posta ile bilgilendirileceksiniz.
             </p>
           </div>
-          <Link href="/giris" className="inline-block px-8 py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] rounded-xl text-[14px] font-semibold text-white hover:from-[#5B5BEE] hover:to-[#6C6CFF] transition-all">
+          <Link href="/giris" className="inline-block px-8 py-3.5 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] rounded-xl text-[16px] font-semibold text-white hover:from-[#5B5BEE] hover:to-[#6C6CFF] transition-all">
             Giris Sayfasina Don
           </Link>
         </motion.div>
@@ -127,7 +127,7 @@ export default function KayitPage() {
             <span className="text-white text-2xl font-bold">L</span>
           </div>
           <h1 className="text-[24px] font-semibold text-[#ECECEE] tracking-tight">Hesap Olusturun</h1>
-          <p className="text-[13px] text-[#5C5C5F] mt-1">3 adimda ucretsiz kayit</p>
+          <p className="text-[15px] text-[#5C5C5F] mt-1">3 adimda ucretsiz kayit</p>
         </div>
 
         {/* Step Progress */}
@@ -135,7 +135,7 @@ export default function KayitPage() {
           {STEPS.map((s, i) => (
             <div key={i} className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-300 ${
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[14px] font-bold transition-all duration-300 ${
                   i < step ? "bg-[#3DD68C] text-white" :
                   i === step ? "bg-[#6C6CFF] text-white glow-accent" :
                   "bg-[#1A1A1F] text-[#5C5C5F]"
@@ -149,7 +149,7 @@ export default function KayitPage() {
                   )}
                 </div>
                 <div className="hidden sm:block">
-                  <p className={`text-[11px] font-medium ${i === step ? "text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
+                  <p className={`text-[13px] font-medium ${i === step ? "text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
                     {s.title}
                   </p>
                 </div>
@@ -180,20 +180,20 @@ export default function KayitPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label htmlFor="kayit-fullname" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Ad Soyad *</label>
+                  <label htmlFor="kayit-fullname" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Ad Soyad *</label>
                   <input id="kayit-fullname" type="text" value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="Av. Mehmet Demir" className={inputCls} />
                 </div>
                 <div>
-                  <label htmlFor="kayit-email" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">E-posta *</label>
+                  <label htmlFor="kayit-email" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">E-posta *</label>
                   <input id="kayit-email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="avukat@ornek.com" className={inputCls} />
                 </div>
                 <div>
-                  <label htmlFor="kayit-password" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre * (en az 8 karakter)</label>
+                  <label htmlFor="kayit-password" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Sifre * (en az 8 karakter)</label>
                   <input id="kayit-password" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="••••••••" className={inputCls} />
                   {form.password && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px]" style={{ color: pwStrength.color }}>{pwStrength.label}</span>
+                        <span className="text-[13px]" style={{ color: pwStrength.color }}>{pwStrength.label}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-[#1A1A1F] overflow-hidden">
                         <motion.div
@@ -207,10 +207,10 @@ export default function KayitPage() {
                   )}
                 </div>
                 <div>
-                  <label htmlFor="kayit-password-confirm" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Sifre Tekrar *</label>
+                  <label htmlFor="kayit-password-confirm" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Sifre Tekrar *</label>
                   <input id="kayit-password-confirm" type="password" value={form.password_confirm} onChange={(e) => update("password_confirm", e.target.value)} placeholder="••••••••" className={inputCls} />
                   {form.password_confirm && form.password !== form.password_confirm && (
-                    <p className="text-[11px] text-[#E5484D] mt-1">Sifreler eslesmiyor</p>
+                    <p className="text-[13px] text-[#E5484D] mt-1">Sifreler eslesmiyor</p>
                   )}
                 </div>
               </motion.div>
@@ -226,7 +226,7 @@ export default function KayitPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Baro</label>
+                  <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Baro</label>
                   <BaroDropdown
                     value={form.baro}
                     onChange={(v) => update("baro", v)}
@@ -234,11 +234,11 @@ export default function KayitPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Baro Sicil Numarasi</label>
+                  <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Baro Sicil Numarasi</label>
                   <input type="text" value={form.baro_sicil_no} onChange={(e) => update("baro_sicil_no", e.target.value)} placeholder="12345" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Telefon</label>
+                  <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Telefon</label>
                   <input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="0532 123 4567" className={inputCls} />
                 </div>
               </motion.div>
@@ -273,8 +273,8 @@ export default function KayitPage() {
                     </div>
                   </label>
                   <div>
-                    <p className="text-[13px] font-medium text-[#ECECEE]">Hukuk Burosu Olustur</p>
-                    <p className="text-[11px] text-[#5C5C5F]">Ekibinizi yonetin (istege bagli)</p>
+                    <p className="text-[15px] font-medium text-[#ECECEE]">Hukuk Burosu Olustur</p>
+                    <p className="text-[13px] text-[#5C5C5F]">Ekibinizi yonetin (istege bagli)</p>
                   </div>
                 </div>
 
@@ -287,11 +287,11 @@ export default function KayitPage() {
                       className="space-y-4 overflow-hidden"
                     >
                       <div>
-                        <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Buro Adi *</label>
+                        <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Buro Adi *</label>
                         <input type="text" value={form.firma_adi} onChange={(e) => update("firma_adi", e.target.value)} placeholder="Yildirim & Partners" className={inputCls} />
                       </div>
                       <div>
-                        <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">Buro E-postasi</label>
+                        <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">Buro E-postasi</label>
                         <input type="email" value={form.firma_email} onChange={(e) => update("firma_email", e.target.value)} placeholder="info@buro.com" className={inputCls} />
                       </div>
                     </motion.div>
@@ -317,7 +317,7 @@ export default function KayitPage() {
                       </motion.svg>
                     )}
                   </div>
-                  <span className="text-[12px] text-[#5C5C5F] leading-relaxed">
+                  <span className="text-[14px] text-[#5C5C5F] leading-relaxed">
                     Kullanim Sartlari ve Gizlilik Politikasi&apos;ni okudum ve kabul ediyorum.
                   </span>
                 </label>
@@ -333,7 +333,7 @@ export default function KayitPage() {
               className="mt-4 bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 flex items-center gap-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth={2}><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
-              <span className="text-[13px] text-[#E5484D]">{error}</span>
+              <span className="text-[15px] text-[#E5484D]">{error}</span>
             </motion.div>
           )}
 
@@ -342,7 +342,7 @@ export default function KayitPage() {
             {step > 0 && (
               <button
                 onClick={() => { setStep(step - 1); setError(null); }}
-                className="px-5 py-3 text-[13px] font-medium text-[#8B8B8E] hover:text-[#ECECEE] border border-white/[0.06] hover:border-white/[0.10] rounded-xl transition-all"
+                className="px-5 py-3.5 text-[15px] font-medium text-[#8B8B8E] hover:text-[#ECECEE] border border-white/[0.06] hover:border-white/[0.10] rounded-xl transition-all"
               >
                 Geri
               </button>
@@ -350,7 +350,7 @@ export default function KayitPage() {
             <button
               onClick={handleNext}
               disabled={!canNext() || loading}
-              className="flex-1 py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/20 disabled:to-[#6C6CFF]/20 disabled:cursor-not-allowed rounded-xl text-[14px] font-semibold text-white transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3.5 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/20 disabled:to-[#6C6CFF]/20 disabled:cursor-not-allowed rounded-xl text-[16px] font-semibold text-white transition-all flex items-center justify-center gap-2"
             >
               {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {step === 2 ? (loading ? "Kaydediliyor..." : "Kayit Ol") : "Devam Et"}
@@ -359,7 +359,7 @@ export default function KayitPage() {
         </div>
 
         {/* Login link */}
-        <p className="text-center text-[14px] text-[#5C5C5F]">
+        <p className="text-center text-[16px] text-[#5C5C5F]">
           Zaten hesabiniz var mi?{" "}
           <Link href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] font-medium transition-colors">
             Giris Yap

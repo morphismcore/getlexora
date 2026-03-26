@@ -15,7 +15,7 @@ export function PreviewContent({ doc }: { doc: DocumentState }) {
       {/* Court header */}
       {h.mahkeme && (
         <div className="text-center mb-8">
-          <p className="font-bold text-[16px] uppercase tracking-wide">
+          <p className="font-bold text-[18px] uppercase tracking-wide">
             {h.mahkeme.toLocaleUpperCase("tr")}&apos;NE
           </p>
         </div>
@@ -23,7 +23,7 @@ export function PreviewContent({ doc }: { doc: DocumentState }) {
 
       {/* Parties */}
       {hasHeader && (
-        <div className="mb-6 space-y-1 text-[13px]">
+        <div className="mb-6 space-y-1 text-[15px]">
           {(h.davaci || h.davaci_tc || h.davaci_adres || h.davaci_vekili) && (
             <div className="space-y-0.5">
               <div className="flex">
@@ -83,7 +83,7 @@ export function PreviewContent({ doc }: { doc: DocumentState }) {
           case "section_header":
             return (
               <div key={block.id} className="mt-6 mb-3">
-                <h3 className="font-bold text-[15px] uppercase tracking-wide border-b border-[#CCC] pb-1">
+                <h3 className="font-bold text-[17px] uppercase tracking-wide border-b border-[#CCC] pb-1">
                   {block.content || "(Bölüm başlığı)"}
                 </h3>
               </div>
@@ -135,7 +135,7 @@ export function PreviewContent({ doc }: { doc: DocumentState }) {
             return (
               <div
                 key={block.id}
-                className="mb-2 ml-4 pl-3 border-l-2 border-purple-400/40 italic text-[13px] text-[#444] font-mono"
+                className="mb-2 ml-4 pl-3 border-l-2 border-purple-400/40 italic text-[15px] text-[#444] font-mono"
               >
                 {block.content || "(Kanun referansı)"}
               </div>
@@ -162,9 +162,9 @@ export function PreviewContent({ doc }: { doc: DocumentState }) {
 
       {/* Empty state */}
       {!hasHeader && doc.blocks.length === 0 && (
-        <div className="text-center py-16 text-[#999] text-[13px]">
+        <div className="text-center py-16 text-[#999] text-[15px]">
           <p>Sol panelden belgenizi oluşturmaya başlayın.</p>
-          <p className="mt-1 text-[12px]">
+          <p className="mt-1 text-[14px]">
             Başlık bilgilerini doldurun ve bloklar ekleyin.
           </p>
         </div>

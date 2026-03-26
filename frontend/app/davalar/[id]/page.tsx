@@ -15,20 +15,20 @@ import OlaylarTab from "./olaylar-tab";
 function OzetTab({ caseData }: { caseData: CaseDetail }) {
   return (
     <div className="space-y-4">
-      <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-3 text-[13px]">
+      <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-3 text-[15px]">
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Mahkeme</span><span className="text-[#ECECEE]">{caseData.court || "\u2014"}</span></div>
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Esas No</span><span className="text-[#ECECEE]">{caseData.case_number || "\u2014"}</span></div>
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Karsi Taraf</span><span className="text-[#ECECEE]">{caseData.opponent || "\u2014"}</span></div>
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Tur</span><span className="text-[#ECECEE]">{CASE_TYPES[caseData.case_type] || caseData.case_type}</span></div>
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Durum</span>
-          <span className={`px-2 py-0.5 text-[11px] font-medium rounded ${STATUS_COLORS[caseData.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+          <span className={`px-2.5 py-1 text-[13px] font-medium rounded ${STATUS_COLORS[caseData.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
             {caseData.status === "aktif" ? "Aktif" : caseData.status === "beklemede" ? "Beklemede" : "Kapandi"}
           </span>
         </div>
         <div className="flex"><span className="w-32 text-[#5C5C5F] shrink-0">Atanan</span><span className="text-[#ECECEE]">{caseData.assigned_to || "\u2014"}</span></div>
         {caseData.notes && (
           <div className="pt-3 border-t border-white/[0.04]">
-            <p className="text-[12px] text-[#8B8B8E]">{caseData.notes}</p>
+            <p className="text-[14px] text-[#8B8B8E]">{caseData.notes}</p>
           </div>
         )}
       </div>
@@ -46,7 +46,7 @@ function PlaceholderTab({ title }: { title: string }) {
           <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       </div>
-      <p className="text-[13px] text-[#5C5C5F]">{title} yakin zamanda eklenecek</p>
+      <p className="text-[15px] text-[#5C5C5F]">{title} yakin zamanda eklenecek</p>
     </div>
   );
 }
@@ -107,13 +107,13 @@ export default function CaseDetailPage() {
           <div className="w-14 h-14 rounded-2xl bg-[#E5484D]/10 flex items-center justify-center mx-auto">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth={1.5}><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
-          <p className="text-[14px] text-[#ECECEE]">Dava yuklenemedi</p>
-          <p className="text-[12px] text-[#5C5C5F]">{error}</p>
+          <p className="text-[16px] text-[#ECECEE]">Dava yuklenemedi</p>
+          <p className="text-[14px] text-[#5C5C5F]">{error}</p>
           <div className="flex items-center justify-center gap-3">
-            <button onClick={fetchCase} className="px-5 py-2 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-xl text-[13px] font-medium hover:bg-[#6C6CFF]/20 transition-colors">
+            <button onClick={fetchCase} className="px-5 py-2 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-xl text-[15px] font-medium hover:bg-[#6C6CFF]/20 transition-colors">
               Tekrar Dene
             </button>
-            <Link href="/davalar" className="px-5 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
+            <Link href="/davalar" className="px-5 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
               Davalara Don
             </Link>
           </div>
@@ -127,7 +127,7 @@ export default function CaseDetailPage() {
       {/* Header */}
       <div className="sticky top-0 z-30 bg-[#09090B] border-b border-white/[0.06]">
         <div className="px-4 md:px-6 pt-14 md:pt-5 pb-0">
-          <div className="flex items-center gap-2 text-[12px] text-[#5C5C5F] mb-2">
+          <div className="flex items-center gap-2 text-[14px] text-[#5C5C5F] mb-2">
             <Link href="/davalar" className="hover:text-[#ECECEE] transition-colors">Dava Dosyalari</Link>
             <span>/</span>
             <span className="text-[#8B8B8E] truncate">{caseData.title}</span>
@@ -136,11 +136,11 @@ export default function CaseDetailPage() {
             <div className="min-w-0">
               <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE] truncate">{caseData.title}</h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className={`px-2 py-0.5 text-[10px] font-medium rounded ${STATUS_COLORS[caseData.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+                <span className={`px-2.5 py-1 text-[12px] font-medium rounded ${STATUS_COLORS[caseData.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
                   {caseData.status === "aktif" ? "Aktif" : caseData.status === "beklemede" ? "Beklemede" : "Kapandi"}
                 </span>
-                {caseData.court && <span className="text-[12px] text-[#5C5C5F]">{caseData.court}</span>}
-                {caseData.case_number && <span className="text-[12px] text-[#5C5C5F]">E. {caseData.case_number}</span>}
+                {caseData.court && <span className="text-[14px] text-[#5C5C5F]">{caseData.court}</span>}
+                {caseData.case_number && <span className="text-[14px] text-[#5C5C5F]">E. {caseData.case_number}</span>}
               </div>
             </div>
           </div>
@@ -151,7 +151,7 @@ export default function CaseDetailPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`relative px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+                className={`relative px-4 py-2.5 text-[15px] font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.key ? "text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"
                 }`}
               >

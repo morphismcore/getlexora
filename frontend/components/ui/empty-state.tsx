@@ -53,11 +53,11 @@ export default function EmptyState({ icon, title, description, action }: EmptySt
           )}
         </div>
       </motion.div>
-      <motion.h3 variants={itemVariants} className="text-[14px] font-medium text-text-secondary">
+      <motion.h3 variants={itemVariants} className="text-[16px] font-medium text-text-secondary">
         {title}
       </motion.h3>
       {description && (
-        <motion.p variants={itemVariants} className="mt-1.5 text-[13px] text-text-tertiary max-w-sm">
+        <motion.p variants={itemVariants} className="mt-1.5 text-[15px] text-text-tertiary max-w-sm">
           {description}
         </motion.p>
       )}
@@ -65,7 +65,7 @@ export default function EmptyState({ icon, title, description, action }: EmptySt
         <motion.button
           variants={itemVariants}
           onClick={action.onClick}
-          className="mt-4 px-4 py-2 text-[13px] font-medium text-accent bg-accent-subtle rounded-lg hover:bg-accent-muted transition-colors"
+          className="mt-4 px-4 py-2 text-[15px] font-medium text-accent bg-accent-subtle rounded-lg hover:bg-accent-muted transition-colors"
         >
           {action.label}
         </motion.button>

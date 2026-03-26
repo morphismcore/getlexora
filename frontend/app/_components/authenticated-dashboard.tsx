@@ -101,14 +101,14 @@ export default function AuthenticatedDashboard() {
 
   if (error || !data) {
     return (
-      <div className="h-full flex items-center justify-center p-4">
+      <div className="h-full flex items-center justify-center p-5">
         <div className="text-center space-y-4 max-w-sm">
           <div className="w-14 h-14 rounded-2xl bg-[#E5484D]/10 flex items-center justify-center mx-auto">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth={1.5}><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
-          <p className="text-[14px] text-[#ECECEE]">Veri yuklenemedi</p>
-          <p className="text-[12px] text-[#5C5C5F]">{error}</p>
-          <button onClick={fetchDashboard} className="px-5 py-2 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-xl text-[13px] font-medium hover:bg-[#6C6CFF]/20 transition-colors">
+          <p className="text-[16px] text-[#ECECEE]">Veri yuklenemedi</p>
+          <p className="text-[14px] text-[#5C5C5F]">{error}</p>
+          <button onClick={fetchDashboard} className="px-6 py-2.5 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-xl text-[15px] font-medium hover:bg-[#6C6CFF]/20 transition-colors">
             Tekrar Dene
           </button>
         </div>
@@ -135,17 +135,17 @@ export default function AuthenticatedDashboard() {
     .join(", ");
 
   return (
-    <div className="h-full overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
+    <div className="h-full overflow-auto p-6 pt-14 md:p-10 md:pt-8 space-y-6">
       {/* 1. Morning Briefing Banner */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-[#ECECEE]">
+            <h1 className="text-[28px] font-bold tracking-tight text-[#ECECEE]">
               {greeting}{firstName ? `, ${firstName}` : ""}
             </h1>
-            <p className="text-[13px] text-[#5C5C5F] mt-1">{dateStr}</p>
+            <p className="text-[15px] text-[#5C5C5F] mt-1">{dateStr}</p>
             {(stats.active_cases > 0 || stats.today_deadlines > 0 || stats.overdue_deadlines > 0 || stats.tomorrow_deadlines > 0) && (
-              <p className="text-[13px] text-[#8B8B8E] mt-2">
+              <p className="text-[15px] text-[#8B8B8E] mt-2">
                 {stats.active_cases > 0 && (
                   <><span className="text-[#A78BFA] font-medium">{stats.active_cases}</span> aktif dava</>
                 )}
@@ -163,21 +163,21 @@ export default function AuthenticatedDashboard() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {stats.overdue_deadlines > 0 && (
-              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E5484D]/10 hover:bg-[#E5484D]/20 transition-colors">
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#E5484D]/10 hover:bg-[#E5484D]/20 transition-colors">
                 <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse" />
-                <span className="text-[11px] font-medium text-[#E5484D]">{stats.overdue_deadlines} gecikmis</span>
+                <span className="text-[13px] font-medium text-[#E5484D]">{stats.overdue_deadlines} gecikmis</span>
               </button>
             )}
             {stats.today_deadlines > 0 && (
-              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
                 <span className="w-2 h-2 rounded-full bg-[#FFB224]" />
-                <span className="text-[11px] font-medium text-[#FFB224]">{stats.today_deadlines} bugun</span>
+                <span className="text-[13px] font-medium text-[#FFB224]">{stats.today_deadlines} bugun</span>
               </button>
             )}
             {stats.critical_deadlines > 0 && stats.overdue_deadlines === 0 && stats.today_deadlines === 0 && (
-              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
+              <button onClick={scrollToDeadlines} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#FFB224]/10 hover:bg-[#FFB224]/20 transition-colors">
                 <span className="w-2 h-2 rounded-full bg-[#FFB224]" />
-                <span className="text-[11px] font-medium text-[#FFB224]">{stats.critical_deadlines} kritik</span>
+                <span className="text-[13px] font-medium text-[#FFB224]">{stats.critical_deadlines} kritik</span>
               </button>
             )}
           </div>
@@ -238,7 +238,7 @@ export default function AuthenticatedDashboard() {
       {/* 4. New Decisions */}
       {newDecisions.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yeni Kararlar</h2>
+          <h2 className="text-[17px] font-semibold text-[#ECECEE]">Yeni Kararlar</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
             {newDecisions.slice(0, 5).map((d, i) => (
               <motion.div
@@ -250,12 +250,12 @@ export default function AuthenticatedDashboard() {
               >
                 <Link
                   href={`/arama?q=${encodeURIComponent(d.esas_no || d.karar_no)}`}
-                  className="block bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.03] transition-all group h-full"
+                  className="block bg-[#111113] border border-white/[0.06] rounded-xl p-5 hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.03] transition-all group h-full"
                 >
-                  <p className="text-[11px] text-[#6C6CFF] font-medium truncate">{d.daire || "Yargitay"}</p>
-                  <p className="text-[12px] text-[#ECECEE] mt-1.5 truncate">E. {d.esas_no}</p>
-                  <p className="text-[12px] text-[#8B8B8E] truncate">K. {d.karar_no}</p>
-                  <p className="text-[10px] text-[#5C5C5F] mt-2">{d.tarih}</p>
+                  <p className="text-[13px] text-[#6C6CFF] font-medium truncate">{d.daire || "Yargitay"}</p>
+                  <p className="text-[14px] text-[#ECECEE] mt-1.5 truncate">E. {d.esas_no}</p>
+                  <p className="text-[14px] text-[#8B8B8E] truncate">K. {d.karar_no}</p>
+                  <p className="text-[12px] text-[#5C5C5F] mt-2">{d.tarih}</p>
                 </Link>
               </motion.div>
             ))}
@@ -265,20 +265,20 @@ export default function AuthenticatedDashboard() {
 
       {/* 5. Quick Actions */}
       <div className="space-y-4">
-        <h2 className="text-[15px] font-semibold text-[#ECECEE]">Hizli Erisim</h2>
+        <h2 className="text-[17px] font-semibold text-[#ECECEE]">Hizli Erisim</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {quickActionsNew.map((a, i) => (
             <motion.div key={a.href + a.title} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.04 }}>
               <Link
                 href={a.href}
-                className={`flex flex-col items-center gap-3 bg-gradient-to-br ${a.gradient} border border-white/[0.06] rounded-2xl p-5 hover:border-white/[0.12] transition-all group hover:-translate-y-0.5 text-center`}
+                className={`flex flex-col items-center gap-3 bg-gradient-to-br ${a.gradient} border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.12] transition-all group hover:-translate-y-0.5 text-center`}
               >
                 <div className={`w-12 h-12 rounded-xl bg-[#09090B]/50 flex items-center justify-center shrink-0 ${a.iconColor} group-hover:scale-110 transition-transform`}>
                   {a.icon}
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors">{a.title}</p>
-                  <p className="text-[11px] text-[#5C5C5F] mt-0.5">{a.desc}</p>
+                  <p className="text-[15px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors">{a.title}</p>
+                  <p className="text-[13px] text-[#5C5C5F] mt-0.5">{a.desc}</p>
                 </div>
               </Link>
             </motion.div>
@@ -288,7 +288,7 @@ export default function AuthenticatedDashboard() {
 
       {/* Footer */}
       <div className="pt-4 border-t border-white/[0.06]">
-        <p className="text-[11px] text-[#3A3A3F] text-center">
+        <p className="text-[13px] text-[#3A3A3F] text-center">
           Lexora avukatin isini destekler, yapmaz. Nihai hukuki degerlendirme avukata aittir.
         </p>
       </div>

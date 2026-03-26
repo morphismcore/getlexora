@@ -23,15 +23,15 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
-          <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
+          <h2 className="text-[17px] font-semibold text-[#ECECEE]">Sure Takip</h2>
+          <Link href="/davalar" className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
         </div>
-        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
+        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-10 text-center">
           <div className="w-12 h-12 mx-auto rounded-xl bg-[#1A1A1F] flex items-center justify-center mb-3">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
           </div>
-          <p className="text-[13px] text-[#5C5C5F]">Henuz sure eklenmemis</p>
-          <Link href="/davalar" className="inline-block mt-3 text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF]">Dava dosyalarindan sure ekle</Link>
+          <p className="text-[15px] text-[#5C5C5F]">Henuz sure eklenmemis</p>
+          <Link href="/davalar" className="inline-block mt-3 text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF]">Dava dosyalarindan sure ekle</Link>
         </div>
       </div>
     );
@@ -47,31 +47,31 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
           key={dl.id}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`bg-[#111113] border ${urg.border} rounded-xl p-4 shadow-lg shadow-black/20`}
+          className={`bg-[#111113] border ${urg.border} rounded-xl p-5 shadow-lg shadow-black/20`}
         >
           <div className="flex items-start gap-3">
             <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${urg.dot}`} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[13px] font-semibold text-[#ECECEE] truncate">{dl.title}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${urg.bg} ${urg.text}`}>{urg.label}</span>
+                <span className="text-[15px] font-semibold text-[#ECECEE] truncate">{dl.title}</span>
+                <span className={`text-[12px] font-bold px-1.5 py-0.5 rounded ${urg.bg} ${urg.text}`}>{urg.label}</span>
               </div>
-              <p className="text-[12px] text-[#5C5C5F] mt-1 truncate">
+              <p className="text-[14px] text-[#5C5C5F] mt-1 truncate">
                 {dl.case_title || ""} {dl.court ? `· ${dl.court}` : ""}
               </p>
               {dl.law_reference && (
-                <span className="inline-block mt-1 text-[11px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF]">{dl.law_reference}</span>
+                <span className="inline-block mt-1 text-[13px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF]">{dl.law_reference}</span>
               )}
               <div className="flex items-center gap-2 mt-3">
                 <Link
                   href={`/davalar/${dl.case_id}`}
-                  className="px-2.5 py-1 text-[11px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 rounded-md hover:bg-[#6C6CFF]/20 transition-colors"
+                  className="px-3 py-1 text-[13px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 rounded-md hover:bg-[#6C6CFF]/20 transition-colors"
                 >
                   Davayi Ac
                 </Link>
               </div>
             </div>
-            <span className="text-[11px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
+            <span className="text-[13px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
           </div>
         </motion.div>
       );
@@ -83,18 +83,18 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={() => router.push(`/davalar/${dl.case_id}`)}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.02] transition-colors cursor-pointer"
+        className="flex items-center gap-3 px-4 py-2.5.5 rounded-lg hover:bg-white/[0.02] transition-colors cursor-pointer"
       >
         <div className={`w-2 h-2 rounded-full shrink-0 ${urg.dot}`} />
         <div className="flex-1 min-w-0">
-          <span className="text-[12px] text-[#ECECEE] truncate block">{dl.title}</span>
-          <span className="text-[11px] text-[#5C5C5F] truncate block">{dl.case_title}{dl.court ? ` · ${dl.court}` : ""}</span>
+          <span className="text-[14px] text-[#ECECEE] truncate block">{dl.title}</span>
+          <span className="text-[13px] text-[#5C5C5F] truncate block">{dl.case_title}{dl.court ? ` · ${dl.court}` : ""}</span>
         </div>
         {dl.law_reference && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF] shrink-0 hidden sm:inline">{dl.law_reference}</span>
+          <span className="text-[12px] px-1.5 py-0.5 rounded bg-[#6C6CFF]/10 text-[#6C6CFF] shrink-0 hidden sm:inline">{dl.law_reference}</span>
         )}
-        <span className="text-[11px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
-        <span className={`text-[11px] font-medium shrink-0 ${urg.text}`}>{urg.label}</span>
+        <span className="text-[13px] text-[#5C5C5F] shrink-0">{dateFormatted}</span>
+        <span className={`text-[13px] font-medium shrink-0 ${urg.text}`}>{urg.label}</span>
       </motion.div>
     );
   };
@@ -119,10 +119,10 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
       <div className="space-y-2" key={sectionKey}>
         <div className="flex items-center gap-2 px-1">
           {pulseDot && <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse" />}
-          <span className={`text-[11px] font-bold uppercase tracking-wider ${colorClass}`}>{title}</span>
-          <span className="text-[10px] text-[#5C5C5F]">({items.length})</span>
+          <span className={`text-[13px] font-bold uppercase tracking-wider ${colorClass}`}>{title}</span>
+          <span className="text-[12px] text-[#5C5C5F]">({items.length})</span>
         </div>
-        <div className={`border-l-2 ${borderColor} pl-3 space-y-2`}>
+        <div className={`border-l-2 ${borderColor} pl-4 space-y-2`}>
           {elevated ? (
             <div className="space-y-2">
               {visibleItems.map(dl => renderDeadlineItem(dl, true))}
@@ -135,7 +135,7 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
           {hasMore && !isExpanded && (
             <button
               onClick={() => toggleExpand(sectionKey)}
-              className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-3 py-1"
+              className="text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-4 py-1"
             >
               +{items.length - maxVisible} daha...
             </button>
@@ -143,7 +143,7 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
           {hasMore && isExpanded && (
             <button
               onClick={() => toggleExpand(sectionKey)}
-              className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-3 py-1"
+              className="text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors px-4 py-1"
             >
               Daralt
             </button>
@@ -156,8 +156,8 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
   return (
     <div className="space-y-4" ref={deadlineSectionRef} id="deadline-section">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sure Takip</h2>
-        <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
+        <h2 className="text-[17px] font-semibold text-[#ECECEE]">Sure Takip</h2>
+        <Link href="/davalar" className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Tumunu Gor</Link>
       </div>
 
       {renderSection("Gecikmis", deadlines.overdue || [], "text-[#E5484D]", "border-[#E5484D]", "overdue", true, true, true)}
@@ -177,14 +177,14 @@ export default function DeadlineTimeline({ deadlines }: { deadlines: DashboardDa
             >
               <path d="M9 18l6-6-6-6" />
             </svg>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gelecek Hafta</span>
-            <span className="text-[10px] text-[#3A3A3F]">({(deadlines.next_week || []).length})</span>
+            <span className="text-[13px] font-bold uppercase tracking-wider text-[#5C5C5F]">Gelecek Hafta</span>
+            <span className="text-[12px] text-[#3A3A3F]">({(deadlines.next_week || []).length})</span>
           </button>
           {nextWeekOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
-              className="border-l-2 border-[#5C5C5F] pl-3"
+              className="border-l-2 border-[#5C5C5F] pl-4"
             >
               <div className="bg-[#111113] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04] overflow-hidden">
                 {(deadlines.next_week || []).map(dl => renderDeadlineItem(dl, false))}

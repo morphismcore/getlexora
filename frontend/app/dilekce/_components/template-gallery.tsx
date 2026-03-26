@@ -43,7 +43,7 @@ export function TemplateGallery({
 
   return (
     <div>
-      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-3">
+      <label className="block text-[13px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-3">
         Şablon Galerisi
       </label>
       {/* Category cards */}
@@ -56,14 +56,14 @@ export function TemplateGallery({
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className={style.color} strokeLinecap="round" strokeLinejoin="round">
                   <path d={style.icon} />
                 </svg>
-                <span className={`text-[12px] font-semibold ${style.color}`}>{cat}</span>
+                <span className={`text-[14px] font-semibold ${style.color}`}>{cat}</span>
               </div>
-              <p className="text-[10px] text-[#5C5C5F]">{tpls.length} şablon</p>
+              <p className="text-[12px] text-[#5C5C5F]">{tpls.length} şablon</p>
               {tpls.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {tpls.slice(0, 3).map((tpl) => (
                     <button key={tpl.id} onClick={() => onSelectTemplate(tpl)}
-                      className={`block w-full text-left text-[11px] px-2 py-1 rounded-md transition-colors ${
+                      className={`block w-full text-left text-[13px] px-2 py-1 rounded-md transition-colors ${
                         selectedTemplate?.id === tpl.id
                           ? `${style.bg} ${style.color} font-medium`
                           : "text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03]"
@@ -83,7 +83,7 @@ export function TemplateGallery({
           <button
             key={tpl.id}
             onClick={() => onSelectTemplate(tpl)}
-            className={`px-3 py-1.5 text-[11px] font-medium rounded-lg border transition-all duration-150 ${
+            className={`px-4 py-2 text-[13px] font-medium rounded-lg border transition-all duration-150 ${
               selectedTemplate?.id === tpl.id
                 ? "bg-[#6C6CFF]/20 border-[#6C6CFF]/50 text-[#6C6CFF]"
                 : "bg-[#111113] border-white/[0.06] text-[#8B8B8E] hover:border-white/[0.12] hover:text-[#ECECEE]"
@@ -120,12 +120,12 @@ export function TemplateForm({
 }) {
   return (
     <div className="bg-[#111113] border border-[#6C6CFF]/30 rounded-xl p-4 space-y-3">
-      <h2 className="text-[12px] font-semibold uppercase tracking-wider text-[#6C6CFF] mb-1">
+      <h2 className="text-[14px] font-semibold uppercase tracking-wider text-[#6C6CFF] mb-1">
         {selectedTemplate.name} — Form
       </h2>
       {selectedTemplate.fields.map((field) => (
         <div key={field.id}>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">
             {field.label} {field.required && <span className="text-[#E5484D]">*</span>}
           </label>
           {field.type === "select" ? (
@@ -162,13 +162,13 @@ export function TemplateForm({
         <button
           onClick={onGenerate}
           disabled={generating}
-          className="flex-1 py-2 text-[12px] font-semibold text-white bg-[#6C6CFF] rounded-lg hover:bg-[#5B5BEE] disabled:opacity-50 transition-colors"
+          className="flex-1 py-2 text-[14px] font-semibold text-white bg-[#6C6CFF] rounded-lg hover:bg-[#5B5BEE] disabled:opacity-50 transition-colors"
         >
           {generating ? "Oluşturuluyor..." : "Belge Oluştur"}
         </button>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-[12px] font-medium text-[#5C5C5F] bg-[#16161A] rounded-lg hover:text-[#ECECEE] transition-colors"
+          className="px-4 py-2 text-[14px] font-medium text-[#5C5C5F] bg-[#16161A] rounded-lg hover:text-[#ECECEE] transition-colors"
         >
           İptal
         </button>

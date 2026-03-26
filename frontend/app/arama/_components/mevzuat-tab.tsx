@@ -100,10 +100,10 @@ export function MevzuatTab({
             </div>
           </div>
 
-          <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
+          <h2 className="text-[18px] font-semibold text-[#ECECEE] mb-1.5">
             Mevzuat Arama
           </h2>
-          <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
+          <p className="text-[15px] text-[#5C5C5F] mb-6 leading-relaxed">
             Kanun, yönetmelik ve tüzük metinlerine erişin. Kanun numarası ile
             de arayabilirsiniz.
           </p>
@@ -119,7 +119,7 @@ export function MevzuatTab({
             ].map((q) => (
               <button
                 key={q}
-                className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#A78BFA]/30 hover:text-[#ECECEE] hover:bg-[#A78BFA]/[0.04] transition-all duration-200"
+                className="px-3 py-1.5 text-[14px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#A78BFA]/30 hover:text-[#ECECEE] hover:bg-[#A78BFA]/[0.04] transition-all duration-200"
               >
                 {q}
               </button>
@@ -134,7 +134,7 @@ export function MevzuatTab({
   if (loading) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <div className="p-3 md:p-4 space-y-2.5">
+        <div className="p-4 md:p-5 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <SkeletonCard key={i} delay={i} />
           ))}
@@ -146,14 +146,14 @@ export function MevzuatTab({
   /* Error */
   if (error && !loading) {
     return (
-      <div className="flex-1 overflow-y-auto p-3 md:p-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-5">
         <motion.div
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#E5484D]/[0.06] border border-[#E5484D]/15 rounded-2xl p-4"
+          className="bg-[#E5484D]/[0.06] border border-[#E5484D]/15 rounded-2xl p-5"
         >
-          <p className="text-[13px] font-medium text-[#E5484D]">{error}</p>
-          <p className="text-[12px] text-[#E5484D]/60 mt-1">
+          <p className="text-[15px] font-medium text-[#E5484D]">{error}</p>
+          <p className="text-[14px] text-[#E5484D]/60 mt-1">
             Farklı anahtar kelimeler deneyebilirsiniz.
           </p>
         </motion.div>
@@ -173,9 +173,9 @@ export function MevzuatTab({
             : "flex-1"
         }`}
       >
-        <div className={`p-3 md:p-4 space-y-2.5 ${!selectedMevzuat ? "max-w-3xl mx-auto" : ""}`}>
+        <div className={`p-4 md:p-5 space-y-3 ${!selectedMevzuat ? "max-w-5xl mx-auto" : ""}`}>
           <div className="flex items-center justify-between px-1 mb-1">
-            <p className="text-[12px] text-[#5C5C5F] tabular-nums">
+            <p className="text-[14px] text-[#5C5C5F] tabular-nums">
               <span className="text-[#8B8B8E] font-medium">
                 {mevzuatResults.toplam}
               </span>{" "}
@@ -204,10 +204,10 @@ export function MevzuatTab({
                   />
                 </svg>
               </div>
-              <p className="text-[14px] text-[#8B8B8E] font-medium mb-1">
+              <p className="text-[16px] text-[#8B8B8E] font-medium mb-1">
                 Mevzuat bulunamadı
               </p>
-              <p className="text-[12px] text-[#5C5C5F] max-w-xs leading-relaxed">
+              <p className="text-[14px] text-[#5C5C5F] max-w-xs leading-relaxed">
                 Farklı anahtar kelimeler veya kanun numarası deneyin.
               </p>
             </motion.div>
@@ -229,31 +229,31 @@ export function MevzuatTab({
                     key={`${m.mevzuatNo}-${idx}`}
                     variants={listItem}
                     onClick={() => selectMevzuat(m)}
-                    className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 overflow-hidden min-w-0 ${
+                    className={`group w-full text-left bg-[#111113] border rounded-2xl p-5 transition-all duration-200 overflow-hidden min-w-0 ${
                       isSelected
                         ? "border-[#A78BFA]/30 bg-[#A78BFA]/[0.04] shadow-[0_0_0_1px_rgba(167,139,250,0.15)]"
                         : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA]">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA]">
                         {m.mevzuatTur || "Mevzuat"}
                       </span>
                       {m.mevzuatNo && (
-                        <span className="text-[11px] font-mono text-[#8B8B8E]">
+                        <span className="text-[13px] font-mono text-[#8B8B8E]">
                           No: {m.mevzuatNo}
                         </span>
                       )}
                       {m.mevzuatTertip && (
-                        <span className="text-[10px] text-[#5C5C5F]">
+                        <span className="text-[12px] text-[#5C5C5F]">
                           {m.mevzuatTertip}. Tertip
                         </span>
                       )}
                     </div>
-                    <p className="text-[13px] text-[#ECECEE] font-medium leading-relaxed mb-2 break-words group-hover:text-white transition-colors">
+                    <p className="text-[15px] text-[#ECECEE] font-medium leading-relaxed mb-2 break-words group-hover:text-white transition-colors">
                       {m.mevzuatAd}
                     </p>
-                    <div className="flex items-center gap-3 text-[11px] text-[#5C5C5F]">
+                    <div className="flex items-center gap-3 text-[13px] text-[#5C5C5F]">
                       {m.resmiGazeteTarihi && (
                         <span className="flex items-center gap-1">
                           <svg
@@ -296,11 +296,11 @@ export function MevzuatTab({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="p-4 md:p-6 max-w-[760px]">
+            <div className="p-5 md:p-6 max-w-[900px]">
               {/* Mobile back */}
               <button
                 onClick={clearSelection}
-                className="md:hidden flex items-center gap-1.5 text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
+                className="md:hidden flex items-center gap-1.5 text-[15px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
               >
                 <ArrowLeftIcon />
                 Sonuçlara Dön
@@ -309,19 +309,19 @@ export function MevzuatTab({
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2.5 mb-3">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[13px] font-semibold tracking-wide uppercase bg-[#A78BFA]/10 text-[#A78BFA] border border-[#A78BFA]/20">
                     {selectedMevzuat.mevzuatTur || "Mevzuat"}
                   </span>
                   {selectedMevzuat.mevzuatNo && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
+                    <span className="inline-flex items-center px-2 py-1 rounded-lg text-[13px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
                       No: {selectedMevzuat.mevzuatNo}
                     </span>
                   )}
                 </div>
-                <h2 className="text-[16px] font-semibold text-[#ECECEE] leading-relaxed mb-2">
+                <h2 className="text-[18px] font-semibold text-[#ECECEE] leading-relaxed mb-2">
                   {selectedMevzuat.mevzuatAd}
                 </h2>
-                <div className="flex items-center gap-3 text-[12px] text-[#5C5C5F]">
+                <div className="flex items-center gap-3 text-[14px] text-[#5C5C5F]">
                   {selectedMevzuat.resmiGazeteTarihi && (
                     <span>
                       RG Tarihi: {selectedMevzuat.resmiGazeteTarihi}
@@ -340,7 +340,7 @@ export function MevzuatTab({
                 {mevzuatContent && (
                   <button
                     onClick={() => handleCopyText(mevzuatContent.content)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 text-[14px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
                   >
                     {copied ? <CheckIcon /> : <CopyIcon />}
                     {copied ? "Kopyalandı" : "Metni Kopyala"}
@@ -348,7 +348,7 @@ export function MevzuatTab({
                 )}
                 <button
                   onClick={clearSelection}
-                  className="ml-auto px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
+                  className="ml-auto px-3 py-2 text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
                 >
                   <CloseIcon size={12} />
                   Kapat
@@ -367,18 +367,18 @@ export function MevzuatTab({
                       value={mevzuatSearchText}
                       onChange={(e) => setMevzuatSearchText(e.target.value)}
                       placeholder="Metin içinde ara..."
-                      className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-9 pr-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#A78BFA]/40 transition-all"
+                      className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-9 pr-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#A78BFA]/40 transition-all"
                     />
                   </div>
                   {mevzuatSearchText.trim().length >= 2 ? (
-                    <div className="text-[14px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
+                    <div className="text-[16px] text-[#ECECEE]/90 leading-[1.8] space-y-4">
                       {mevzuatContent.content
                         .split(/\n\n+/)
                         .filter((p) => p.trim())
                         .map((paragraph, i) => (
                           <p
                             key={i}
-                            className="whitespace-pre-wrap text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3"
+                            className="whitespace-pre-wrap text-[15px] text-[#ECECEE]/90 leading-relaxed mb-3"
                           >
                             {highlightText(
                               paragraph.trim(),
@@ -395,7 +395,7 @@ export function MevzuatTab({
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-[13px] text-[#5C5C5F]">
+                  <p className="text-[15px] text-[#5C5C5F]">
                     Mevzuat içeriği yüklenemedi.
                   </p>
                 </div>
@@ -421,7 +421,7 @@ export function MevzuatTab({
                     />
                   </svg>
                 </div>
-                <p className="text-[13px] text-[#5C5C5F]">
+                <p className="text-[15px] text-[#5C5C5F]">
                   İçeriği görüntülemek için
                   <br />
                   <span className="text-[#8B8B8E]">bir mevzuat seçin</span>

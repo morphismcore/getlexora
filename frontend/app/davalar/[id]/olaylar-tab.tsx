@@ -10,7 +10,7 @@ import { formatDateTR, formatDateShortTR, getDayNameTR, getUrgencyStyle, apiFetc
 
 function CalcDetailPanel({ detail }: { detail: DeadlineCalcDetail }) {
   return (
-    <div className="mt-3 bg-[#0C0C0E] border border-white/[0.04] rounded-lg p-4 space-y-3 font-mono text-[12px]">
+    <div className="mt-3 bg-[#0C0C0E] border border-white/[0.04] rounded-lg p-4 space-y-3 font-mono text-[14px]">
       <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5">
         <span className="text-[#5C5C5F]">Baslangic tarihi:</span>
         <span className="text-[#ECECEE]">{formatDateTR(detail.start_date)}</span>
@@ -98,7 +98,7 @@ function OverrideModal({
     }
   };
 
-  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
+  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
 
   return (
     <motion.div
@@ -115,46 +115,46 @@ function OverrideModal({
         className="bg-[#111113] border border-white/[0.08] rounded-2xl p-6 w-full max-w-md space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[15px] font-semibold text-[#ECECEE]">Sureyi Duzenle</h2>
-        <p className="text-[12px] text-[#5C5C5F]">{deadline.name}</p>
+        <h2 className="text-[17px] font-semibold text-[#ECECEE]">Sureyi Duzenle</h2>
+        <p className="text-[14px] text-[#5C5C5F]">{deadline.name}</p>
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Mevcut sistem tarihi</label>
-          <p className="text-[13px] text-[#8B8B8E]">{formatDateTR(deadline.deadline_date)}</p>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Mevcut sistem tarihi</label>
+          <p className="text-[15px] text-[#8B8B8E]">{formatDateTR(deadline.deadline_date)}</p>
         </div>
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Yeni tarih *</label>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Yeni tarih *</label>
           <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={inputCls} />
-          {diffDays > 0 && <p className="text-[11px] text-[#E5484D] mt-1">Bu tarih yasal sureden {diffDays} gun SONRA</p>}
-          {diffDays < 0 && <p className="text-[11px] text-[#6C6CFF] mt-1">Yasal sure bitiminden {Math.abs(diffDays)} gun once (ic takip)</p>}
+          {diffDays > 0 && <p className="text-[13px] text-[#E5484D] mt-1">Bu tarih yasal sureden {diffDays} gun SONRA</p>}
+          {diffDays < 0 && <p className="text-[13px] text-[#6C6CFF] mt-1">Yasal sure bitiminden {Math.abs(diffDays)} gun once (ic takip)</p>}
         </div>
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-2">Neden *</label>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-2">Neden *</label>
           <div className="space-y-2">
             {OVERRIDE_REASONS.map((r) => (
               <label key={r} className="flex items-center gap-2 cursor-pointer group">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${reason === r ? "border-[#6C6CFF] bg-[#6C6CFF]" : "border-[#3A3A3F] group-hover:border-[#5C5C5F]"}`}>
                   {reason === r && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                 </div>
-                <span className="text-[12px] text-[#ECECEE]">{r}</span>
+                <span className="text-[14px] text-[#ECECEE]">{r}</span>
               </label>
             ))}
             <label className="flex items-center gap-2 cursor-pointer group">
               <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${reason === "Diger" ? "border-[#6C6CFF] bg-[#6C6CFF]" : "border-[#3A3A3F] group-hover:border-[#5C5C5F]"}`}>
                 {reason === "Diger" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
               </div>
-              <span className="text-[12px] text-[#ECECEE]">Diger:</span>
+              <span className="text-[14px] text-[#ECECEE]">Diger:</span>
             </label>
             {reason === "Diger" && (
               <input value={customReason} onChange={(e) => setCustomReason(e.target.value)} placeholder="Aciklama yazin..." className={inputCls + " ml-6"} />
             )}
           </div>
         </div>
-        {error && <p className="text-[12px] text-[#E5484D]">{error}</p>}
+        {error && <p className="text-[14px] text-[#E5484D]">{error}</p>}
         <div className="flex gap-2 pt-2">
-          <button onClick={handleSave} disabled={saving} className="flex-1 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/50 rounded-lg text-[13px] font-medium text-white transition-colors">
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/50 rounded-lg text-[15px] font-medium text-white transition-colors">
             {saving ? "Kaydediliyor..." : "Kaydet"}
           </button>
-          <button onClick={onClose} className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">Iptal</button>
+          <button onClick={onClose} className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">Iptal</button>
         </div>
       </motion.div>
     </motion.div>
@@ -195,39 +195,39 @@ function DeadlineCard({ deadline, caseId, onRefresh }: { deadline: Deadline; cas
 
   return (
     <>
-      <div className={`${style.bg} ${style.border} rounded-lg p-3.5 ml-4 ${deadline.is_completed ? "opacity-50" : ""}`}>
+      <div className={`${style.bg} ${style.border} rounded-lg p-4 ml-4 ${deadline.is_completed ? "opacity-50" : ""}`}>
         <div className="flex items-start gap-3">
           <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${style.dot}`} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-[13px] font-semibold ${deadline.is_completed ? "line-through text-[#5C5C5F]" : "text-[#ECECEE]"}`}>
+              <span className={`text-[15px] font-semibold ${deadline.is_completed ? "line-through text-[#5C5C5F]" : "text-[#ECECEE]"}`}>
                 {deadline.name}
               </span>
               {deadline.is_completed && (
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#3DD68C]/10 text-[#3DD68C]">Tamamlandi</span>
+                <span className="text-[12px] font-medium px-2 py-1 rounded bg-[#3DD68C]/10 text-[#3DD68C]">Tamamlandi</span>
               )}
             </div>
             <div className="mt-1.5 space-y-0.5">
               {deadline.override ? (
                 <>
-                  <p className="text-[12px] text-[#ECECEE]">
+                  <p className="text-[14px] text-[#ECECEE]">
                     {deadlineDateFormatted}
-                    <span className="text-[#FFB224] ml-2 text-[11px]">elle duzenlendi</span>
+                    <span className="text-[#FFB224] ml-2 text-[13px]">elle duzenlendi</span>
                   </p>
-                  <p className="text-[12px] text-[#5C5C5F] line-through">
+                  <p className="text-[14px] text-[#5C5C5F] line-through">
                     {formatDateShortTR(deadline.override.original_date)} (sistem hesabi)
                   </p>
-                  <p className="text-[11px] text-[#8B8B8E] mt-1">Neden: {deadline.override.reason}</p>
-                  <p className="text-[11px] text-[#5C5C5F]">
+                  <p className="text-[13px] text-[#8B8B8E] mt-1">Neden: {deadline.override.reason}</p>
+                  <p className="text-[13px] text-[#5C5C5F]">
                     Duzenleyen: {deadline.override.overridden_by} {"\u00b7"} {formatDateShortTR(deadline.override.overridden_at)}
                   </p>
                 </>
               ) : (
-                <p className="text-[12px] text-[#8B8B8E]">
+                <p className="text-[14px] text-[#8B8B8E]">
                   {deadlineDateFormatted} ({dayName})
                 </p>
               )}
-              <p className="text-[11px] text-[#5C5C5F]">
+              <p className="text-[13px] text-[#5C5C5F]">
                 +{deadline.duration} {"\u00b7"} <span className={style.text}>{daysLabel}</span>
               </p>
             </div>
@@ -235,7 +235,7 @@ function DeadlineCard({ deadline, caseId, onRefresh }: { deadline: Deadline; cas
               {deadline.calc_detail && (
                 <button
                   onClick={() => setShowCalcDetail(!showCalcDetail)}
-                  className="text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors flex items-center gap-1"
+                  className="text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors flex items-center gap-1"
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
                     className={`transition-transform ${showCalcDetail ? "rotate-90" : ""}`}>
@@ -247,7 +247,7 @@ function DeadlineCard({ deadline, caseId, onRefresh }: { deadline: Deadline; cas
               {!deadline.is_completed && (
                 <button
                   onClick={() => setShowOverrideModal(true)}
-                  className="text-[11px] text-[#8B8B8E] hover:text-[#ECECEE] transition-colors flex items-center gap-1"
+                  className="text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] transition-colors flex items-center gap-1"
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -258,7 +258,7 @@ function DeadlineCard({ deadline, caseId, onRefresh }: { deadline: Deadline; cas
               <button
                 onClick={handleComplete}
                 disabled={completing}
-                className={`text-[11px] transition-colors flex items-center gap-1 ${
+                className={`text-[13px] transition-colors flex items-center gap-1 ${
                   deadline.is_completed ? "text-[#FFB224] hover:text-[#FFB224]" : "text-[#3DD68C] hover:text-[#3DD68C]"
                 }`}
               >
@@ -305,7 +305,7 @@ export function UrgencyBanner({ events }: { events: CaseEvent[] }) {
         <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
       <div className="flex-1 min-w-0">
-        <p className={`text-[13px] font-semibold ${hasCritical ? "text-[#E5484D]" : "text-[#FFB224]"}`}>
+        <p className={`text-[15px] font-semibold ${hasCritical ? "text-[#E5484D]" : "text-[#FFB224]"}`}>
           {critical.length > 0 && `${critical.length} KRITIK SURE`}
           {critical.length > 0 && expired.length > 0 && " \u00b7 "}
           {expired.length > 0 && `${expired.length} sure gecti`}
@@ -326,10 +326,10 @@ function EventCard({ event, caseId, onRefresh }: { event: CaseEvent; caseId: str
         <div className="w-3 h-3 rounded-full bg-[#6C6CFF]/30 border-2 border-[#6C6CFF] shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[13px] font-semibold text-[#ECECEE]">{event.event_type_label}</span>
-            <span className="text-[11px] text-[#5C5C5F]">{formatDateTR(event.event_date)}</span>
+            <span className="text-[15px] font-semibold text-[#ECECEE]">{event.event_type_label}</span>
+            <span className="text-[13px] text-[#5C5C5F]">{formatDateTR(event.event_date)}</span>
           </div>
-          {event.note && <p className="text-[12px] text-[#8B8B8E] mt-0.5">{event.note}</p>}
+          {event.note && <p className="text-[14px] text-[#8B8B8E] mt-0.5">{event.note}</p>}
         </div>
       </div>
       {event.deadlines.length > 0 && (
@@ -416,23 +416,23 @@ function NewEventModal({
     }
   };
 
-  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
+  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-[#111113] border border-white/[0.08] rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto space-y-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yeni Olay</h2>
+        <h2 className="text-[17px] font-semibold text-[#ECECEE]">Yeni Olay</h2>
 
         {/* Event type selector */}
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Olay turu *</label>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Olay turu *</label>
           <input type="text" placeholder="Olay turu ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={inputCls} />
           <div className="mt-2 max-h-48 overflow-y-auto bg-[#0C0C0E] border border-white/[0.04] rounded-lg">
             {filteredEventTypes.frequent.length > 0 && (
               <>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#3A3A3F] px-3 pt-2 pb-1">Sik kullanilanlar</p>
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-[#3A3A3F] px-3 pt-2 pb-1">Sik kullanilanlar</p>
                 {filteredEventTypes.frequent.map((et) => (
-                  <button key={et.value} onClick={() => { setEventType(et.value); setSearchTerm(""); }} className={`w-full text-left px-3 py-2 text-[12px] transition-colors ${eventType === et.value ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#ECECEE] hover:bg-white/[0.03]"}`}>
+                  <button key={et.value} onClick={() => { setEventType(et.value); setSearchTerm(""); }} className={`w-full text-left px-4 py-2.5 text-[14px] transition-colors ${eventType === et.value ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#ECECEE] hover:bg-white/[0.03]"}`}>
                     <span className="font-medium">{et.label}</span>
                     <span className="text-[#5C5C5F] ml-2">{et.description}</span>
                   </button>
@@ -443,7 +443,7 @@ function NewEventModal({
               <>
                 {filteredEventTypes.frequent.length > 0 && <div className="border-t border-white/[0.04] my-1" />}
                 {filteredEventTypes.rest.map((et) => (
-                  <button key={et.value} onClick={() => { setEventType(et.value); setSearchTerm(""); }} className={`w-full text-left px-3 py-2 text-[12px] transition-colors ${eventType === et.value ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#ECECEE] hover:bg-white/[0.03]"}`}>
+                  <button key={et.value} onClick={() => { setEventType(et.value); setSearchTerm(""); }} className={`w-full text-left px-4 py-2.5 text-[14px] transition-colors ${eventType === et.value ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#ECECEE] hover:bg-white/[0.03]"}`}>
                     <span className="font-medium">{et.label}</span>
                     <span className="text-[#5C5C5F] ml-2">{et.description}</span>
                   </button>
@@ -451,25 +451,25 @@ function NewEventModal({
               </>
             )}
             {filteredEventTypes.frequent.length === 0 && filteredEventTypes.rest.length === 0 && (
-              <p className="px-3 py-3 text-[12px] text-[#5C5C5F]">Sonuc bulunamadi</p>
+              <p className="px-3 py-3 text-[14px] text-[#5C5C5F]">Sonuc bulunamadi</p>
             )}
           </div>
-          {eventType && <p className="text-[11px] text-[#6C6CFF] mt-1">Secili: {EVENT_TYPE_OPTIONS.find((et) => et.value === eventType)?.label}</p>}
+          {eventType && <p className="text-[13px] text-[#6C6CFF] mt-1">Secili: {EVENT_TYPE_OPTIONS.find((et) => et.value === eventType)?.label}</p>}
         </div>
 
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Olay tarihi *</label>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Olay tarihi *</label>
           <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={inputCls} />
         </div>
 
         <div>
-          <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Not (istege bagli)</label>
+          <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Not (istege bagli)</label>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Ek bilgi..." className={inputCls + " resize-none"} />
         </div>
 
         {eventType && applicableDeadlines.length > 0 && (
           <div>
-            <label className="block text-[11px] font-medium text-[#5C5C5F] mb-2">Hesaplanacak sureler</label>
+            <label className="block text-[13px] font-medium text-[#5C5C5F] mb-2">Hesaplanacak sureler</label>
             <div className="space-y-1.5">
               {applicableDeadlines.map((ad) => (
                 <label key={ad.key} className="flex items-start gap-2.5 cursor-pointer group p-2 rounded-lg hover:bg-white/[0.02] transition-colors">
@@ -479,8 +479,8 @@ function NewEventModal({
                     )}
                   </div>
                   <div>
-                    <span className="text-[12px] text-[#ECECEE] font-medium">{ad.name} ({ad.duration})</span>
-                    <span className="text-[11px] text-[#5C5C5F] ml-1">-- {ad.law_reference}</span>
+                    <span className="text-[14px] text-[#ECECEE] font-medium">{ad.name} ({ad.duration})</span>
+                    <span className="text-[13px] text-[#5C5C5F] ml-1">-- {ad.law_reference}</span>
                   </div>
                 </label>
               ))}
@@ -488,14 +488,14 @@ function NewEventModal({
           </div>
         )}
 
-        {error && <p className="text-[12px] text-[#E5484D]">{error}</p>}
+        {error && <p className="text-[14px] text-[#E5484D]">{error}</p>}
 
         <div className="flex gap-2 pt-2">
-          <button onClick={handleSave} disabled={saving || !eventType || !eventDate} className="flex-1 py-2.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-lg text-[13px] font-medium text-white transition-colors flex items-center justify-center gap-2">
+          <button onClick={handleSave} disabled={saving || !eventType || !eventDate} className="flex-1 py-2.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-lg text-[15px] font-medium text-white transition-colors flex items-center justify-center gap-2">
             {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
             {saving ? "Hesaplaniyor..." : "Hesapla ve Kaydet"}
           </button>
-          <button onClick={onClose} className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">Iptal</button>
+          <button onClick={onClose} className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">Iptal</button>
         </div>
       </motion.div>
     </motion.div>
@@ -541,8 +541,8 @@ export default function OlaylarTab({ caseId }: { caseId: string }) {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-[13px] text-[#E5484D]">{error}</p>
-        <button onClick={fetchEvents} className="mt-3 text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF]">Tekrar dene</button>
+        <p className="text-[15px] text-[#E5484D]">{error}</p>
+        <button onClick={fetchEvents} className="mt-3 text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF]">Tekrar dene</button>
       </div>
     );
   }
@@ -553,7 +553,7 @@ export default function OlaylarTab({ caseId }: { caseId: string }) {
 
       <button
         onClick={() => setShowNewEvent(true)}
-        className="w-full py-3 border-2 border-dashed border-white/[0.08] rounded-xl text-[13px] font-medium text-[#6C6CFF] hover:border-[#6C6CFF]/30 hover:bg-[#6C6CFF]/[0.03] transition-all"
+        className="w-full py-3 border-2 border-dashed border-white/[0.08] rounded-xl text-[15px] font-medium text-[#6C6CFF] hover:border-[#6C6CFF]/30 hover:bg-[#6C6CFF]/[0.03] transition-all"
       >
         + Yeni Olay
       </button>
@@ -565,8 +565,8 @@ export default function OlaylarTab({ caseId }: { caseId: string }) {
               <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
             </svg>
           </div>
-          <p className="text-[13px] text-[#5C5C5F]">Henuz olay eklenmemis</p>
-          <p className="text-[12px] text-[#3A3A3F] mt-1">Bir olay ekleyerek yasal surelerin otomatik hesaplanmasini saglayin</p>
+          <p className="text-[15px] text-[#5C5C5F]">Henuz olay eklenmemis</p>
+          <p className="text-[14px] text-[#3A3A3F] mt-1">Bir olay ekleyerek yasal surelerin otomatik hesaplanmasini saglayin</p>
         </div>
       ) : (
         <div className="space-y-6">

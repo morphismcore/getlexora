@@ -181,7 +181,7 @@ export function AuthBrandPanel() {
           transition={{ delay: 0.6 }}
           className="mt-3 h-6"
         >
-          <span className="text-[16px] text-[#8B8B8E] font-[family-name:var(--font-serif)]">
+          <span className="text-[18px] text-[#8B8B8E] font-[family-name:var(--font-serif)]">
             {TYPEWRITER_TEXT.slice(0, typewriterIndex)}
             <span className="animate-pulse text-[#6C6CFF]">|</span>
           </span>
@@ -201,7 +201,7 @@ export function AuthBrandPanel() {
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <p className="text-[20px] font-bold text-[#ECECEE]">{stat.value}</p>
-              <p className="text-[11px] text-[#5C5C5F] mt-0.5">{stat.label}</p>
+              <p className="text-[13px] text-[#5C5C5F] mt-0.5">{stat.label}</p>
             </div>
           ))}
         </motion.div>

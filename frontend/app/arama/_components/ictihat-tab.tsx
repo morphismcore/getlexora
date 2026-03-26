@@ -67,7 +67,7 @@ const ResultCard = React.memo(function ResultCard({
     <motion.button
       variants={listItem}
       onClick={() => onSelect(result)}
-      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 relative overflow-hidden min-w-0 border-l-[3px] ${
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-5 transition-all duration-200 relative overflow-hidden min-w-0 border-l-[3px] ${
         isSelected
           ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
           : "border-white/[0.06] hover:border-white/[0.15] hover:bg-[#141418]"
@@ -75,45 +75,45 @@ const ResultCard = React.memo(function ResultCard({
       style={{ borderLeftColor: court.color }}
     >
       {/* Court + Chamber */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-3 mb-3">
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text}`}
+          className={`inline-flex items-center px-3 py-1 rounded-md text-[12px] font-semibold tracking-wide uppercase ${court.bg} ${court.text}`}
         >
           {court.label || result.mahkeme}
         </span>
         {result.daire && (
-          <span className="text-[11px] text-[#8B8B8E]/80 font-medium px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">
+          <span className="text-[13px] text-[#8B8B8E]/80 font-medium px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">
             {result.daire}
           </span>
         )}
         {result.kaynak === "aym" && result.mahkeme !== "aym" && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#E5484D]/20 text-[#E5484D]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D]">
             AYM
           </span>
         )}
         {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/20 text-[#3DD68C]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C]">
             AİHM
           </span>
         )}
       </div>
 
       {/* Esas No / Karar No */}
-      <div className="flex items-baseline gap-3 mb-2">
-        <span className="font-mono text-[15px] font-bold text-[#ECECEE] tracking-tight">
-          <span className="text-[#5C5C5F] text-[10px] font-sans font-semibold mr-1">
+      <div className="flex items-baseline gap-3 mb-3">
+        <span className="font-mono text-[17px] font-bold text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[12px] font-sans font-semibold mr-1">
             E.
           </span>
           {result.esas_no}
         </span>
-        <span className="text-[#3A3A3F] text-[10px]">/</span>
-        <span className="font-mono text-[15px] font-bold text-[#ECECEE] tracking-tight">
-          <span className="text-[#5C5C5F] text-[10px] font-sans font-semibold mr-1">
+        <span className="text-[#3A3A3F] text-[12px]">/</span>
+        <span className="font-mono text-[17px] font-bold text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[12px] font-sans font-semibold mr-1">
             K.
           </span>
           {result.karar_no}
         </span>
-        <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums flex items-center gap-1">
+        <span className="ml-auto text-[13px] text-[#5C5C5F] tabular-nums flex items-center gap-1">
           <svg
             width="11"
             height="11"
@@ -134,7 +134,7 @@ const ResultCard = React.memo(function ResultCard({
       </div>
 
       {/* 2-line truncated ozet */}
-      <p className="text-[13px] text-[#8B8B8E] leading-relaxed break-words group-hover:text-[#A0A0A3] transition-colors line-clamp-2">
+      <p className="text-[15px] text-[#8B8B8E] leading-relaxed break-words group-hover:text-[#A0A0A3] transition-colors line-clamp-2">
         {highlightText(result.ozet, query)}
       </p>
     </motion.button>
@@ -290,14 +290,14 @@ export function IctihatTab({
               </div>
             </div>
 
-            <h2 className="text-[18px] font-bold text-[#ECECEE] mb-2">
+            <h2 className="text-[22px] font-bold text-[#ECECEE] mb-3">
               Hukuk veritabanında arama yapın
             </h2>
-            <p className="text-[13px] text-[#5C5C5F] mb-3 leading-relaxed">
+            <p className="text-[15px] text-[#5C5C5F] mb-4 leading-relaxed">
               Doğal dil ile içtihat arayın. AI destekli semantik arama ile en
               alakalı kararları bulun.
             </p>
-            <p className="text-[12px] text-[#6C6CFF]/60 font-medium mb-5 tracking-wide">
+            <p className="text-[14px] text-[#6C6CFF]/60 font-medium mb-5 tracking-wide">
               65.000+ karar · 7 kaynak · yapay zeka destekli hibrit arama
             </p>
 
@@ -311,12 +311,12 @@ export function IctihatTab({
                 { label: "KVKK", color: "#F76B15" },
                 { label: "Mevzuat", color: "#FFB224" },
               ].map((s) => (
-                <div key={s.label} className="flex items-center gap-1.5">
+                <div key={s.label} className="flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: s.color }}
                   />
-                  <span className="text-[11px] text-[#5C5C5F]">{s.label}</span>
+                  <span className="text-[13px] text-[#5C5C5F]">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -326,7 +326,7 @@ export function IctihatTab({
                 <button
                   key={q}
                   onClick={() => handleSuggestedQuery(q)}
-                  className="px-4 py-2 text-[13px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-[#6C6CFF]/40 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.06] hover:shadow-[0_0_16px_rgba(108,108,255,0.08)] transition-all duration-300"
+                  className="px-4 py-2 text-[15px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-[#6C6CFF]/40 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.06] hover:shadow-[0_0_16px_rgba(108,108,255,0.08)] transition-all duration-300"
                 >
                   {q}
                 </button>
@@ -349,11 +349,11 @@ export function IctihatTab({
           }`}
         >
           <div
-            className={`p-3 md:p-4 space-y-2.5 ${!selectedResult ? "max-w-3xl mx-auto" : ""}`}
+            className={`p-4 md:p-5 space-y-3 ${!selectedResult ? "max-w-5xl mx-auto" : ""}`}
           >
             {/* Source filter bar */}
             {(results || loading) && (
-              <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
                 {SOURCE_TABS.map((tab) => {
                   const isActive =
                     tab.key === "Tümü"
@@ -381,7 +381,7 @@ export function IctihatTab({
                         }
                         setCurrentPage(1);
                       }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap border transition-all shrink-0 ${
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[14px] font-medium whitespace-nowrap border transition-all shrink-0 ${
                         isActive
                           ? style
                             ? `${style.bg} ${style.text} border-current/20`
@@ -397,7 +397,7 @@ export function IctihatTab({
                       {tab.label}
                       {facetCount !== undefined && (
                         <span
-                          className={`text-[10px] tabular-nums ${isActive ? "opacity-70" : "text-[#5C5C5F]"}`}
+                          className={`text-[12px] tabular-nums ${isActive ? "opacity-70" : "text-[#5C5C5F]"}`}
                         >
                           ({facetCount})
                         </span>
@@ -411,12 +411,12 @@ export function IctihatTab({
             {/* Status bar */}
             {results && !loading && (
               <div className="flex items-center justify-between px-1 mb-1">
-                <p className="text-[12px] text-[#5C5C5F] tabular-nums flex items-center gap-2">
+                <p className="text-[14px] text-[#5C5C5F] tabular-nums flex items-center gap-3">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3DD68C] opacity-50" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3DD68C]" />
                   </span>
-                  <span className="text-[#ECECEE] font-semibold text-[14px]">
+                  <span className="text-[#ECECEE] font-semibold text-[16px]">
                     {results.toplam_bulunan}
                   </span>{" "}
                   sonuç bulundu
@@ -426,7 +426,7 @@ export function IctihatTab({
                 {results.sonuclar.length > 0 && (
                   <button
                     onClick={handleDownloadResults}
-                    className="flex items-center gap-1.5 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+                    className="flex items-center gap-2 text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
                   >
                     <DownloadIcon />
                     İndir
@@ -437,7 +437,7 @@ export function IctihatTab({
 
             {/* Loading skeletons */}
             {loading && (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <SkeletonCard key={i} delay={i} />
                 ))}
@@ -453,10 +453,10 @@ export function IctihatTab({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[13px] font-medium text-[#E5484D]">
+                    <p className="text-[15px] font-medium text-[#E5484D]">
                       {error}
                     </p>
-                    <p className="text-[12px] text-[#E5484D]/60 mt-1">
+                    <p className="text-[14px] text-[#E5484D]/60 mt-1">
                       Farklı anahtar kelimeler deneyebilir veya filtreleri
                       değiştirebilirsiniz.
                     </p>
@@ -470,7 +470,7 @@ export function IctihatTab({
                 </div>
                 <button
                   onClick={search}
-                  className="mt-3 px-4 py-1.5 text-[12px] font-medium text-white bg-[#E5484D] hover:bg-[#D13438] rounded-lg transition-colors"
+                  className="mt-3 px-4 py-1.5 text-[14px] font-medium text-white bg-[#E5484D] hover:bg-[#D13438] rounded-lg transition-colors"
                 >
                   Tekrar Dene
                 </button>
@@ -480,7 +480,7 @@ export function IctihatTab({
             {/* Results list */}
             {hasResults && (
               <motion.div
-                className="space-y-2.5"
+                className="space-y-3"
                 variants={listContainer}
                 initial="hidden"
                 animate="show"
@@ -502,7 +502,7 @@ export function IctihatTab({
             {/* Pagination */}
             {hasResults && results.toplam_sayfa > 1 && (
               <div className="flex items-center justify-between px-1 py-3 mt-2 border-t border-white/[0.06]">
-                <span className="text-[12px] text-[#5C5C5F] tabular-nums">
+                <span className="text-[14px] text-[#5C5C5F] tabular-nums">
                   <span className="text-[#8B8B8E] font-medium">
                     {results.toplam_bulunan}
                   </span>{" "}
@@ -512,11 +512,11 @@ export function IctihatTab({
                   </span>{" "}
                   / {results.toplam_sayfa}
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage <= 1}
-                    className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
+                    className="flex items-center gap-1 px-3 py-1.5 text-[14px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
                   >
                     <ChevronIcon direction="left" />
                     Önceki
@@ -524,7 +524,7 @@ export function IctihatTab({
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage >= results.toplam_sayfa}
-                    className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
+                    className="flex items-center gap-1 px-3 py-1.5 text-[14px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
                   >
                     Sonraki
                     <ChevronIcon direction="right" />
@@ -540,7 +540,7 @@ export function IctihatTab({
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center py-16 text-center"
               >
-                <div className="w-12 h-12 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center mb-4">
                   <svg
                     className="w-6 h-6 text-[#5C5C5F]/40"
                     fill="none"
@@ -555,19 +555,19 @@ export function IctihatTab({
                     />
                   </svg>
                 </div>
-                <p className="text-[14px] text-[#8B8B8E] font-medium mb-1">
+                <p className="text-[16px] text-[#8B8B8E] font-medium mb-1">
                   Sonuç bulunamadı
                 </p>
-                <p className="text-[12px] text-[#5C5C5F] max-w-xs leading-relaxed mb-4">
+                <p className="text-[14px] text-[#5C5C5F] max-w-xs leading-relaxed mb-4">
                   Farklı anahtar kelimeler deneyin veya filtrelerinizi
                   genişletin.
                 </p>
-                <div className="flex flex-wrap justify-center gap-1.5">
+                <div className="flex flex-wrap justify-center gap-2">
                   {SUGGESTED_QUERIES.slice(0, 4).map((q) => (
                     <button
                       key={q}
                       onClick={() => handleSuggestedQuery(q)}
-                      className="px-2.5 py-1 text-[11px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] rounded-md hover:bg-[#6C6CFF]/10 transition-colors"
+                      className="px-2.5 py-1 text-[13px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] rounded-md hover:bg-[#6C6CFF]/10 transition-colors"
                     >
                       {q}
                     </button>
@@ -592,14 +592,14 @@ export function IctihatTab({
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <div className="p-4 md:p-6 max-w-[760px]">
+            <div className="p-5 md:p-6 max-w-[900px]">
               {/* Mobile back */}
               <button
                 onClick={() => {
                   setMobileShowDetail(false);
                   clearSelection();
                 }}
-                className="md:hidden flex items-center gap-1.5 text-[13px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
+                className="md:hidden flex items-center gap-2 text-[15px] text-[#8B8B8E] hover:text-[#ECECEE] mb-5 transition-colors"
               >
                 <ArrowLeftIcon />
                 Sonuçlara Dön
@@ -614,25 +614,25 @@ export function IctihatTab({
                 }}
               >
                 <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2.5">
                       {(() => {
                         const court = getCourtStyle(selectedResult.mahkeme);
                         return (
                           <span
-                            className={`inline-flex items-center px-3 py-1.5 rounded-lg text-[13px] font-bold tracking-wide uppercase ${court.bg} ${court.text}`}
+                            className={`inline-flex items-center px-3 py-1.5 rounded-lg text-[15px] font-bold tracking-wide uppercase ${court.bg} ${court.text}`}
                           >
                             {court.label || selectedResult.mahkeme}
                           </span>
                         );
                       })()}
                       {selectedResult.daire && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[14px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
                           {selectedResult.daire}
                         </span>
                       )}
                     </div>
-                    <span className="text-[12px] text-[#8B8B8E] tabular-nums font-medium">
+                    <span className="text-[14px] text-[#8B8B8E] tabular-nums font-medium">
                       {formatTurkishDate(selectedResult.tarih)}
                     </span>
                   </div>
@@ -641,18 +641,18 @@ export function IctihatTab({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <span className="text-[10px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">
+                      <span className="text-[12px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">
                         Esas No
                       </span>
-                      <span className="font-mono text-[15px] font-bold text-[#ECECEE]">
+                      <span className="font-mono text-[17px] font-bold text-[#ECECEE]">
                         {selectedResult.esas_no}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">
+                      <span className="text-[12px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">
                         Karar No
                       </span>
-                      <span className="font-mono text-[15px] font-bold text-[#ECECEE]">
+                      <span className="font-mono text-[17px] font-bold text-[#ECECEE]">
                         {selectedResult.karar_no}
                       </span>
                     </div>
@@ -661,12 +661,12 @@ export function IctihatTab({
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 mb-6 flex-wrap">
+              <div className="flex items-center gap-3 mb-6 flex-wrap">
                 {kararDetail && (
                   <>
                     <button
                       onClick={() => handleCopyText(kararDetail.tam_metin)}
-                      className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                      className="flex items-center gap-2 px-3 py-2 text-[14px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
                     >
                       {copied ? <CheckIcon /> : <CopyIcon />}
                       {copied ? "Kopyalandı" : "Metni Kopyala"}
@@ -676,14 +676,14 @@ export function IctihatTab({
                         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
                         window.open(`${apiUrl}/api/v1/search/karar/${selectedResult.karar_id}/download`, "_blank");
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                      className="flex items-center gap-2 px-3 py-2 text-[14px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
                     >
                       <DownloadIcon />
                       Kararı İndir
                     </button>
                     <button
                       onClick={() => toggleBookmark(selectedResult.karar_id)}
-                      className={`flex items-center gap-1.5 px-3 py-2 text-[12px] rounded-xl border transition-all ${
+                      className={`flex items-center gap-2 px-3 py-2 text-[14px] rounded-xl border transition-all ${
                         bookmarks.has(selectedResult.karar_id)
                           ? "text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border-[#6C6CFF]/15 hover:bg-[#6C6CFF]/10"
                           : "text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border-white/[0.06] hover:border-white/[0.10]"
@@ -702,7 +702,7 @@ export function IctihatTab({
                         localStorage.setItem("lexora_cite_to_dilekce", ref);
                         window.open("/dilekce", "_blank");
                       }}
-                      className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border border-[#6C6CFF]/15 rounded-xl hover:bg-[#6C6CFF]/10 hover:border-[#6C6CFF]/30 transition-all"
+                      className="flex items-center gap-2 px-3 py-2 text-[14px] text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border border-[#6C6CFF]/15 rounded-xl hover:bg-[#6C6CFF]/10 hover:border-[#6C6CFF]/30 transition-all"
                     >
                       <svg
                         width="13"
@@ -720,7 +720,7 @@ export function IctihatTab({
                 )}
                 <button
                   onClick={clearSelection}
-                  className="ml-auto px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-1.5"
+                  className="ml-auto px-3 py-2 text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all hidden md:flex items-center gap-2"
                 >
                   <CloseIcon size={12} />
                   Kapat
@@ -733,23 +733,23 @@ export function IctihatTab({
               ) : kararDetail ? (
                 <div className="space-y-6">
                   {/* Summary card */}
-                  <div className="bg-[#13131A] border border-[#6C6CFF]/10 rounded-2xl p-5">
-                    <div className="flex items-center gap-2 mb-3">
+                  <div className="bg-[#13131A] border border-[#6C6CFF]/10 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
                       <div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />
-                      <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">
+                      <h3 className="text-[14px] font-semibold text-[#8B8B8E] uppercase tracking-wider">
                         Özet
                       </h3>
                     </div>
-                    <p className="text-[13px] text-[#ECECEE] leading-[1.8] break-words">
+                    <p className="text-[15px] text-[#ECECEE] leading-[1.8] break-words">
                       {highlightText(kararDetail.ozet, query)}
                     </p>
                   </div>
 
                   {/* Full text */}
                   <div>
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-3 mb-4">
                       <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
-                      <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">
+                      <h3 className="text-[14px] font-semibold text-[#8B8B8E] uppercase tracking-wider">
                         Karar Metni
                       </h3>
                     </div>
@@ -789,7 +789,7 @@ export function IctihatTab({
                     <div>
                       <div className="flex items-center gap-3 mb-4">
                         <div className="flex-1 h-px bg-white/[0.06]" />
-                        <h3 className="text-[12px] font-semibold text-[#5C5C5F] uppercase tracking-wider whitespace-nowrap">
+                        <h3 className="text-[14px] font-semibold text-[#5C5C5F] uppercase tracking-wider whitespace-nowrap">
                           Benzer Kararlar
                         </h3>
                         <div className="flex-1 h-px bg-white/[0.06]" />
@@ -803,19 +803,19 @@ export function IctihatTab({
                               onClick={() => handleSelectResult(r)}
                               className="w-full text-left bg-[#111113] border border-white/[0.06] rounded-xl p-3 hover:border-white/[0.12] hover:bg-white/[0.02] transition-all group"
                             >
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-3 mb-2">
                                 <span
-                                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${court.bg} ${court.text}`}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-[12px] font-semibold uppercase ${court.bg} ${court.text}`}
                                 >
                                   {court.label || r.mahkeme}
                                 </span>
                                 {r.esas_no && (
-                                  <span className="text-[11px] font-mono text-[#8B8B8E]">
+                                  <span className="text-[13px] font-mono text-[#8B8B8E]">
                                     {r.esas_no}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[12px] text-[#8B8B8E] group-hover:text-[#ECECEE] line-clamp-2 leading-relaxed transition-colors">
+                              <p className="text-[14px] text-[#8B8B8E] group-hover:text-[#ECECEE] line-clamp-2 leading-relaxed transition-colors">
                                 {r.ozet?.slice(0, 150)}
                                 {r.ozet && r.ozet.length > 150 ? "..." : ""}
                               </p>
@@ -833,7 +833,7 @@ export function IctihatTab({
           hasResults && (
             <div className="hidden lg:flex flex-1 items-center justify-center bg-[#0C0C0E]">
               <div className="text-center">
-                <div className="w-14 h-14 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <svg
                     className="w-6 h-6 text-[#5C5C5F]/40"
                     fill="none"
@@ -848,7 +848,7 @@ export function IctihatTab({
                     />
                   </svg>
                 </div>
-                <p className="text-[13px] text-[#5C5C5F]">
+                <p className="text-[15px] text-[#5C5C5F]">
                   Karar metnini görüntülemek için
                   <br />
                   <span className="text-[#8B8B8E]">bir sonuç seçin</span>

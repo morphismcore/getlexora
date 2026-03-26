@@ -55,7 +55,7 @@ export default function SifremiUnuttumPage() {
           <h1 className="text-[20px] font-bold text-[#ECECEE] mt-4 tracking-tight">
             Sifremi Unuttum
           </h1>
-          <p className="text-[13px] text-[#5C5C5F] mt-1">
+          <p className="text-[15px] text-[#5C5C5F] mt-1">
             E-posta adresinize sifre sifirlama linki gonderecegiz.
           </p>
         </div>
@@ -73,19 +73,19 @@ export default function SifremiUnuttumPage() {
                 <path d="M22 4L12 14.01l-3-3" />
               </svg>
             </div>
-            <h3 className="text-[15px] font-semibold text-[#ECECEE]">
+            <h3 className="text-[17px] font-semibold text-[#ECECEE]">
               E-posta Gonderildi
             </h3>
-            <p className="text-[13px] text-[#8B8B8E] leading-relaxed">
+            <p className="text-[15px] text-[#8B8B8E] leading-relaxed">
               <strong className="text-[#ECECEE]">{email}</strong> adresine sifre sifirlama linki gonderdik.
               Lutfen gelen kutunuzu (ve spam klasorunu) kontrol edin.
             </p>
-            <p className="text-[11px] text-[#5C5C5F]">
+            <p className="text-[13px] text-[#5C5C5F]">
               Link 1 saat boyunca gecerlidir.
             </p>
             <Link
               href="/giris"
-              className="inline-block mt-2 text-[13px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+              className="inline-block mt-2 text-[15px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
             >
               Giris sayfasina don
             </Link>
@@ -95,7 +95,7 @@ export default function SifremiUnuttumPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4">
               <div>
-                <label className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
+                <label className="block text-[14px] font-medium text-[#8B8B8E] mb-2">
                   E-posta Adresiniz
                 </label>
                 <div className="relative">
@@ -111,7 +111,7 @@ export default function SifremiUnuttumPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="avukat@ornek.com"
-                    className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3 text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-all duration-200"
+                    className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3.5 text-[16px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -122,14 +122,14 @@ export default function SifremiUnuttumPage() {
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 8v4M12 16h.01" />
                   </svg>
-                  <span className="text-[13px] text-[#E5484D]">{error}</span>
+                  <span className="text-[15px] text-[#E5484D]">{error}</span>
                 </div>
               )}
 
               <button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/30 disabled:to-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-xl text-[14px] font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/30 disabled:to-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-xl text-[16px] font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {loading && (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -138,7 +138,7 @@ export default function SifremiUnuttumPage() {
               </button>
             </div>
 
-            <p className="text-center text-[13px] text-[#5C5C5F]">
+            <p className="text-center text-[15px] text-[#5C5C5F]">
               <Link href="/giris" className="text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Giris sayfasina don
               </Link>

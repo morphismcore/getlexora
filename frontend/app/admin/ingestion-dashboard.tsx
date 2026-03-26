@@ -248,8 +248,8 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
       {/* Source Breakdown */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Veri Kaynaklari</h3>
-          <button onClick={() => { fetchBreakdown(); fetchProgress(); }} className="text-[11px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Yenile</button>
+          <h3 className="text-[15px] font-semibold text-[#ECECEE]">Veri Kaynaklari</h3>
+          <button onClick={() => { fetchBreakdown(); fetchProgress(); }} className="text-[13px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Yenile</button>
         </div>
         <div className="space-y-3">
           {(["yargitay", "danistay", "aym", "aihm", "mevzuat"] as const).map((key) => {
@@ -258,7 +258,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
             const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
             return (
               <div key={key} className="flex items-center gap-3">
-                <span className="text-[12px] text-[#8B8B8E] w-20 shrink-0">{cfg.label}</span>
+                <span className="text-[14px] text-[#8B8B8E] w-20 shrink-0">{cfg.label}</span>
                 <div className="flex-1 h-[22px] bg-[#1A1A1F] rounded-md overflow-hidden relative">
                   <div
                     className="h-full rounded-md transition-all duration-700 ease-out"
@@ -269,7 +269,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
                     style={{ width: `${Math.max(barWidth, count > 0 ? 2 : 0)}%`, backgroundColor: cfg.color }}
                   />
                 </div>
-                <span className="text-[13px] font-mono text-[#ECECEE] w-16 text-right shrink-0">{count.toLocaleString("tr-TR")}</span>
+                <span className="text-[15px] font-mono text-[#ECECEE] w-16 text-right shrink-0">{count.toLocaleString("tr-TR")}</span>
                 {count === 0 && !state?.running && (
                   <button
                     onClick={() => {
@@ -278,7 +278,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
                       else if (key === "mevzuat") triggerIngest("/mevzuat", "Mevzuat");
                       else triggerIngest("", "Ictihat");
                     }}
-                    className="text-[10px] px-2 py-1 rounded-md border transition-colors shrink-0"
+                    className="text-[12px] px-2 py-1 rounded-md border transition-colors shrink-0"
                     style={{ color: cfg.color, borderColor: `${cfg.color}40`, backgroundColor: `${cfg.color}10` }}
                   >
                     Cek
@@ -289,8 +289,8 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           })}
         </div>
         <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-          <span className="text-[12px] text-[#5C5C5F]">Toplam</span>
-          <span className="text-[15px] font-semibold text-[#ECECEE]">{(breakdown?.total || 0).toLocaleString("tr-TR")} embedding</span>
+          <span className="text-[14px] text-[#5C5C5F]">Toplam</span>
+          <span className="text-[17px] font-semibold text-[#ECECEE]">{(breakdown?.total || 0).toLocaleString("tr-TR")} embedding</span>
         </div>
       </div>
 
@@ -299,24 +299,24 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${state?.running ? "bg-[#3DD68C] animate-pulse" : "bg-[#5C5C5F]"}`} />
-            <span className="text-[13px] font-semibold text-[#ECECEE]">{state?.running ? "Calisiyor" : "Beklemede"}</span>
+            <span className="text-[15px] font-semibold text-[#ECECEE]">{state?.running ? "Calisiyor" : "Beklemede"}</span>
           </div>
           {state?.running && elapsed && (
-            <span className="text-[12px] font-mono text-[#8B8B8E]">{elapsed}</span>
+            <span className="text-[14px] font-mono text-[#8B8B8E]">{elapsed}</span>
           )}
         </div>
 
         {state?.running ? (
           <>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[12px] text-[#5C5C5F]">Kaynak:</span>
-              <span className="text-[12px] font-medium" style={{ color: SOURCE_CONFIG[state.source || ""]?.color || "#8B8B8E" }}>
+              <span className="text-[14px] text-[#5C5C5F]">Kaynak:</span>
+              <span className="text-[14px] font-medium" style={{ color: SOURCE_CONFIG[state.source || ""]?.color || "#8B8B8E" }}>
                 {sourceLabel(state.source)}
               </span>
               {state.task && (
                 <>
                   <span className="text-[#5C5C5F]">·</span>
-                  <span className="text-[12px] text-[#ECECEE]">{state.task}</span>
+                  <span className="text-[14px] text-[#ECECEE]">{state.task}</span>
                 </>
               )}
             </div>
@@ -324,8 +324,8 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
             {state.total_topics > 0 && (
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-[#5C5C5F]">{state.completed_topics}/{state.total_topics}</span>
-                  <span className="text-[11px] text-[#5C5C5F]">%{pct}</span>
+                  <span className="text-[13px] text-[#5C5C5F]">{state.completed_topics}/{state.total_topics}</span>
+                  <span className="text-[13px] text-[#5C5C5F]">%{pct}</span>
                 </div>
                 <div className="w-full h-2 bg-[#1A1A1F] rounded-full overflow-hidden">
                   <div className="h-full bg-[#6C6CFF] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
@@ -335,21 +335,21 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
 
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#09090B] rounded-lg p-3 text-center">
-                <p className="text-[16px] font-semibold text-[#6C6CFF]">{state.fetched}</p>
-                <p className="text-[10px] text-[#5C5C5F] mt-0.5">Cekilen</p>
+                <p className="text-[18px] font-semibold text-[#6C6CFF]">{state.fetched}</p>
+                <p className="text-[12px] text-[#5C5C5F] mt-0.5">Cekilen</p>
               </div>
               <div className="bg-[#09090B] rounded-lg p-3 text-center">
-                <p className="text-[16px] font-semibold text-[#3DD68C]">{state.embedded}</p>
-                <p className="text-[10px] text-[#5C5C5F] mt-0.5">Embed</p>
+                <p className="text-[18px] font-semibold text-[#3DD68C]">{state.embedded}</p>
+                <p className="text-[12px] text-[#5C5C5F] mt-0.5">Embed</p>
               </div>
               <div className="bg-[#09090B] rounded-lg p-3 text-center">
-                <p className={`text-[16px] font-semibold ${state.errors > 0 ? "text-[#E5484D]" : "text-[#5C5C5F]"}`}>{state.errors}</p>
-                <p className="text-[10px] text-[#5C5C5F] mt-0.5">Hata</p>
+                <p className={`text-[18px] font-semibold ${state.errors > 0 ? "text-[#E5484D]" : "text-[#5C5C5F]"}`}>{state.errors}</p>
+                <p className="text-[12px] text-[#5C5C5F] mt-0.5">Hata</p>
               </div>
             </div>
           </>
         ) : (
-          <p className="text-[12px] text-[#5C5C5F]">
+          <p className="text-[14px] text-[#5C5C5F]">
             {progress?.last_update
               ? `Son guncelleme: ${new Date(progress.last_update as string).toLocaleString("tr-TR")}`
               : "Henuz ingestion calistirilmadi"}
@@ -361,37 +361,37 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`w-2.5 h-2.5 rounded-full ${gpuConnected ? "bg-[#3DD68C]" : gpuConnected === false ? "bg-[#E5484D]" : "bg-[#5C5C5F] animate-pulse"}`} />
-          <span className="text-[13px] font-medium text-[#ECECEE]">GPU Embedding</span>
+          <span className="text-[15px] font-medium text-[#ECECEE]">GPU Embedding</span>
         </div>
-        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${gpuConnected ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+        <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${gpuConnected ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
           {gpuConnected ? "Bagli" : gpuConnected === false ? "Bagli Degil" : "Kontrol ediliyor..."}
         </span>
       </div>
 
       {/* Ingestion Config */}
       <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
-        <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-4">Ingestion Yapilandirmasi</h3>
+        <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-4">Ingestion Yapilandirmasi</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="text-[11px] text-[#5C5C5F] block mb-1.5">Yargitay - Baslangic Yili</label>
+            <label className="text-[13px] text-[#5C5C5F] block mb-1.5">Yargitay - Baslangic Yili</label>
             <input
               type="number"
               value={ingestConfig.yargitay_year_from}
               onChange={(e) => setIngestConfig({ ...ingestConfig, yargitay_year_from: parseInt(e.target.value) || 2020 })}
               min={2000}
               max={2030}
-              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
+              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
             />
           </div>
           <div>
-            <label className="text-[11px] text-[#5C5C5F] block mb-1.5">Danistay - Baslangic Yili</label>
+            <label className="text-[13px] text-[#5C5C5F] block mb-1.5">Danistay - Baslangic Yili</label>
             <input
               type="number"
               value={ingestConfig.danistay_year_from}
               onChange={(e) => setIngestConfig({ ...ingestConfig, danistay_year_from: parseInt(e.target.value) || 2020 })}
               min={2000}
               max={2030}
-              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
+              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
             />
           </div>
         </div>
@@ -399,14 +399,14 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           <button
             onClick={saveIngestConfig}
             disabled={configSaving}
-            className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+            className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
           >
             {configSaving ? "Kaydediliyor..." : "Kaydet"}
           </button>
           <button
             onClick={startExhaustive}
             disabled={state?.running || exhaustiveStarting}
-            className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#A78BFA] hover:from-[#5B5BEE] hover:to-[#9678E5] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#A78BFA] hover:from-[#5B5BEE] hover:to-[#9678E5] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
           >
             {exhaustiveStarting ? "Baslatiliyor..." : state?.running ? "Calisiyor..." : "Exhaustive Baslat"}
           </button>
@@ -418,35 +418,35 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
         <button
           onClick={() => triggerIngest("", "Ictihat")}
           disabled={state?.running}
-          className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
         >
           {state?.running && state.source === "bedesten" ? "Calisiyor..." : "Ictihat Cek"}
         </button>
         <button
           onClick={() => triggerIngest("/aym", "AYM")}
           disabled={state?.running}
-          className="px-4 py-2 bg-[#E5484D] hover:bg-[#D13438] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          className="px-4 py-2 bg-[#E5484D] hover:bg-[#D13438] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
         >
           {state?.running && state.source === "aym" ? "Calisiyor..." : "AYM Cek"}
         </button>
         <button
           onClick={() => triggerIngest("/aihm", "AIHM")}
           disabled={state?.running}
-          className="px-4 py-2 bg-[#3DD68C] hover:bg-[#2CC67C] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          className="px-4 py-2 bg-[#3DD68C] hover:bg-[#2CC67C] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
         >
           {state?.running && state.source === "aihm" ? "Calisiyor..." : "AIHM Cek"}
         </button>
         <button
           onClick={() => triggerIngest("/mevzuat", "Mevzuat")}
           disabled={state?.running}
-          className="px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          className="px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
         >
           {state?.running && state.source === "mevzuat" ? "Calisiyor..." : "Mevzuat Cek"}
         </button>
         <button
           onClick={() => triggerIngest("/batch", "Toplu")}
           disabled={state?.running}
-          className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#3DD68C] hover:from-[#5B5BEE] hover:to-[#2CC67C] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#3DD68C] hover:from-[#5B5BEE] hover:to-[#2CC67C] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
         >
           {state?.running && state.source === "batch" ? "Calisiyor..." : "Toplu Cek"}
         </button>
@@ -458,7 +458,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors"
         >
-          <span className="text-[13px] font-semibold text-[#ECECEE]">Gelismis Ingestion</span>
+          <span className="text-[15px] font-semibold text-[#ECECEE]">Gelismis Ingestion</span>
           <svg
             className={`w-4 h-4 text-[#5C5C5F] transition-transform ${showAdvanced ? "rotate-180" : ""}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -471,25 +471,25 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           <div className="px-5 pb-5 space-y-5 border-t border-white/[0.06] pt-4">
             {/* Daire Bazli Ingestion */}
             <div className="space-y-3">
-              <h4 className="text-[12px] font-semibold text-[#A78BFA]">Daire Bazli Ingestion</h4>
+              <h4 className="text-[14px] font-semibold text-[#A78BFA]">Daire Bazli Ingestion</h4>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Mahkeme</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Mahkeme</label>
                   <select
                     value={daireCourtType}
                     onChange={(e) => setDaireCourtType(e.target.value)}
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
                   >
                     <option value="yargitay">Yargitay</option>
                     <option value="danistay">Danistay</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Daire</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Daire</label>
                   <select
                     value={daireId}
                     onChange={(e) => setDaireId(e.target.value)}
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
                   >
                     <option value="">Tum Daireler</option>
                     {Object.entries(YARGITAY_DAIRELERI).map(([id, name]) => (
@@ -498,21 +498,21 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Sayfa Sayisi</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Sayfa Sayisi</label>
                   <input
                     type="number"
                     value={dairePages}
                     onChange={(e) => setDairePages(parseInt(e.target.value) || 10)}
                     min={1}
                     max={100}
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
                   />
                 </div>
                 <div className="flex items-end">
                   <button
                     onClick={triggerDaireIngest}
                     disabled={state?.running}
-                    className="w-full px-4 py-2 bg-[#A78BFA] hover:bg-[#9678E5] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+                    className="w-full px-4 py-2 bg-[#A78BFA] hover:bg-[#9678E5] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
                   >
                     Daire Cek
                   </button>
@@ -522,33 +522,33 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
 
             {/* Tarih Bazli Ingestion */}
             <div className="space-y-3">
-              <h4 className="text-[12px] font-semibold text-[#FFB224]">Tarih Bazli Ingestion</h4>
+              <h4 className="text-[14px] font-semibold text-[#FFB224]">Tarih Bazli Ingestion</h4>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Baslangic (GG.AA.YYYY)</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Baslangic (GG.AA.YYYY)</label>
                   <input
                     type="text"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                     placeholder="01.01.2024"
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Bitis (GG.AA.YYYY)</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Bitis (GG.AA.YYYY)</label>
                   <input
                     type="text"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                     placeholder="31.12.2024"
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Mahkemeler</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Mahkemeler</label>
                   <div className="flex gap-2 mt-1">
                     {["yargitay", "danistay"].map((ct) => (
-                      <label key={ct} className="flex items-center gap-1 text-[11px] text-[#8B8B8E]">
+                      <label key={ct} className="flex items-center gap-1 text-[13px] text-[#8B8B8E]">
                         <input
                           type="checkbox"
                           checked={dateCourtTypes.includes(ct)}
@@ -564,21 +564,21 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] text-[#5C5C5F] block mb-1">Max Sayfa</label>
+                  <label className="text-[13px] text-[#5C5C5F] block mb-1">Max Sayfa</label>
                   <input
                     type="number"
                     value={dateMaxPages}
                     onChange={(e) => setDateMaxPages(parseInt(e.target.value) || 50)}
                     min={1}
                     max={200}
-                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+                    className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
                   />
                 </div>
                 <div className="flex items-end">
                   <button
                     onClick={triggerDateRangeIngest}
                     disabled={state?.running || !dateFrom || !dateTo}
-                    className="w-full px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+                    className="w-full px-4 py-2 bg-[#FFB224] hover:bg-[#E5A010] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[14px] font-medium text-white transition-colors"
                   >
                     Tarih Cek
                   </button>
@@ -598,25 +598,25 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
               <div className="w-2.5 h-2.5 rounded-full bg-[#FFB224]/60" />
               <div className="w-2.5 h-2.5 rounded-full bg-[#3DD68C]/60" />
             </div>
-            <span className="text-[11px] font-medium text-[#5C5C5F]">Canli Log</span>
+            <span className="text-[13px] font-medium text-[#5C5C5F]">Canli Log</span>
             {state?.running && <span className="w-1.5 h-1.5 rounded-full bg-[#3DD68C] animate-pulse" />}
           </div>
           <div className="flex gap-1">
             <button
               onClick={() => setLogFilter("all")}
-              className={`px-2 py-0.5 text-[10px] rounded ${logFilter === "all" ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}
+              className={`px-2 py-0.5 text-[12px] rounded ${logFilter === "all" ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}
             >
               Tumu
             </button>
             <button
               onClick={() => setLogFilter("errors")}
-              className={`px-2 py-0.5 text-[10px] rounded ${logFilter === "errors" ? "bg-[#E5484D]/20 text-[#E5484D]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}
+              className={`px-2 py-0.5 text-[12px] rounded ${logFilter === "errors" ? "bg-[#E5484D]/20 text-[#E5484D]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}
             >
               Hatalar
             </button>
           </div>
         </div>
-        <div ref={terminalRef} className="bg-[#09090B] p-3 h-[300px] overflow-y-auto font-mono text-[11px] leading-[1.7] scrollbar-thin">
+        <div ref={terminalRef} className="bg-[#09090B] p-3 h-[300px] overflow-y-auto font-mono text-[13px] leading-[1.7] scrollbar-thin">
           {filteredLogs.length === 0 ? (
             <div className="text-[#5C5C5F] text-center py-12">
               {logFilter === "errors" ? "Hata yok" : "Henuz log yok. Ingestion baslatin."}
@@ -649,7 +649,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
             onClick={() => setTopicsExpanded(!topicsExpanded)}
             className="flex items-center justify-between w-full"
           >
-            <span className="text-[12px] font-medium text-[#8B8B8E]">
+            <span className="text-[14px] font-medium text-[#8B8B8E]">
               Tamamlanan ({(progress.topics_list as string[]).length})
             </span>
             <svg
@@ -662,7 +662,7 @@ export default function IngestionDashboard({ token, apiUrl, onToast }: { token: 
           {topicsExpanded && (
             <div className="flex flex-wrap gap-1 mt-3">
               {(progress.topics_list as string[]).map((t: string) => (
-                <span key={t} className="px-1.5 py-0.5 text-[10px] bg-[#3DD68C]/10 text-[#3DD68C] rounded">{t}</span>
+                <span key={t} className="px-1.5 py-0.5 text-[12px] bg-[#3DD68C]/10 text-[#3DD68C] rounded">{t}</span>
               ))}
             </div>
           )}

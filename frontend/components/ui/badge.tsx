@@ -15,8 +15,8 @@ const variantStyles: Record<BadgeProps["variant"], string> = {
 };
 
 const sizeStyles: Record<NonNullable<BadgeProps["size"]>, string> = {
-  sm: "px-2 py-0.5 text-[11px]",
-  md: "px-2.5 py-0.5 text-[11px]",
+  sm: "px-2 py-0.5 text-[13px]",
+  md: "px-2.5 py-0.5 text-[13px]",
 };
 
 export default function Badge({ variant, size = "md", children }: BadgeProps) {

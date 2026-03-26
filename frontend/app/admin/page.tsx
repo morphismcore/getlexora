@@ -118,7 +118,7 @@ export default function AdminPage() {
             initial={{ opacity: 0, y: -20, x: 20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-4 right-4 z-[70] px-4 py-2.5 ${toastColors[toast.type].bg} border ${toastColors[toast.type].border} ${toastColors[toast.type].text} text-[13px] rounded-lg shadow-lg backdrop-blur-sm flex items-center gap-2`}
+            className={`fixed top-4 right-4 z-[70] px-4 py-2.5 ${toastColors[toast.type].bg} border ${toastColors[toast.type].border} ${toastColors[toast.type].text} text-[15px] rounded-lg shadow-lg backdrop-blur-sm flex items-center gap-2`}
           >
             {toast.type === "success" && (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -136,7 +136,7 @@ export default function AdminPage() {
 
       {/* Fetch error banner */}
       {fetchError && (
-        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
+        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[15px] text-[#E5484D]">
           {fetchError}
           <button onClick={fetchAll} className="ml-3 underline">Tekrar dene</button>
         </div>
@@ -145,12 +145,12 @@ export default function AdminPage() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[#ECECEE]">Admin Panel</h1>
-          <p className="text-[12px] text-[#5C5C5F] mt-0.5">Lexora platform yonetimi</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-[#ECECEE]">Admin Panel</h1>
+          <p className="text-[14px] text-[#5C5C5F] mt-0.5">Lexora platform yonetimi</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#3DD68C]" />
-          <span className="text-[11px] text-[#5C5C5F]">{user.full_name}</span>
+          <span className="text-[13px] text-[#5C5C5F]">{user.full_name}</span>
         </div>
       </div>
 
@@ -173,10 +173,10 @@ export default function AdminPage() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <p className="text-[12px] text-[#5C5C5F]">{s.label}</p>
+                <p className="text-[14px] text-[#5C5C5F]">{s.label}</p>
               </div>
               <p className="text-2xl font-semibold text-[#ECECEE]">{typeof s.value === "number" ? s.value.toLocaleString("tr-TR") : s.value}</p>
-              {"sub" in s && s.sub && <p className="text-[11px] text-[#FFB224] mt-1">{s.sub}</p>}
+              {"sub" in s && s.sub && <p className="text-[13px] text-[#FFB224] mt-1">{s.sub}</p>}
             </motion.div>
           ))}
         </div>
@@ -188,7 +188,7 @@ export default function AdminPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium rounded-lg transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 text-[14px] font-medium rounded-lg transition-all whitespace-nowrap ${
               tab === t.key
                 ? "bg-[#6C6CFF]/15 text-[#6C6CFF] shadow-sm"
                 : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"
@@ -238,16 +238,16 @@ export default function AdminPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
           {systemHealth && (
             <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
-              <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3">Servis Durumu</h3>
+              <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3">Servis Durumu</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
                   <div key={key} className="bg-[#09090B] rounded-lg p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${val.status === "ok" ? "bg-[#3DD68C]" : "bg-[#E5484D] animate-pulse"}`} />
-                      <span className="text-[12px] text-[#ECECEE] capitalize">{key}</span>
+                      <span className="text-[14px] text-[#ECECEE] capitalize">{key}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${val.status === "ok" ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                    <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${val.status === "ok" ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                       {val.status}
                     </span>
                   </div>
@@ -261,7 +261,7 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
-              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Sure Kurallari</h3>
+              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Sure Kurallari</h3>
             </div>
             <DeadlineRulesTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
           </div>
@@ -269,7 +269,7 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
-              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Tatiller</h3>
+              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Tatiller</h3>
             </div>
             <HolidaysTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
           </div>
@@ -277,7 +277,7 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1 h-5 rounded-full bg-[#FFB224]" />
-              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Platform Ayarlari</h3>
+              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Platform Ayarlari</h3>
             </div>
             <SettingsTab apiUrl={API_URL} />
           </div>
@@ -316,17 +316,17 @@ function GenelTabContent({
         <div className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-[#FFB224]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            <h3 className="text-[13px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
+            <h3 className="text-[15px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
           </div>
           {pendingUsers.map((u) => (
             <div key={u.id} className="flex items-center justify-between bg-[#09090B] rounded-lg p-3">
               <div>
-                <p className="text-[13px] text-[#ECECEE] font-medium">{u.full_name}</p>
-                <p className="text-[11px] text-[#5C5C5F]">{u.email} {u.baro ? `\u2014 ${u.baro}` : ""}</p>
+                <p className="text-[15px] text-[#ECECEE] font-medium">{u.full_name}</p>
+                <p className="text-[13px] text-[#5C5C5F]">{u.email} {u.baro ? `\u2014 ${u.baro}` : ""}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => onApproveUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
-                <button onClick={() => onRejectUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
+                <button onClick={() => onApproveUser(u.id)} className="px-3 py-1 text-[13px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
+                <button onClick={() => onRejectUser(u.id)} className="px-3 py-1 text-[13px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
               </div>
             </div>
           ))}
@@ -339,35 +339,35 @@ function GenelTabContent({
           <div className="w-10 h-10 rounded-xl bg-[#6C6CFF]/10 flex items-center justify-center mb-3">
             <HIcon d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" className="w-5 h-5 text-[#6C6CFF]" />
           </div>
-          <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Kullanicilar & Firmalar</p>
-          <p className="text-[12px] text-[#5C5C5F]">{users.length} kullanici, {firms.length} firma</p>
+          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Kullanicilar & Firmalar</p>
+          <p className="text-[14px] text-[#5C5C5F]">{users.length} kullanici, {firms.length} firma</p>
         </button>
         <button onClick={() => onSetTab("veri-yonetimi")} className="bg-[#111113] border border-white/[0.06] hover:border-[#3DD68C]/30 rounded-xl p-5 text-left transition-colors group">
           <div className="w-10 h-10 rounded-xl bg-[#3DD68C]/10 flex items-center justify-center mb-3">
             <HIcon d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" className="w-5 h-5 text-[#3DD68C]" />
           </div>
-          <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Veri Yonetimi</p>
-          <p className="text-[12px] text-[#5C5C5F]">{(embeddings?.total || 0).toLocaleString("tr-TR")} embedding</p>
+          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Veri Yonetimi</p>
+          <p className="text-[14px] text-[#5C5C5F]">{(embeddings?.total || 0).toLocaleString("tr-TR")} embedding</p>
         </button>
         <button onClick={() => onSetTab("sistem")} className="bg-[#111113] border border-white/[0.06] hover:border-[#FFB224]/30 rounded-xl p-5 text-left transition-colors group">
           <div className="w-10 h-10 rounded-xl bg-[#FFB224]/10 flex items-center justify-center mb-3">
             <HIcon d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z" className="w-5 h-5 text-[#FFB224]" />
           </div>
-          <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Sistem Ayarlari</p>
-          <p className="text-[12px] text-[#5C5C5F]">Sure kurallari, tatiller, ayarlar</p>
+          <p className="text-[16px] font-medium text-[#ECECEE] mb-1">Sistem Ayarlari</p>
+          <p className="text-[14px] text-[#5C5C5F]">Sure kurallari, tatiller, ayarlar</p>
         </button>
       </div>
 
       {/* System health summary */}
       {systemHealth && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3">Sistem Durumu</h3>
+          <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3">Sistem Durumu</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
               <div key={key} className="bg-[#09090B] rounded-lg p-3 flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${val.status === "ok" ? "bg-[#3DD68C]" : "bg-[#E5484D] animate-pulse"}`} />
-                <span className="text-[12px] text-[#ECECEE] capitalize">{key}</span>
+                <span className="text-[14px] text-[#ECECEE] capitalize">{key}</span>
               </div>
             ))}
           </div>
@@ -406,17 +406,17 @@ function KullanicilarTabContent({
         <div className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-[#FFB224]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            <h3 className="text-[13px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
+            <h3 className="text-[15px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
           </div>
           {pendingUsers.map((u) => (
             <div key={u.id} className="flex items-center justify-between bg-[#09090B] rounded-lg p-3">
               <div>
-                <p className="text-[13px] text-[#ECECEE] font-medium">{u.full_name}</p>
-                <p className="text-[11px] text-[#5C5C5F]">{u.email} {u.baro ? `\u2014 ${u.baro}` : ""}</p>
+                <p className="text-[15px] text-[#ECECEE] font-medium">{u.full_name}</p>
+                <p className="text-[13px] text-[#5C5C5F]">{u.email} {u.baro ? `\u2014 ${u.baro}` : ""}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => onApproveUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
-                <button onClick={() => onRejectUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
+                <button onClick={() => onApproveUser(u.id)} className="px-3 py-1 text-[13px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
+                <button onClick={() => onRejectUser(u.id)} className="px-3 py-1 text-[13px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
               </div>
             </div>
           ))}
@@ -427,12 +427,12 @@ function KullanicilarTabContent({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
-          <h3 className="text-[14px] font-semibold text-[#ECECEE]">Kullanicilar</h3>
-          <span className="text-[12px] text-[#5C5C5F]">({users.length})</span>
+          <h3 className="text-[16px] font-semibold text-[#ECECEE]">Kullanicilar</h3>
+          <span className="text-[14px] text-[#5C5C5F]">({users.length})</span>
         </div>
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[11px] uppercase tracking-wider">
+          <table className="w-full text-[15px]">
+            <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[13px] uppercase tracking-wider">
               <th className="text-left p-3">Kullanici</th><th className="text-left p-3 hidden md:table-cell">E-posta</th><th className="text-left p-3 hidden sm:table-cell">Baro</th><th className="text-left p-3">Rol</th><th className="text-left p-3">Durum</th>
             </tr></thead>
             <tbody>
@@ -442,12 +442,12 @@ function KullanicilarTabContent({
                   <td className="p-3 text-[#8B8B8E] hidden md:table-cell">{u.email}</td>
                   <td className="p-3 text-[#8B8B8E] hidden sm:table-cell">{u.baro || "\u2014"}</td>
                   <td className="p-3">
-                    <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="bg-transparent text-[12px] text-[#ECECEE] cursor-pointer focus:outline-none">
+                    <select value={u.role} onChange={(e) => onChangeRole(u.id, e.target.value)} className="bg-transparent text-[14px] text-[#ECECEE] cursor-pointer focus:outline-none">
                       {ROLES.map((r) => <option key={r} value={r} className="bg-[#16161A]">{ROLE_LABELS[r]}</option>)}
                     </select>
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${u.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
+                    <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${u.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
                       {u.is_active ? "Aktif" : "Beklemede"}
                     </span>
                   </td>
@@ -462,20 +462,20 @@ function KullanicilarTabContent({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
-          <h3 className="text-[14px] font-semibold text-[#ECECEE]">Kurumsal Burolar</h3>
-          <span className="text-[12px] text-[#5C5C5F]">({kurumsalFirms.length})</span>
+          <h3 className="text-[16px] font-semibold text-[#ECECEE]">Kurumsal Burolar</h3>
+          <span className="text-[14px] text-[#5C5C5F]">({kurumsalFirms.length})</span>
         </div>
         {kurumsalFirms.length === 0 ? (
-          <p className="text-[12px] text-[#5C5C5F] pl-3">Henuz kurumsal buro yok.</p>
+          <p className="text-[14px] text-[#5C5C5F] pl-3">Henuz kurumsal buro yok.</p>
         ) : (
           <div className="space-y-2">
             {kurumsalFirms.map((f) => (
               <div key={f.id} className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
                 <div>
-                  <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[12px] text-[#5C5C5F]">{f.email || "\u2014"} {"\u00b7"} {f.member_count}/{f.max_users} uye</p>
+                  <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
+                  <p className="text-[14px] text-[#5C5C5F]">{f.email || "\u2014"} {"\u00b7"} {f.member_count}/{f.max_users} uye</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                   {f.is_active ? "Aktif" : "Pasif"}
                 </span>
               </div>
@@ -488,20 +488,20 @@ function KullanicilarTabContent({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
-          <h3 className="text-[14px] font-semibold text-[#ECECEE]">Bireysel Avukatlar</h3>
-          <span className="text-[12px] text-[#5C5C5F]">({bireyselFirms.length})</span>
+          <h3 className="text-[16px] font-semibold text-[#ECECEE]">Bireysel Avukatlar</h3>
+          <span className="text-[14px] text-[#5C5C5F]">({bireyselFirms.length})</span>
         </div>
         {bireyselFirms.length === 0 ? (
-          <p className="text-[12px] text-[#5C5C5F] pl-3">Henuz bireysel avukat yok.</p>
+          <p className="text-[14px] text-[#5C5C5F] pl-3">Henuz bireysel avukat yok.</p>
         ) : (
           <div className="space-y-2">
             {bireyselFirms.map((f) => (
               <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
                 <div>
-                  <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
-                  <p className="text-[12px] text-[#5C5C5F]">{f.member_count}/{f.max_users} uye</p>
+                  <p className="text-[16px] font-medium text-[#ECECEE]">{f.name}</p>
+                  <p className="text-[14px] text-[#5C5C5F]">{f.member_count}/{f.max_users} uye</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                <span className={`px-2 py-0.5 rounded text-[12px] font-medium ${f.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
                   {f.is_active ? "Aktif" : "Pasif"}
                 </span>
               </div>

@@ -187,15 +187,15 @@ export default function AyarlarPage() {
     setToast("Üye çıkarıldı");
   }, [headers]);
 
-  const inputCls = "w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200";
+  const inputCls = "w-full bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200";
   const isAdmin = user?.role === "admin" || user?.role === "platform_admin";
 
   return (
     <div className="h-screen overflow-auto p-5 pt-14 md:p-8 md:pt-8 space-y-6">
-      {toast && <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg">{toast}</div>}
+      {toast && <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[15px] rounded-lg">{toast}</div>}
 
       {loadError && (
-        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
+        <div role="alert" className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[15px] text-[#E5484D]">
           {loadError}
           <button onClick={() => { setLoadError(null); window.location.reload(); }} className="ml-3 underline">Tekrar dene</button>
         </div>
@@ -203,7 +203,7 @@ export default function AyarlarPage() {
 
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Ayarlar</h1>
-        <p className="text-[12px] text-[#5C5C5F] mt-0.5">Hesap ve firma ayarlarınız</p>
+        <p className="text-[14px] text-[#5C5C5F] mt-0.5">Hesap ve firma ayarlarınız</p>
       </div>
 
       {/* Tabs */}
@@ -215,7 +215,7 @@ export default function AyarlarPage() {
           { id: "firma", label: "Firma" },
           ...(firm ? [{ id: "uyeler", label: "Üyeler" }] : []),
         ] as { id: typeof tab; label: string }[]).map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors ${tab === t.id ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`px-3 py-1.5 text-[14px] font-medium rounded-md transition-colors ${tab === t.id ? "bg-[#6C6CFF]/20 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
             {t.label}
           </button>
         ))}
@@ -225,28 +225,28 @@ export default function AyarlarPage() {
       {tab === "profil" && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4 max-w-lg">
           <div>
-            <label htmlFor="profil-email" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">E-posta</label>
+            <label htmlFor="profil-email" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">E-posta</label>
             <input id="profil-email" type="email" value={user?.email || ""} disabled className={inputCls + " opacity-50 cursor-not-allowed"} />
           </div>
           <div>
-            <label htmlFor="profil-fullname" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Ad Soyad</label>
+            <label htmlFor="profil-fullname" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Ad Soyad</label>
             <input id="profil-fullname" type="text" value={profile.full_name} onChange={e => setProfile(p => ({ ...p, full_name: e.target.value }))} className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="profil-baro-sicil" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro Sicil No</label>
+              <label htmlFor="profil-baro-sicil" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Baro Sicil No</label>
               <input id="profil-baro-sicil" type="text" value={profile.baro_sicil_no} onChange={e => setProfile(p => ({ ...p, baro_sicil_no: e.target.value }))} className={inputCls} />
             </div>
             <div>
-              <label htmlFor="profil-baro" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Baro</label>
+              <label htmlFor="profil-baro" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Baro</label>
               <input id="profil-baro" type="text" value={profile.baro} onChange={e => setProfile(p => ({ ...p, baro: e.target.value }))} className={inputCls} />
             </div>
           </div>
           <div>
-            <label htmlFor="profil-phone" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Telefon</label>
+            <label htmlFor="profil-phone" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Telefon</label>
             <input id="profil-phone" type="tel" value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} className={inputCls} />
           </div>
-          <button onClick={saveProfile} disabled={profileLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
+          <button onClick={saveProfile} disabled={profileLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors">
             {profileLoading ? "Kaydediliyor..." : "Kaydet"}
           </button>
         </div>
@@ -255,21 +255,21 @@ export default function AyarlarPage() {
       {/* Güvenlik */}
       {tab === "guvenlik" && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4 max-w-lg">
-          <h3 className="text-[13px] font-semibold text-[#ECECEE]">Şifre Değiştir</h3>
+          <h3 className="text-[15px] font-semibold text-[#ECECEE]">Şifre Değiştir</h3>
           <div>
-            <label htmlFor="pw-current" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Mevcut Şifre</label>
+            <label htmlFor="pw-current" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Mevcut Şifre</label>
             <input id="pw-current" type="password" value={passwords.current} onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))} className={inputCls} />
           </div>
           <div>
-            <label htmlFor="pw-new" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (min 8 karakter)</label>
+            <label htmlFor="pw-new" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (min 8 karakter)</label>
             <input id="pw-new" type="password" value={passwords.new_password} onChange={e => setPasswords(p => ({ ...p, new_password: e.target.value }))} className={inputCls} />
           </div>
           <div>
-            <label htmlFor="pw-confirm" className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (tekrar)</label>
+            <label htmlFor="pw-confirm" className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Yeni Şifre (tekrar)</label>
             <input id="pw-confirm" type="password" value={passwords.confirm} onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))} className={inputCls} />
           </div>
-          {pwError && <p className="text-[13px] text-[#E5484D]">{pwError}</p>}
-          <button onClick={changePassword} disabled={pwLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
+          {pwError && <p className="text-[15px] text-[#E5484D]">{pwError}</p>}
+          <button onClick={changePassword} disabled={pwLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors">
             {pwLoading ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
           </button>
         </div>
@@ -279,16 +279,16 @@ export default function AyarlarPage() {
       {tab === "bildirimler" && (
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-5 max-w-lg">
           <div>
-            <h3 className="text-[13px] font-semibold text-[#ECECEE]">E-posta Bildirimleri</h3>
-            <p className="text-[11px] text-[#5C5C5F] mt-0.5">Hangi durumlarda e-posta almak istediginizi secin.</p>
+            <h3 className="text-[15px] font-semibold text-[#ECECEE]">E-posta Bildirimleri</h3>
+            <p className="text-[13px] text-[#5C5C5F] mt-0.5">Hangi durumlarda e-posta almak istediginizi secin.</p>
           </div>
 
           <div className="space-y-3">
             {/* Deadline reminder toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-[#ECECEE]">Sure Hatirlatmalari</p>
-                <p className="text-[11px] text-[#5C5C5F]">Yaklasan hak dusurucusu ve durusma tarihleri</p>
+                <p className="text-[15px] text-[#ECECEE]">Sure Hatirlatmalari</p>
+                <p className="text-[13px] text-[#5C5C5F]">Yaklasan hak dusurucusu ve durusma tarihleri</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -308,8 +308,8 @@ export default function AyarlarPage() {
             {/* Case update toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-[#ECECEE]">Dava Guncellemeleri</p>
-                <p className="text-[11px] text-[#5C5C5F]">Dava durumu degisiklikleri hakkinda bildirim</p>
+                <p className="text-[15px] text-[#ECECEE]">Dava Guncellemeleri</p>
+                <p className="text-[13px] text-[#5C5C5F]">Dava durumu degisiklikleri hakkinda bildirim</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -329,8 +329,8 @@ export default function AyarlarPage() {
             {/* Weekly summary toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] text-[#ECECEE]">Haftalik Ozet</p>
-                <p className="text-[11px] text-[#5C5C5F]">Her pazartesi dava ve sure ozeti</p>
+                <p className="text-[15px] text-[#ECECEE]">Haftalik Ozet</p>
+                <p className="text-[13px] text-[#5C5C5F]">Her pazartesi dava ve sure ozeti</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -351,7 +351,7 @@ export default function AyarlarPage() {
           {/* Reminder days before */}
           {notifPrefs.email_deadline_reminder && (
             <div>
-              <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">
+              <label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">
                 Kac gun once hatirlatilsin?
               </label>
               <select
@@ -366,7 +366,7 @@ export default function AyarlarPage() {
             </div>
           )}
 
-          <button onClick={saveNotifPrefs} disabled={notifLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">
+          <button onClick={saveNotifPrefs} disabled={notifLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors">
             {notifLoading ? "Kaydediliyor..." : "Tercihleri Kaydet"}
           </button>
         </div>
@@ -380,48 +380,48 @@ export default function AyarlarPage() {
               <div className="w-12 h-12 mx-auto rounded-xl bg-[#6C6CFF]/10 flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6C6CFF" strokeWidth={1.5}><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
               </div>
-              <p className="text-[14px] text-[#ECECEE]">Henüz bir firmaya bağlı değilsiniz</p>
-              <p className="text-[12px] text-[#5C5C5F]">Kendi hukuk büronuzu oluşturun veya mevcut bir büroya davet bekleyin.</p>
-              <button onClick={() => setCreateFirmMode(true)} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[13px] font-medium text-white transition-colors">
+              <p className="text-[16px] text-[#ECECEE]">Henüz bir firmaya bağlı değilsiniz</p>
+              <p className="text-[14px] text-[#5C5C5F]">Kendi hukuk büronuzu oluşturun veya mevcut bir büroya davet bekleyin.</p>
+              <button onClick={() => setCreateFirmMode(true)} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[15px] font-medium text-white transition-colors">
                 Firma Oluştur
               </button>
             </div>
           ) : !firm && createFirmMode ? (
             <div className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-5 space-y-4">
-              <h3 className="text-[13px] font-semibold text-[#6C6CFF]">Yeni Firma Oluştur</h3>
+              <h3 className="text-[15px] font-semibold text-[#6C6CFF]">Yeni Firma Oluştur</h3>
               <div>
-                <label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Firma Adı *</label>
+                <label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Firma Adı *</label>
                 <input type="text" value={firmForm.name} onChange={e => setFirmForm(p => ({ ...p, name: e.target.value }))} placeholder="Yıldırım & Partners" className={inputCls} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Vergi No</label><input value={firmForm.tax_id} onChange={e => setFirmForm(p => ({ ...p, tax_id: e.target.value }))} className={inputCls} /></div>
-                <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Telefon</label><input value={firmForm.phone} onChange={e => setFirmForm(p => ({ ...p, phone: e.target.value }))} className={inputCls} /></div>
+                <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Vergi No</label><input value={firmForm.tax_id} onChange={e => setFirmForm(p => ({ ...p, tax_id: e.target.value }))} className={inputCls} /></div>
+                <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Telefon</label><input value={firmForm.phone} onChange={e => setFirmForm(p => ({ ...p, phone: e.target.value }))} className={inputCls} /></div>
               </div>
-              <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">E-posta</label><input value={firmForm.email} onChange={e => setFirmForm(p => ({ ...p, email: e.target.value }))} className={inputCls} /></div>
-              <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Adres</label><textarea value={firmForm.address} onChange={e => setFirmForm(p => ({ ...p, address: e.target.value }))} rows={2} className={inputCls + " resize-none"} /></div>
+              <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">E-posta</label><input value={firmForm.email} onChange={e => setFirmForm(p => ({ ...p, email: e.target.value }))} className={inputCls} /></div>
+              <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Adres</label><textarea value={firmForm.address} onChange={e => setFirmForm(p => ({ ...p, address: e.target.value }))} rows={2} className={inputCls + " resize-none"} /></div>
               <div className="flex gap-2">
-                <button onClick={createFirm} disabled={firmLoading || !firmForm.name} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">{firmLoading ? "Oluşturuluyor..." : "Oluştur"}</button>
-                <button onClick={() => setCreateFirmMode(false)} className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE]">İptal</button>
+                <button onClick={createFirm} disabled={firmLoading || !firmForm.name} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors">{firmLoading ? "Oluşturuluyor..." : "Oluştur"}</button>
+                <button onClick={() => setCreateFirmMode(false)} className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE]">İptal</button>
               </div>
             </div>
           ) : firm && (
             <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-[13px] font-semibold text-[#ECECEE]">{firm.name}</h3>
-                <span className="text-[11px] text-[#5C5C5F]">{members.length}/{firm.max_users} üye</span>
+                <h3 className="text-[15px] font-semibold text-[#ECECEE]">{firm.name}</h3>
+                <span className="text-[13px] text-[#5C5C5F]">{members.length}/{firm.max_users} üye</span>
               </div>
               {isAdmin ? (
                 <>
-                  <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Firma Adı</label><input value={firmForm.name} onChange={e => setFirmForm(p => ({ ...p, name: e.target.value }))} className={inputCls} /></div>
+                  <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Firma Adı</label><input value={firmForm.name} onChange={e => setFirmForm(p => ({ ...p, name: e.target.value }))} className={inputCls} /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Vergi No</label><input value={firmForm.tax_id} onChange={e => setFirmForm(p => ({ ...p, tax_id: e.target.value }))} className={inputCls} /></div>
-                    <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">Telefon</label><input value={firmForm.phone} onChange={e => setFirmForm(p => ({ ...p, phone: e.target.value }))} className={inputCls} /></div>
+                    <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Vergi No</label><input value={firmForm.tax_id} onChange={e => setFirmForm(p => ({ ...p, tax_id: e.target.value }))} className={inputCls} /></div>
+                    <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">Telefon</label><input value={firmForm.phone} onChange={e => setFirmForm(p => ({ ...p, phone: e.target.value }))} className={inputCls} /></div>
                   </div>
-                  <div><label className="block text-[12px] font-medium text-[#5C5C5F] mb-1">E-posta</label><input value={firmForm.email} onChange={e => setFirmForm(p => ({ ...p, email: e.target.value }))} className={inputCls} /></div>
-                  <button onClick={updateFirm} disabled={firmLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors">{firmLoading ? "Kaydediliyor..." : "Kaydet"}</button>
+                  <div><label className="block text-[14px] font-medium text-[#5C5C5F] mb-1">E-posta</label><input value={firmForm.email} onChange={e => setFirmForm(p => ({ ...p, email: e.target.value }))} className={inputCls} /></div>
+                  <button onClick={updateFirm} disabled={firmLoading} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors">{firmLoading ? "Kaydediliyor..." : "Kaydet"}</button>
                 </>
               ) : (
-                <div className="space-y-2 text-[13px]">
+                <div className="space-y-2 text-[15px]">
                   {firm.tax_id && <div className="flex"><span className="w-24 text-[#5C5C5F]">Vergi No</span><span className="text-[#ECECEE]">{firm.tax_id}</span></div>}
                   {firm.email && <div className="flex"><span className="w-24 text-[#5C5C5F]">E-posta</span><span className="text-[#ECECEE]">{firm.email}</span></div>}
                   {firm.phone && <div className="flex"><span className="w-24 text-[#5C5C5F]">Telefon</span><span className="text-[#ECECEE]">{firm.phone}</span></div>}
@@ -437,10 +437,10 @@ export default function AyarlarPage() {
         <div className="max-w-lg space-y-4">
           {isAdmin && (
             <div className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-4">
-              <h3 className="text-[12px] font-semibold text-[#6C6CFF] mb-3">Üye Davet Et</h3>
+              <h3 className="text-[14px] font-semibold text-[#6C6CFF] mb-3">Üye Davet Et</h3>
               <div className="flex gap-2">
                 <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="avukat@ornek.com" className={inputCls + " flex-1"} />
-                <button onClick={inviteMember} disabled={inviteLoading || !inviteEmail} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[13px] font-medium text-white transition-colors shrink-0">
+                <button onClick={inviteMember} disabled={inviteLoading || !inviteEmail} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:opacity-50 rounded-lg text-[15px] font-medium text-white transition-colors shrink-0">
                   {inviteLoading ? "..." : "Davet Et"}
                 </button>
               </div>
@@ -451,19 +451,19 @@ export default function AyarlarPage() {
             {members.map(m => (
               <div key={m.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[13px] font-medium text-[#ECECEE]">{m.full_name}</p>
-                  <p className="text-[11px] text-[#5C5C5F]">{m.email}</p>
+                  <p className="text-[15px] font-medium text-[#ECECEE]">{m.full_name}</p>
+                  <p className="text-[13px] text-[#5C5C5F]">{m.email}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {isAdmin && m.id !== user?.id ? (
                     <>
-                      <select value={m.role} onChange={e => changeRole(m.id, e.target.value)} className="bg-[#16161A] border border-white/[0.06] rounded-lg px-2 py-1 text-[12px] text-[#ECECEE] focus:outline-none">
+                      <select value={m.role} onChange={e => changeRole(m.id, e.target.value)} className="bg-[#16161A] border border-white/[0.06] rounded-lg px-2 py-1 text-[14px] text-[#ECECEE] focus:outline-none">
                         {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                       </select>
-                      <button onClick={() => removeMember(m.id)} className="px-2 py-1 text-[11px] text-[#E5484D] hover:bg-[#E5484D]/10 rounded-md transition-colors">Çıkar</button>
+                      <button onClick={() => removeMember(m.id)} className="px-2 py-1 text-[13px] text-[#E5484D] hover:bg-[#E5484D]/10 rounded-md transition-colors">Çıkar</button>
                     </>
                   ) : (
-                    <span className="px-2 py-0.5 text-[10px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF] rounded">{ROLES.find(r => r.value === m.role)?.label || m.role}</span>
+                    <span className="px-2 py-0.5 text-[12px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF] rounded">{ROLES.find(r => r.value === m.role)?.label || m.role}</span>
                   )}
                 </div>
               </div>

@@ -61,7 +61,7 @@ export default function GirisPage() {
             <h2 className="text-[24px] font-semibold text-[#ECECEE] tracking-tight">
               Hosgeldiniz
             </h2>
-            <p className="text-[14px] text-[#5C5C5F] mt-1">
+            <p className="text-[16px] text-[#5C5C5F] mt-1">
               Hesabiniza giris yapin
             </p>
           </div>
@@ -73,7 +73,7 @@ export default function GirisPage() {
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 8v4M12 16h.01" />
               </svg>
-              <span className="text-[13px] text-[#FFB224]">Oturumunuz sona erdi. Lutfen tekrar giris yapin.</span>
+              <span className="text-[15px] text-[#FFB224]">Oturumunuz sona erdi. Lutfen tekrar giris yapin.</span>
             </div>
           )}
 
@@ -86,7 +86,7 @@ export default function GirisPage() {
           >
             {/* Email */}
             <div>
-              <label htmlFor="giris-email" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
+              <label htmlFor="giris-email" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">
                 E-posta
               </label>
               <div className="relative">
@@ -103,14 +103,14 @@ export default function GirisPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="avukat@ornek.com"
-                  className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3 text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200"
+                  className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-11 pr-4 py-3.5 text-[16px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label htmlFor="giris-password" className="block text-[12px] font-medium text-[#8B8B8E] mb-2">
+              <label htmlFor="giris-password" className="block text-[14px] font-medium text-[#8B8B8E] mb-2">
                 Sifre
               </label>
               <div className="relative">
@@ -127,7 +127,7 @@ export default function GirisPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-11 pr-12 py-3 text-[14px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200"
+                  className="w-full bg-[#111113] border border-white/[0.06] rounded-xl pl-11 pr-12 py-3.5 text-[16px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 focus:bg-[#16161A] transition-all duration-200"
                 />
                 <button
                   type="button"
@@ -161,9 +161,9 @@ export default function GirisPage() {
                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${rememberMe ? "bg-[#6C6CFF] border-[#6C6CFF]" : "border-[#5C5C5F] bg-transparent"}`}>
                   {rememberMe && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12"><path d="M3.5 6l2 2 3-4" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
-                <span className="text-[12px] text-[#8B8B8E]">Beni hatirla</span>
+                <span className="text-[14px] text-[#8B8B8E]">Beni hatirla</span>
               </label>
-              <Link href="/sifremi-unuttum" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
+              <Link href="/sifremi-unuttum" className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">
                 Sifremi unuttum
               </Link>
             </div>
@@ -181,7 +181,7 @@ export default function GirisPage() {
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 8v4M12 16h.01" />
                   </svg>
-                  <span className="text-[13px] text-[#E5484D]">{error}</span>
+                  <span className="text-[15px] text-[#E5484D]">{error}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -190,7 +190,7 @@ export default function GirisPage() {
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="relative w-full py-3 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/30 disabled:to-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-xl text-[14px] font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 overflow-hidden group"
+              className="relative w-full py-3.5 bg-gradient-to-r from-[#6C6CFF] to-[#7B7BFF] hover:from-[#5B5BEE] hover:to-[#6C6CFF] disabled:from-[#6C6CFF]/30 disabled:to-[#6C6CFF]/30 disabled:cursor-not-allowed rounded-xl text-[16px] font-semibold text-white transition-all duration-200 flex items-center justify-center gap-2 overflow-hidden group"
             >
               {/* Shimmer effect */}
               <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -211,12 +211,12 @@ export default function GirisPage() {
               <div className="w-full border-t border-white/[0.06]" />
             </div>
             <div className="relative flex justify-center">
-              <span className="px-4 bg-[#09090B] text-[12px] text-[#5C5C5F]">veya</span>
+              <span className="px-4 bg-[#09090B] text-[14px] text-[#5C5C5F]">veya</span>
             </div>
           </div>
 
           {/* Register link */}
-          <p className="text-center text-[14px] text-[#5C5C5F]">
+          <p className="text-center text-[16px] text-[#5C5C5F]">
             Hesabiniz yok mu?{" "}
             <Link
               href="/kayit"
@@ -227,7 +227,7 @@ export default function GirisPage() {
           </p>
 
           {/* Footer */}
-          <p className="text-center text-[11px] text-[#3A3A3F]">
+          <p className="text-center text-[13px] text-[#3A3A3F]">
             Giris yaparak Kullanim Sartlari ve Gizlilik Politikasi&apos;ni kabul etmis olursunuz.
           </p>
         </motion.div>

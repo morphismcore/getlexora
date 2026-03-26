@@ -157,20 +157,20 @@ export default function IstatistikPage() {
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[#ECECEE]">İstatistikler</h1>
-          <p className="text-[12px] text-[#5C5C5F] mt-0.5">Platform kullanımı ve mahkeme analizi</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-[#ECECEE]">İstatistikler</h1>
+          <p className="text-[14px] text-[#5C5C5F] mt-0.5">Platform kullanımı ve mahkeme analizi</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative group">
-            <button className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all">
+            <button className="flex items-center gap-1.5 px-3 py-2 text-[14px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Dışa Aktar
             </button>
             <div className="absolute right-0 top-full mt-1 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-              <button onClick={() => handleExport("json")} className="block w-full text-left px-4 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03] transition-colors rounded-t-xl">JSON</button>
-              <button onClick={() => handleExport("csv")} className="block w-full text-left px-4 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03] transition-colors rounded-b-xl">CSV</button>
+              <button onClick={() => handleExport("json")} className="block w-full text-left px-4 py-2 text-[14px] text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03] transition-colors rounded-t-xl">JSON</button>
+              <button onClick={() => handleExport("csv")} className="block w-full text-left px-4 py-2 text-[14px] text-[#8B8B8E] hover:text-[#ECECEE] hover:bg-white/[0.03] transition-colors rounded-b-xl">CSV</button>
             </div>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function IstatistikPage() {
           { key: "compare" as const, label: "Konu Karşılaştırma" },
         ]).map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors ${activeTab === tab.key ? "text-[#ECECEE]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
+            className={`relative px-4 py-2.5 text-[15px] font-medium transition-colors ${activeTab === tab.key ? "text-[#ECECEE]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
             {tab.label}
             {activeTab === tab.key && (
               <motion.div layoutId="statsTab" className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#6C6CFF] rounded-full" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
@@ -199,7 +199,7 @@ export default function IstatistikPage() {
           <div className="flex items-center gap-1.5">
             {PERIODS.map((p) => (
               <button key={p} onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${period === p ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"}`}>
+                className={`px-3 py-1.5 rounded-lg text-[14px] font-medium transition-all ${period === p ? "bg-[#6C6CFF]/10 text-[#6C6CFF]" : "text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.03]"}`}>
                 {p}
               </button>
             ))}
@@ -219,13 +219,13 @@ export default function IstatistikPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {caseTypeData.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
-                <h3 className="text-[13px] font-medium text-[#ECECEE] mb-4">Dava Türü Dağılımı</h3>
+                <h3 className="text-[15px] font-medium text-[#ECECEE] mb-4">Dava Türü Dağılımı</h3>
                 <DonutChart data={caseTypeData} colors={["#6C6CFF", "#A78BFA", "#3DD68C", "#FFB224", "#E5484D", "#8B8B8E"]} />
               </motion.div>
             )}
             {caseStatusData.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
-                <h3 className="text-[13px] font-medium text-[#ECECEE] mb-4">Dava Durumu</h3>
+                <h3 className="text-[15px] font-medium text-[#ECECEE] mb-4">Dava Durumu</h3>
                 <HorizontalBarChart data={caseStatusData} colors={["#3DD68C", "#E5484D", "#FFB224", "#8B8B8E"]} />
               </motion.div>
             )}
@@ -233,14 +233,14 @@ export default function IstatistikPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 flex flex-col items-center">
-              <h3 className="text-[13px] font-medium text-[#ECECEE] mb-4 self-start">Süre Tamamlanma</h3>
+              <h3 className="text-[15px] font-medium text-[#ECECEE] mb-4 self-start">Süre Tamamlanma</h3>
               <CircularProgress value={dashboard?.deadline_completion_rate ?? 0} />
-              <p className="text-[12px] text-[#5C5C5F] mt-3">tamamlanma oranı</p>
+              <p className="text-[14px] text-[#5C5C5F] mt-3">tamamlanma oranı</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5 lg:col-span-2">
-              <h3 className="text-[13px] font-medium text-[#ECECEE] mb-4">Arama Aktivitesi (Son 7 Gün)</h3>
+              <h3 className="text-[15px] font-medium text-[#ECECEE] mb-4">Arama Aktivitesi (Son 7 Gün)</h3>
               <MiniLineChart data={[3, 7, 5, 12, 8, 15, dashboard?.total_searches ? Math.min(dashboard.total_searches, 20) : 10]} color="#6C6CFF" height={80} />
-              <div className="flex justify-between mt-2 text-[10px] text-[#5C5C5F]">
+              <div className="flex justify-between mt-2 text-[12px] text-[#5C5C5F]">
                 {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((d) => (<span key={d}>{d}</span>))}
               </div>
             </motion.div>
@@ -248,10 +248,10 @@ export default function IstatistikPage() {
 
           {dashboard?.recent_searches && dashboard.recent_searches.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
-              <h3 className="text-[13px] font-medium text-[#ECECEE] mb-3">Son Aramalar</h3>
+              <h3 className="text-[15px] font-medium text-[#ECECEE] mb-3">Son Aramalar</h3>
               <div className="flex flex-wrap gap-2">
                 {dashboard.recent_searches.slice(0, 12).map((s, i) => (
-                  <span key={i} className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-white/[0.03] border border-white/[0.06] rounded-lg">{s}</span>
+                  <span key={i} className="px-3 py-1.5 text-[14px] text-[#8B8B8E] bg-white/[0.03] border border-white/[0.06] rounded-lg">{s}</span>
                 ))}
               </div>
             </motion.div>
@@ -264,8 +264,8 @@ export default function IstatistikPage() {
                   <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={1} /><rect x="14" y="9" width="7" height="12" rx="1" strokeWidth={1} />
                 </svg>
               </div>
-              <p className="text-[14px] text-[#8B8B8E] font-medium">Henüz veri yok</p>
-              <p className="text-[12px] text-[#5C5C5F] mt-1 max-w-sm">Arama yapın, dava oluşturun ve süre ekleyin — istatistikler burada görünecek.</p>
+              <p className="text-[16px] text-[#8B8B8E] font-medium">Henüz veri yok</p>
+              <p className="text-[14px] text-[#5C5C5F] mt-1 max-w-sm">Arama yapın, dava oluşturun ve süre ekleyin — istatistikler burada görünecek.</p>
             </div>
           )}
         </div>
@@ -277,23 +277,23 @@ export default function IstatistikPage() {
           <div className="flex gap-3">
             <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="Konu girin (örn: işe iade, kıdem tazminatı)..."
-              className="flex-1 bg-[#16161A] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[14px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors" />
+              className="flex-1 bg-[#16161A] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[16px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors" />
             <button onClick={handleAnalyze} disabled={loading || !topic.trim()}
-              className="px-5 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[13px] font-medium text-white transition-colors flex-shrink-0">
+              className="px-5 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[15px] font-medium text-white transition-colors flex-shrink-0">
               {loading ? (<div className="flex items-center gap-2"><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Analiz ediliyor...</span></div>) : "Analiz Et"}
             </button>
           </div>
           {error && (
-            <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 text-[13px] text-[#E5484D]">
+            <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 text-[15px] text-[#E5484D]">
               {error}
-              <button onClick={handleAnalyze} className="block mt-2 text-[12px] text-[#E5484D]/80 hover:text-[#E5484D] underline underline-offset-2 transition-colors">Tekrar Dene</button>
+              <button onClick={handleAnalyze} className="block mt-2 text-[14px] text-[#E5484D]/80 hover:text-[#E5484D] underline underline-offset-2 transition-colors">Tekrar Dene</button>
             </div>
           )}
           <AnimatePresence mode="wait">
             {stats && stats.total_decisions > 0 && <StatsResults key={stats.topic} stats={stats} />}
             {stats && stats.total_decisions === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#111113] border border-white/[0.06] rounded-xl p-6 text-center">
-                <p className="text-[13px] text-[#8B8B8E]">&quot;{stats.topic}&quot; için karar bulunamadı.</p>
+                <p className="text-[15px] text-[#8B8B8E]">&quot;{stats.topic}&quot; için karar bulunamadı.</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -302,8 +302,8 @@ export default function IstatistikPage() {
               <svg className="w-10 h-10 text-[#5C5C5F]/40 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="7" height="18" rx="1" strokeWidth={1} /><rect x="14" y="9" width="7" height="12" rx="1" strokeWidth={1} />
               </svg>
-              <p className="text-[13px] text-[#8B8B8E]">Konu girerek mahkeme istatistiklerini analiz edin</p>
-              <p className="text-[12px] text-[#5C5C5F] mt-1 max-w-md">Bedesten API üzerinden daire dağılımı, yıl bazlı trend ve en aktif daireler</p>
+              <p className="text-[15px] text-[#8B8B8E]">Konu girerek mahkeme istatistiklerini analiz edin</p>
+              <p className="text-[14px] text-[#5C5C5F] mt-1 max-w-md">Bedesten API üzerinden daire dağılımı, yıl bazlı trend ve en aktif daireler</p>
             </div>
           )}
         </div>
@@ -318,19 +318,19 @@ export default function IstatistikPage() {
                 onChange={(e) => { const next = [...compareTopics]; next[i] = e.target.value; setCompareTopics(next); }}
                 onKeyDown={handleKeyDown}
                 placeholder={`Konu ${i + 1}${i >= 2 ? " (opsiyonel)" : ""}...`}
-                className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[14px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors" />
+                className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-4 py-2.5 text-[16px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors" />
             ))}
           </div>
           <div className="flex justify-end">
             <button onClick={handleCompare} disabled={compareLoading || compareTopics.filter((t) => t.trim()).length < 2}
-              className="px-5 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[13px] font-medium text-white transition-colors">
+              className="px-5 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[15px] font-medium text-white transition-colors">
               {compareLoading ? (<div className="flex items-center gap-2"><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Karşılaştırılıyor...</span></div>) : "Karşılaştır"}
             </button>
           </div>
           {compareError && (
-            <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 text-[13px] text-[#E5484D]">
+            <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-3 text-[15px] text-[#E5484D]">
               {compareError}
-              <button onClick={handleCompare} className="block mt-2 text-[12px] text-[#E5484D]/80 hover:text-[#E5484D] underline underline-offset-2 transition-colors">Tekrar Dene</button>
+              <button onClick={handleCompare} className="block mt-2 text-[14px] text-[#E5484D]/80 hover:text-[#E5484D] underline underline-offset-2 transition-colors">Tekrar Dene</button>
             </div>
           )}
           {compareResults && (
@@ -338,16 +338,16 @@ export default function IstatistikPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {compareResults.comparisons.map((c, i) => (
                   <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4">
-                    <p className="text-[12px] text-[#6C6CFF] font-medium mb-2 truncate">{c.topic}</p>
+                    <p className="text-[14px] text-[#6C6CFF] font-medium mb-2 truncate">{c.topic}</p>
                     <p className="text-[24px] font-bold text-[#ECECEE] leading-none">{c.total_decisions}</p>
-                    <p className="text-[11px] text-[#5C5C5F] mt-1">karar</p>
-                    {c.most_active_chamber && <p className="text-[11px] text-[#8B8B8E] mt-2 truncate">En aktif: {c.most_active_chamber}</p>}
+                    <p className="text-[13px] text-[#5C5C5F] mt-1">karar</p>
+                    {c.most_active_chamber && <p className="text-[13px] text-[#8B8B8E] mt-2 truncate">En aktif: {c.most_active_chamber}</p>}
                   </div>
                 ))}
               </div>
               {compareResults.comparisons.map((c, i) => c.total_decisions > 0 && (
                 <div key={i} className="space-y-3">
-                  <h3 className="text-[13px] font-medium text-[#6C6CFF]">{c.topic}</h3>
+                  <h3 className="text-[15px] font-medium text-[#6C6CFF]">{c.topic}</h3>
                   <StatsResults stats={c} />
                 </div>
               ))}

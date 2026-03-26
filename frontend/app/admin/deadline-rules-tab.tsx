@@ -17,7 +17,7 @@ function EditEventTypeForm({ eventType, onSave, onCancel }: { eventType: EventTy
           type="text"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
         />
       </FormField>
       <FormField label="Slug">
@@ -25,14 +25,14 @@ function EditEventTypeForm({ eventType, onSave, onCancel }: { eventType: EventTy
           type="text"
           value={form.slug}
           onChange={(e) => setForm({ ...form, slug: e.target.value })}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 font-mono"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 font-mono"
         />
       </FormField>
       <FormField label="Kategori">
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
         >
           {ALL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#16161A]">{c}</option>)}
         </select>
@@ -42,7 +42,7 @@ function EditEventTypeForm({ eventType, onSave, onCancel }: { eventType: EventTy
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           rows={3}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 resize-none"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 resize-none"
         />
       </FormField>
       <FormField label="Durum">
@@ -53,19 +53,19 @@ function EditEventTypeForm({ eventType, onSave, onCancel }: { eventType: EventTy
             onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             className="accent-[#6C6CFF] w-4 h-4"
           />
-          <span className="text-[13px] text-[#ECECEE]">Aktif</span>
+          <span className="text-[15px] text-[#ECECEE]">Aktif</span>
         </label>
       </FormField>
       <div className="flex gap-3 pt-2">
         <button
           onClick={() => onSave(form)}
-          className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[13px] font-medium rounded-lg transition-colors"
+          className="flex-1 py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[15px] font-medium rounded-lg transition-colors"
         >
           Kaydet
         </button>
         <button
           onClick={onCancel}
-          className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[13px] font-medium rounded-lg transition-colors"
+          className="px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-[#8B8B8E] text-[15px] font-medium rounded-lg transition-colors"
         >
           Iptal
         </button>
@@ -95,7 +95,7 @@ function RuleFormFields({
           value={form.name}
           onChange={(e) => onChange({ ...form, name: e.target.value })}
           placeholder="orn. Istinaf suresi"
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
         />
       </FormField>
 
@@ -106,14 +106,14 @@ function RuleFormFields({
             value={form.duration_value}
             onChange={(e) => onChange({ ...form, duration_value: parseInt(e.target.value) || 0 })}
             min={0}
-            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
           />
         </FormField>
         <FormField label="Sure Birimi">
           <select
             value={form.duration_unit}
             onChange={(e) => onChange({ ...form, duration_unit: e.target.value })}
-            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
           >
             {Object.entries(DURATION_UNITS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v}</option>)}
           </select>
@@ -124,7 +124,7 @@ function RuleFormFields({
         <select
           value={form.deadline_type}
           onChange={(e) => onChange({ ...form, deadline_type: e.target.value })}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50"
         >
           {Object.entries(DEADLINE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v.label}</option>)}
         </select>
@@ -136,7 +136,7 @@ function RuleFormFields({
           value={form.law_reference}
           onChange={(e) => onChange({ ...form, law_reference: e.target.value })}
           placeholder="HMK md. 345"
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50"
         />
       </FormField>
 
@@ -149,7 +149,7 @@ function RuleFormFields({
               onChange={(e) => onChange({ ...form, affects_by_judicial_recess: e.target.checked })}
               className="accent-[#6C6CFF] w-4 h-4"
             />
-            <span className="text-[13px] text-[#ECECEE]">Evet</span>
+            <span className="text-[15px] text-[#ECECEE]">Evet</span>
           </label>
         </FormField>
         <FormField label="Resmi Tatil Etkisi">
@@ -160,7 +160,7 @@ function RuleFormFields({
               onChange={(e) => onChange({ ...form, affects_by_holidays: e.target.checked })}
               className="accent-[#6C6CFF] w-4 h-4"
             />
-            <span className="text-[13px] text-[#ECECEE]">Evet</span>
+            <span className="text-[15px] text-[#ECECEE]">Evet</span>
           </label>
         </FormField>
       </div>
@@ -171,7 +171,7 @@ function RuleFormFields({
           onChange={(e) => onChange({ ...form, description: e.target.value })}
           placeholder="Opsiyonel aciklama..."
           rows={3}
-          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 resize-none"
+          className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 resize-none"
         />
       </FormField>
 
@@ -183,14 +183,14 @@ function RuleFormFields({
             onChange={(e) => onChange({ ...form, is_active: e.target.checked })}
             className="accent-[#6C6CFF] w-4 h-4"
           />
-          <span className="text-[13px] text-[#ECECEE]">Aktif</span>
+          <span className="text-[15px] text-[#ECECEE]">Aktif</span>
         </label>
       </FormField>
 
       <button
         onClick={onSubmit}
         disabled={!form.name}
-        className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[13px] font-medium rounded-lg transition-colors"
+        className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[15px] font-medium rounded-lg transition-colors"
       >
         {submitLabel}
       </button>
@@ -230,23 +230,23 @@ function RuleCard({
       >
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kural Adi">
-            <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+            <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
           </FormField>
           <FormField label="Kanun Maddesi">
-            <input type="text" value={editForm.law_reference} onChange={(e) => setEditForm({ ...editForm, law_reference: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+            <input type="text" value={editForm.law_reference} onChange={(e) => setEditForm({ ...editForm, law_reference: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
           </FormField>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Sure">
-            <input type="number" value={editForm.duration_value} onChange={(e) => setEditForm({ ...editForm, duration_value: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
+            <input type="number" value={editForm.duration_value} onChange={(e) => setEditForm({ ...editForm, duration_value: parseInt(e.target.value) || 0 })} min={0} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50" />
           </FormField>
           <FormField label="Birim">
-            <select value={editForm.duration_unit} onChange={(e) => setEditForm({ ...editForm, duration_unit: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
+            <select value={editForm.duration_unit} onChange={(e) => setEditForm({ ...editForm, duration_unit: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
               {Object.entries(DURATION_UNITS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v}</option>)}
             </select>
           </FormField>
           <FormField label="Sure Tipi">
-            <select value={editForm.deadline_type} onChange={(e) => setEditForm({ ...editForm, deadline_type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
+            <select value={editForm.deadline_type} onChange={(e) => setEditForm({ ...editForm, deadline_type: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
               {Object.entries(DEADLINE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k} className="bg-[#16161A]">{v.label}</option>)}
             </select>
           </FormField>
@@ -254,19 +254,19 @@ function RuleCard({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={editForm.affects_by_judicial_recess} onChange={(e) => setEditForm({ ...editForm, affects_by_judicial_recess: e.target.checked })} className="accent-[#6C6CFF] w-3.5 h-3.5" />
-            <span className="text-[12px] text-[#ECECEE]">Adli tatil etkisi</span>
+            <span className="text-[14px] text-[#ECECEE]">Adli tatil etkisi</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={editForm.affects_by_holidays} onChange={(e) => setEditForm({ ...editForm, affects_by_holidays: e.target.checked })} className="accent-[#6C6CFF] w-3.5 h-3.5" />
-            <span className="text-[12px] text-[#ECECEE]">Resmi tatil etkisi</span>
+            <span className="text-[14px] text-[#ECECEE]">Resmi tatil etkisi</span>
           </label>
         </div>
         <FormField label="Aciklama">
-          <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[12px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 resize-none" />
+          <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-3 py-2 text-[14px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 resize-none" />
         </FormField>
         <div className="flex gap-2 justify-end">
-          <button onClick={onCancelEdit} className="px-3 py-1.5 text-[11px] font-medium text-[#8B8B8E] hover:text-[#ECECEE] bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors">Iptal</button>
-          <button onClick={() => onSave(editForm)} className="px-3 py-1.5 text-[11px] font-medium text-white bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg transition-colors">Kaydet</button>
+          <button onClick={onCancelEdit} className="px-3 py-1.5 text-[13px] font-medium text-[#8B8B8E] hover:text-[#ECECEE] bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors">Iptal</button>
+          <button onClick={() => onSave(editForm)} className="px-3 py-1.5 text-[13px] font-medium text-white bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg transition-colors">Kaydet</button>
         </div>
       </motion.div>
     );
@@ -277,18 +277,18 @@ function RuleCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-[13px] font-medium text-[#ECECEE]">{rule.name}</span>
+            <span className="text-[15px] font-medium text-[#ECECEE]">{rule.name}</span>
             <span
-              className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+              className="px-1.5 py-0.5 text-[12px] font-medium rounded"
               style={{ color: dtLabel.color, backgroundColor: `${dtLabel.color}15` }}
             >
               {dtLabel.label}
             </span>
             {!rule.is_active && (
-              <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#5C5C5F]/10 text-[#5C5C5F]">Pasif</span>
+              <span className="px-1.5 py-0.5 text-[12px] font-medium rounded bg-[#5C5C5F]/10 text-[#5C5C5F]">Pasif</span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-[#8B8B8E] flex-wrap">
+          <div className="flex items-center gap-3 text-[13px] text-[#8B8B8E] flex-wrap">
             <span className="font-medium">
               {rule.duration_value} {unitLabel}
             </span>
@@ -307,7 +307,7 @@ function RuleCard({
             </span>
           </div>
           {rule.description && (
-            <p className="text-[11px] text-[#5C5C5F] mt-1.5">{rule.description}</p>
+            <p className="text-[13px] text-[#5C5C5F] mt-1.5">{rule.description}</p>
           )}
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -523,8 +523,8 @@ export default function DeadlineRulesTab({
           { label: "Tatil Yili", value: deadlineStats?.holiday_years ?? 0, color: "#FFB224" },
         ].map((s, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4">
-            <p className="text-[22px] font-bold" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-[11px] text-[#5C5C5F] mt-0.5">{s.label}</p>
+            <p className="text-[26px] font-bold" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-[13px] text-[#5C5C5F] mt-0.5">{s.label}</p>
           </motion.div>
         ))}
       </div>
@@ -540,12 +540,12 @@ export default function DeadlineRulesTab({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Olay turu, kural veya kanun maddesi ara..."
-            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg pl-10 pr-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
+            className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg pl-10 pr-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
           />
         </div>
         <button
           onClick={() => setShowNewEventType(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[12px] font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           Yeni Olay Turu
@@ -556,7 +556,7 @@ export default function DeadlineRulesTab({
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setSelectedCategory("Tumu")}
-          className={`px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-all ${selectedCategory === "Tumu" ? "bg-[#6C6CFF]/15 text-[#6C6CFF] ring-1 ring-[#6C6CFF]/30" : "bg-white/[0.04] text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.06]"}`}
+          className={`px-3 py-1.5 text-[14px] font-medium rounded-lg whitespace-nowrap transition-all ${selectedCategory === "Tumu" ? "bg-[#6C6CFF]/15 text-[#6C6CFF] ring-1 ring-[#6C6CFF]/30" : "bg-white/[0.04] text-[#5C5C5F] hover:text-[#8B8B8E] hover:bg-white/[0.06]"}`}
         >
           Tumu ({eventTypes.length})
         </button>
@@ -567,7 +567,7 @@ export default function DeadlineRulesTab({
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 text-[12px] font-medium rounded-lg whitespace-nowrap transition-all ${selectedCategory === cat ? "ring-1" : "bg-white/[0.04] hover:bg-white/[0.06]"}`}
+              className={`px-3 py-1.5 text-[14px] font-medium rounded-lg whitespace-nowrap transition-all ${selectedCategory === cat ? "ring-1" : "bg-white/[0.04] hover:bg-white/[0.06]"}`}
               style={{
                 color: selectedCategory === cat ? catColor.color : "#5C5C5F",
                 backgroundColor: selectedCategory === cat ? `${catColor.color}15` : undefined,
@@ -587,7 +587,7 @@ export default function DeadlineRulesTab({
           title={searchQuery ? "Sonuc bulunamadi" : "Henuz olay turu yok"}
           description={searchQuery ? "Farkli bir arama terimi deneyin." : "Ilk olay turunu olusturarak baslayin."}
           action={!searchQuery ? (
-            <button onClick={() => setShowNewEventType(true)} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[12px] font-medium rounded-lg transition-colors">
+            <button onClick={() => setShowNewEventType(true)} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] text-white text-[14px] font-medium rounded-lg transition-colors">
               + Yeni Olay Turu
             </button>
           ) : undefined}
@@ -605,13 +605,13 @@ export default function DeadlineRulesTab({
                   </motion.svg>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[14px] font-medium text-[#ECECEE] truncate">{et.name}</span>
-                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-md shrink-0" style={{ color: catColor.color, backgroundColor: `${catColor.color}15` }}>{et.category}</span>
-                      <span className="px-1.5 py-0.5 text-[10px] font-mono text-[#5C5C5F] bg-white/[0.04] rounded shrink-0">{et.rules.length}</span>
+                      <span className="text-[16px] font-medium text-[#ECECEE] truncate">{et.name}</span>
+                      <span className="px-2 py-0.5 text-[12px] font-medium rounded-md shrink-0" style={{ color: catColor.color, backgroundColor: `${catColor.color}15` }}>{et.category}</span>
+                      <span className="px-1.5 py-0.5 text-[12px] font-mono text-[#5C5C5F] bg-white/[0.04] rounded shrink-0">{et.rules.length}</span>
                     </div>
-                    <span className="text-[11px] text-[#5C5C5F] font-mono">{et.slug}</span>
+                    <span className="text-[13px] text-[#5C5C5F] font-mono">{et.slug}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${et.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+                  <span className={`px-2 py-0.5 rounded text-[12px] font-medium shrink-0 ${et.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
                     {et.is_active ? "Aktif" : "Pasif"}
                   </span>
                 </button>
@@ -620,10 +620,10 @@ export default function DeadlineRulesTab({
                   {isExpanded && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                       <div className="px-5 pb-5 space-y-3 border-t border-white/[0.06] pt-4">
-                        {et.description && <p className="text-[12px] text-[#8B8B8E] mb-3">{et.description}</p>}
+                        {et.description && <p className="text-[14px] text-[#8B8B8E] mb-3">{et.description}</p>}
                         {et.rules.length === 0 ? (
                           <div className="text-center py-6 bg-[#09090B] rounded-lg border border-dashed border-white/[0.06]">
-                            <p className="text-[12px] text-[#5C5C5F]">Bu olay turune henuz kural eklenmemis.</p>
+                            <p className="text-[14px] text-[#5C5C5F]">Bu olay turune henuz kural eklenmemis.</p>
                           </div>
                         ) : (
                           et.rules.map((rule) => (
@@ -633,16 +633,16 @@ export default function DeadlineRulesTab({
                         <div className="flex gap-2 pt-2">
                           <button
                             onClick={() => { setShowNewRule(et.id); setRuleForm({ name: "", duration_value: 0, duration_unit: "gun", deadline_type: "usul_suresi", law_reference: "", affects_by_judicial_recess: true, affects_by_holidays: true, description: "", is_active: true }); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 hover:bg-[#6C6CFF]/20 rounded-lg transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[#6C6CFF] bg-[#6C6CFF]/10 hover:bg-[#6C6CFF]/20 rounded-lg transition-colors"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                             Yeni Kural Ekle
                           </button>
-                          <button onClick={() => setShowEditEventType(et)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#8B8B8E] bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors">
+                          <button onClick={() => setShowEditEventType(et)} className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[#8B8B8E] bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                             Olay Turunu Duzenle
                           </button>
-                          <button onClick={() => setConfirmDelete({ type: "event", id: et.id, name: et.name })} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#E5484D] bg-[#E5484D]/10 hover:bg-[#E5484D]/20 rounded-lg transition-colors">
+                          <button onClick={() => setConfirmDelete({ type: "event", id: et.id, name: et.name })} className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-[#E5484D] bg-[#E5484D]/10 hover:bg-[#E5484D]/20 rounded-lg transition-colors">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                             Sil
                           </button>
@@ -661,20 +661,20 @@ export default function DeadlineRulesTab({
       <SlideOver open={showNewEventType} onClose={() => setShowNewEventType(false)} title="Yeni Olay Turu">
         <div className="space-y-5">
           <FormField label="Olay Turu Adi">
-            <input type="text" value={newEventForm.name} onChange={(e) => setNewEventForm({ ...newEventForm, name: e.target.value })} placeholder="orn. Hukuk Karari Tebligi" className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50" />
+            <input type="text" value={newEventForm.name} onChange={(e) => setNewEventForm({ ...newEventForm, name: e.target.value })} placeholder="orn. Hukuk Karari Tebligi" className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50" />
           </FormField>
           <FormField label="Slug (benzersiz tanimlayici)">
-            <input type="text" value={newEventForm.slug} onChange={(e) => setNewEventForm({ ...newEventForm, slug: e.target.value })} placeholder="orn. hmk_karar_teblig" className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 font-mono" />
+            <input type="text" value={newEventForm.slug} onChange={(e) => setNewEventForm({ ...newEventForm, slug: e.target.value })} placeholder="orn. hmk_karar_teblig" className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 font-mono" />
           </FormField>
           <FormField label="Kategori">
-            <select value={newEventForm.category} onChange={(e) => setNewEventForm({ ...newEventForm, category: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
+            <select value={newEventForm.category} onChange={(e) => setNewEventForm({ ...newEventForm, category: e.target.value })} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50">
               {ALL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-[#16161A]">{c}</option>)}
             </select>
           </FormField>
           <FormField label="Aciklama">
-            <textarea value={newEventForm.description} onChange={(e) => setNewEventForm({ ...newEventForm, description: e.target.value })} placeholder="Opsiyonel aciklama..." rows={3} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[13px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 resize-none" />
+            <textarea value={newEventForm.description} onChange={(e) => setNewEventForm({ ...newEventForm, description: e.target.value })} placeholder="Opsiyonel aciklama..." rows={3} className="w-full bg-[#1A1A1F] border border-white/[0.06] rounded-lg px-4 py-2.5 text-[15px] text-[#ECECEE] placeholder:text-[#5C5C5F] focus:outline-none focus:border-[#6C6CFF]/50 resize-none" />
           </FormField>
-          <button onClick={createEventType} disabled={!newEventForm.name || !newEventForm.slug} className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[13px] font-medium rounded-lg transition-colors">
+          <button onClick={createEventType} disabled={!newEventForm.name || !newEventForm.slug} className="w-full py-3 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] text-white text-[15px] font-medium rounded-lg transition-colors">
             Olay Turunu Olustur
           </button>
         </div>

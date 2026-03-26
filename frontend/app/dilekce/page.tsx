@@ -346,7 +346,7 @@ export default function DilekcePage() {
   // -----------------------------------------------------------------------
 
   const inputCls =
-    "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150";
+    "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors duration-150";
 
   // ---- Editor Panel ----
   const editorPanel = (
@@ -376,7 +376,7 @@ export default function DilekcePage() {
 
         {/* Doc type selector */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">
+          <label className="block text-[13px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">
             Belge Türü
           </label>
           <select value={doc.docType} onChange={(e) => updateDocType(e.target.value)} className={inputCls + " cursor-pointer"}>
@@ -386,7 +386,7 @@ export default function DilekcePage() {
 
         {/* Header fields */}
         <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 space-y-3">
-          <h2 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-1">Başlık Bilgileri</h2>
+          <h2 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-1">Başlık Bilgileri</h2>
           <Field label="Mahkeme" placeholder="İstanbul ( ). İş Mahkemesi" value={doc.header.mahkeme} onChange={(v) => updateHeader("mahkeme", v)} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Davacı" placeholder="Ad Soyad" value={doc.header.davaci} onChange={(v) => updateHeader("davaci", v)} />
@@ -404,8 +404,8 @@ export default function DilekcePage() {
         {/* Blocks */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F]">Belge İçeriği</h2>
-            <button onClick={loadSample} className="text-[11px] font-medium text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Örnek Yükle</button>
+            <h2 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F]">Belge İçeriği</h2>
+            <button onClick={loadSample} className="text-[13px] font-medium text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Örnek Yükle</button>
           </div>
 
           <div className="flex flex-wrap gap-1.5">
@@ -418,11 +418,11 @@ export default function DilekcePage() {
 
           {doc.blocks.length === 0 && (
             <div className="bg-[#111113] border border-dashed border-white/[0.08] rounded-xl p-4 text-center space-y-3">
-              <p className="text-[12px] text-[#5C5C5F]">Hızlı başlangıç: Bölüm ekleyin</p>
+              <p className="text-[14px] text-[#5C5C5F]">Hızlı başlangıç: Bölüm ekleyin</p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {SECTION_PRESETS.map((s) => (
                   <button key={s} onClick={() => addBlock("section_header", s)}
-                    className="px-2.5 py-1 text-[11px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-md hover:bg-[#6C6CFF]/20 transition-colors">
+                    className="px-2.5 py-1 text-[13px] font-medium bg-[#6C6CFF]/10 text-[#6C6CFF] rounded-md hover:bg-[#6C6CFF]/20 transition-colors">
                     + {s}
                   </button>
                 ))}
@@ -460,26 +460,26 @@ export default function DilekcePage() {
       <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-[#E0E0E0]/20 bg-[#F5F5F5]">
         <div className="flex items-center gap-2">
           <IconDoc className="w-4 h-4 text-[#666]" />
-          <span className="text-[12px] font-semibold text-[#444] uppercase tracking-wider">Önizleme</span>
+          <span className="text-[14px] font-semibold text-[#444] uppercase tracking-wider">Önizleme</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={handleCopy} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors">
+          <button onClick={handleCopy} className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors">
             <IconCopy className="w-3.5 h-3.5" /> {copied ? "Kopyalandı" : "Kopyala"}
           </button>
-          <button onClick={() => exportDocument("docx")} disabled={exporting === "docx"} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50">
+          <button onClick={() => exportDocument("docx")} disabled={exporting === "docx"} className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50">
             <IconDownload className="w-3.5 h-3.5" /> {exporting === "docx" ? "..." : "DOCX İndir"}
           </button>
-          <button onClick={() => exportDocument("pdf")} disabled={exporting === "pdf"} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50">
+          <button onClick={() => exportDocument("pdf")} disabled={exporting === "pdf"} className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors disabled:opacity-50">
             <IconDownload className="w-3.5 h-3.5" /> {exporting === "pdf" ? "..." : "PDF İndir"}
           </button>
-          <button onClick={handleDownloadTxt} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors">
+          <button onClick={handleDownloadTxt} className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#555] bg-white border border-[#D0D0D0] rounded-md hover:bg-[#EEE] transition-colors">
             <IconDownload className="w-3.5 h-3.5" /> TXT
           </button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto bg-[#E8E8E8]">
         <div className="max-w-[700px] mx-auto my-6 bg-[#FAFAFA] shadow-[0_1px_4px_rgba(0,0,0,0.08)] rounded-sm">
-          <div className="px-12 py-10 text-[#111] text-[14px] leading-[1.8]" style={{ fontFamily: "var(--font-serif), 'Noto Serif', Georgia, serif" }}>
+          <div className="px-12 py-10 text-[#111] text-[16px] leading-[1.8]" style={{ fontFamily: "var(--font-serif), 'Noto Serif', Georgia, serif" }}>
             <PreviewContent doc={doc} />
           </div>
         </div>
@@ -494,24 +494,24 @@ export default function DilekcePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Dilekce Olusturucu</h1>
-            <p className="text-[12px] text-[#5C5C5F] mt-0.5">
+            <p className="text-[14px] text-[#5C5C5F] mt-0.5">
               Blok tabanlı hukuki belge düzenleyici
               {lastSaved && (
-                <span className={`ml-2 text-[11px] transition-colors duration-500 ${autoSaveFlash ? "text-[#3DD68C]" : "text-[#3DD68C]/50"}`}>
+                <span className={`ml-2 text-[13px] transition-colors duration-500 ${autoSaveFlash ? "text-[#3DD68C]" : "text-[#3DD68C]/50"}`}>
                   {autoSaveFlash ? "\u2713 Otomatik kaydedildi" : `Son kayıt: ${lastSaved}`}
                 </span>
               )}
             </p>
           </div>
-          <button onClick={handleNewDocument} className="px-3 py-1.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[12px] font-medium text-white transition-colors">
+          <button onClick={handleNewDocument} className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[14px] font-medium text-white transition-colors">
             + Yeni Belge
           </button>
         </div>
         <div className="flex md:hidden mt-3 gap-1 bg-[#111113] rounded-lg p-0.5">
-          <button onClick={() => setMobileTab("editor")} className={`flex-1 py-1.5 text-[12px] font-medium rounded-md transition-colors ${mobileTab === "editor" ? "bg-[#1E1E22] text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
+          <button onClick={() => setMobileTab("editor")} className={`flex-1 py-1.5 text-[14px] font-medium rounded-md transition-colors ${mobileTab === "editor" ? "bg-[#1E1E22] text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
             Düzenleyici
           </button>
-          <button onClick={() => setMobileTab("preview")} className={`flex-1 py-1.5 text-[12px] font-medium rounded-md transition-colors ${mobileTab === "preview" ? "bg-[#1E1E22] text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
+          <button onClick={() => setMobileTab("preview")} className={`flex-1 py-1.5 text-[14px] font-medium rounded-md transition-colors ${mobileTab === "preview" ? "bg-[#1E1E22] text-[#ECECEE]" : "text-[#5C5C5F]"}`}>
             Önizleme
           </button>
         </div>
@@ -538,12 +538,12 @@ export default function DilekcePage() {
                 <IconDoc className="w-5 h-5 text-[#E5484D]" />
               </div>
               <div className="text-center">
-                <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yeni Belge</h2>
-                <p className="text-[13px] text-[#5C5C5F] mt-2">Mevcut taslak silinecek. Emin misiniz?</p>
+                <h2 className="text-[17px] font-semibold text-[#ECECEE]">Yeni Belge</h2>
+                <p className="text-[15px] text-[#5C5C5F] mt-2">Mevcut taslak silinecek. Emin misiniz?</p>
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={confirmNewDocument} className="flex-1 py-2 bg-[#E5484D] hover:bg-[#D13438] rounded-lg text-[13px] font-medium text-white transition-colors">Taslağı Sil</button>
-                <button onClick={() => setShowNewDocConfirm(false)} className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">İptal</button>
+                <button onClick={confirmNewDocument} className="flex-1 py-2 bg-[#E5484D] hover:bg-[#D13438] rounded-lg text-[15px] font-medium text-white transition-colors">Taslağı Sil</button>
+                <button onClick={() => setShowNewDocConfirm(false)} className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">İptal</button>
               </div>
             </motion.div>
           </motion.div>

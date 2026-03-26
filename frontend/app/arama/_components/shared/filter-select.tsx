@@ -16,7 +16,7 @@ export function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 pr-8 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#1A1A1F] transition-all cursor-pointer"
+        className="w-full appearance-none bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 pr-8 text-[14px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#1A1A1F] transition-all cursor-pointer"
       >
         {options.map((o) => (
           <option key={o} value={o}>

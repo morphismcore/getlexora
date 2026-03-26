@@ -53,10 +53,10 @@ export default function CasesOverview({ cases, casesByStatus }: { cases: CaseSum
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Davalarim</h2>
-          <span className="text-[12px] text-[#5C5C5F]">{cases.length}</span>
+          <h2 className="text-[17px] font-semibold text-[#ECECEE]">Davalarim</h2>
+          <span className="text-[14px] text-[#5C5C5F]">{cases.length}</span>
         </div>
-        <Link href="/davalar" className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] border border-[#6C6CFF]/20 rounded-lg px-3 py-1 hover:bg-[#6C6CFF]/10 transition-colors">
+        <Link href="/davalar" className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] border border-[#6C6CFF]/20 rounded-lg px-4 py-1 hover:bg-[#6C6CFF]/10 transition-colors">
           Yeni Dava
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default function CasesOverview({ cases, casesByStatus }: { cases: CaseSum
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-2 text-[12px] font-medium transition-colors relative ${
+              className={`px-4 py-2.5 text-[14px] font-medium transition-colors relative ${
                 activeTab === tab.key
                   ? "text-[#ECECEE]"
                   : "text-[#5C5C5F] hover:text-[#8B8B8E]"
@@ -85,8 +85,8 @@ export default function CasesOverview({ cases, casesByStatus }: { cases: CaseSum
 
       {/* Cases */}
       {filteredCases.length === 0 ? (
-        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-8 text-center">
-          <p className="text-[13px] text-[#5C5C5F]">Bu kategoride dava yok</p>
+        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-10 text-center">
+          <p className="text-[15px] text-[#5C5C5F]">Bu kategoride dava yok</p>
         </div>
       ) : (
         <div className="space-y-1">
@@ -102,32 +102,32 @@ export default function CasesOverview({ cases, casesByStatus }: { cases: CaseSum
               >
                 <Link
                   href={`/davalar/${c.id}`}
-                  className="flex items-center gap-3 bg-[#111113] border border-white/[0.06] rounded-xl px-4 py-3 hover:border-white/[0.10] hover:bg-[#16161A] transition-all group"
+                  className="flex items-center gap-3 bg-[#111113] border border-white/[0.06] rounded-xl px-5 py-4 hover:border-white/[0.10] hover:bg-[#16161A] transition-all group"
                 >
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: typeColor }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-[#ECECEE] truncate group-hover:text-[#6C6CFF] transition-colors">{c.title}</p>
-                    <p className="text-[12px] text-[#5C5C5F] truncate">{c.court || c.case_type}{c.case_number ? ` · ${c.case_number}` : ""}</p>
+                    <p className="text-[15px] font-semibold text-[#ECECEE] truncate group-hover:text-[#6C6CFF] transition-colors">{c.title}</p>
+                    <p className="text-[14px] text-[#5C5C5F] truncate">{c.court || c.case_type}{c.case_number ? ` · ${c.case_number}` : ""}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {c.deadline_count > 0 && (
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                      <span className={`text-[12px] font-medium px-1.5 py-0.5 rounded ${
                         hasOverdue ? "bg-[#E5484D]/10 text-[#E5484D]" : "bg-white/[0.04] text-[#8B8B8E]"
                       }`}>
                         {c.deadline_count} sure
                       </span>
                     )}
                     {c.document_count > 0 && (
-                      <span className="text-[10px] text-[#5C5C5F] px-1.5 py-0.5 rounded bg-white/[0.04]">{c.document_count} belge</span>
+                      <span className="text-[12px] text-[#5C5C5F] px-1.5 py-0.5 rounded bg-white/[0.04]">{c.document_count} belge</span>
                     )}
-                    <span className="text-[10px] text-[#3A3A3F]">{timeAgo(c.updated_at)}</span>
+                    <span className="text-[12px] text-[#3A3A3F]">{timeAgo(c.updated_at)}</span>
                   </div>
                 </Link>
               </motion.div>
             );
           })}
           {filteredCases.length > maxVisible && (
-            <Link href="/davalar" className="block text-center text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] py-2 transition-colors">
+            <Link href="/davalar" className="block text-center text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] py-2.5 transition-colors">
               Tum davalari gor ({filteredCases.length})
             </Link>
           )}

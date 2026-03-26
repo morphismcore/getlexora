@@ -92,11 +92,11 @@ export default function BelgePage() {
         {/* Header */}
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-[22px] font-bold text-[#ECECEE] tracking-tight">Belge Analiz</h1>
-            <p className="text-[13px] text-[#5C5C5F] mt-0.5">PDF veya DOCX belgenizi yükleyin — metin, taraflar, atıflar otomatik çıkarılır</p>
+            <h1 className="text-[26px] font-bold text-[#ECECEE] tracking-tight">Belge Analiz</h1>
+            <p className="text-[15px] text-[#5C5C5F] mt-0.5">PDF veya DOCX belgenizi yükleyin — metin, taraflar, atıflar otomatik çıkarılır</p>
           </div>
           {uploadHistory.length > 0 && !result && (
-            <button onClick={() => setActiveTab("history")} className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Geçmiş ({uploadHistory.length})</button>
+            <button onClick={() => setActiveTab("history")} className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors">Geçmiş ({uploadHistory.length})</button>
           )}
         </div>
 
@@ -119,8 +119,8 @@ export default function BelgePage() {
               <>
                 <div className="flex items-center gap-6"><FormatIcon ext="pdf" bounce={dragOver} /><FormatIcon ext="docx" bounce={dragOver} /></div>
                 <div className="text-center">
-                  <p className="text-[14px] font-medium text-[#ECECEE]">Dosya sürükleyin veya tıklayarak seçin</p>
-                  <p className="text-[12px] text-[#5C5C5F] mt-1">PDF, DOCX — Maks. 20MB</p>
+                  <p className="text-[16px] font-medium text-[#ECECEE]">Dosya sürükleyin veya tıklayarak seçin</p>
+                  <p className="text-[14px] text-[#5C5C5F] mt-1">PDF, DOCX — Maks. 20MB</p>
                 </div>
               </>
             )}
@@ -131,23 +131,23 @@ export default function BelgePage() {
         {activeTab === "history" && !result && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-[14px] font-medium text-[#ECECEE]">Yükleme Geçmişi</h2>
-              <button onClick={() => setActiveTab("overview")} className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Geri</button>
+              <h2 className="text-[16px] font-medium text-[#ECECEE]">Yükleme Geçmişi</h2>
+              <button onClick={() => setActiveTab("overview")} className="text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Geri</button>
             </div>
             {uploadHistory.map((item, i) => (
               <div key={i} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[13px] text-[#ECECEE]">{item.file_name}</p>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-[#5C5C5F]">
+                  <p className="text-[15px] text-[#ECECEE]">{item.file_name}</p>
+                  <div className="flex items-center gap-3 mt-1 text-[13px] text-[#5C5C5F]">
                     <span className="uppercase font-medium">{item.file_type}</span>
                     <span>{DOC_TYPE_LABELS[item.document_type] || item.document_type}</span>
                     <span>{item.citations_count} atıf</span>
                   </div>
                 </div>
-                <span className="text-[10px] text-[#5C5C5F]">{new Date(item.timestamp).toLocaleDateString("tr-TR")}</span>
+                <span className="text-[12px] text-[#5C5C5F]">{new Date(item.timestamp).toLocaleDateString("tr-TR")}</span>
               </div>
             ))}
-            {uploadHistory.length === 0 && (<p className="text-center text-[13px] text-[#5C5C5F] py-8">Henüz yükleme yapılmadı</p>)}
+            {uploadHistory.length === 0 && (<p className="text-center text-[15px] text-[#5C5C5F] py-8">Henüz yükleme yapılmadı</p>)}
           </div>
         )}
 
@@ -155,7 +155,7 @@ export default function BelgePage() {
         <AnimatePresence>
           {error && (
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="rounded-2xl bg-[#E5484D]/[0.06] border border-[#E5484D]/15 px-4 py-3 text-[13px] text-[#E5484D]">{error}</motion.div>
+              className="rounded-2xl bg-[#E5484D]/[0.06] border border-[#E5484D]/15 px-4 py-3 text-[15px] text-[#E5484D]">{error}</motion.div>
           )}
         </AnimatePresence>
 
@@ -167,8 +167,8 @@ export default function BelgePage() {
               <div className="rounded-2xl bg-[#111113] border border-white/[0.06] p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="space-y-1.5">
-                    <h2 className="text-[16px] font-semibold text-[#ECECEE]">{result.file_name}</h2>
-                    <div className="flex items-center gap-3 text-[12px] text-[#8B8B8E]">
+                    <h2 className="text-[18px] font-semibold text-[#ECECEE]">{result.file_name}</h2>
+                    <div className="flex items-center gap-3 text-[14px] text-[#8B8B8E]">
                       <span className="uppercase font-medium">{result.file_type}</span>
                       {result.pages != null && <span>{result.pages} sayfa</span>}
                       {result.paragraphs != null && <span>{result.paragraphs} paragraf</span>}
@@ -176,14 +176,14 @@ export default function BelgePage() {
                     </div>
                   </div>
                   {(() => { const style = getDocTypeStyle(result.document_type); return (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-semibold border ${style.bg} ${style.text} ${style.border}`}>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[13px] font-semibold border ${style.bg} ${style.text} ${style.border}`}>
                       {DOC_TYPE_LABELS[result.document_type] || result.document_type}
                     </span>
                   ); })()}
                 </div>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.06]">
                   <button onClick={() => { localStorage.setItem("lexora_verify_text", result.citations.map((c) => c.raw_text).join("\n")); window.open("/dogrulama", "_blank"); }}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#3DD68C] bg-[#3DD68C]/[0.06] border border-[#3DD68C]/15 rounded-xl hover:bg-[#3DD68C]/10 transition-all">
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-[14px] text-[#3DD68C] bg-[#3DD68C]/[0.06] border border-[#3DD68C]/15 rounded-xl hover:bg-[#3DD68C]/10 transition-all">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     Atıfları Doğrula
                   </button>
@@ -191,12 +191,12 @@ export default function BelgePage() {
                     const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${result.file_name}_analiz.json`; a.click(); URL.revokeObjectURL(url);
                     setToast("Analiz dışa aktarıldı");
-                  }} className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all">
+                  }} className="flex items-center gap-1.5 px-4 py-2.5 text-[14px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     Dışa Aktar
                   </button>
                   <button onClick={() => { setResult(null); setActiveTab("overview"); }}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Yeni Belge Yükle</button>
+                    className="ml-auto flex items-center gap-1.5 px-4 py-2.5 text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Yeni Belge Yükle</button>
                 </div>
               </div>
 
@@ -204,7 +204,7 @@ export default function BelgePage() {
               <div className="flex items-center gap-0.5">
                 {([{ key: "overview" as const, label: "Genel Bakış" }, { key: "viewer" as const, label: "Belge Görüntüleyici" }]).map((tab) => (
                   <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                    className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors ${activeTab === tab.key ? "text-[#ECECEE]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
+                    className={`relative px-4 py-2.5 text-[15px] font-medium transition-colors ${activeTab === tab.key ? "text-[#ECECEE]" : "text-[#5C5C5F] hover:text-[#8B8B8E]"}`}>
                     {tab.label}
                     {activeTab === tab.key && (<motion.div layoutId="belgeTab" className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#6C6CFF] rounded-full" transition={{ type: "spring", stiffness: 400, damping: 30 }} />)}
                   </button>
@@ -216,17 +216,17 @@ export default function BelgePage() {
                 <div className="space-y-4">
                   {risks.length > 0 && (
                     <div className="bg-[#FFB224]/[0.04] border border-[#FFB224]/15 rounded-2xl p-4 space-y-2">
-                      <h3 className="text-[12px] font-semibold text-[#FFB224] uppercase tracking-wider flex items-center gap-1.5">
+                      <h3 className="text-[14px] font-semibold text-[#FFB224] uppercase tracking-wider flex items-center gap-1.5">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M12 9v2m0 4h.01M10.29 3.86l-8.79 15.2a1 1 0 00.87 1.5h17.58a1 1 0 00.87-1.5l-8.79-15.2a1 1 0 00-1.74 0z" /></svg>
                         Dikkat Edilmesi Gerekenler
                       </h3>
-                      {risks.map((r, i) => (<p key={i} className={`text-[12px] ${r.level === "warning" ? "text-[#FFB224]" : "text-[#8B8B8E]"}`}>• {r.label}</p>))}
+                      {risks.map((r, i) => (<p key={i} className={`text-[14px] ${r.level === "warning" ? "text-[#FFB224]" : "text-[#8B8B8E]"}`}>• {r.label}</p>))}
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="rounded-2xl bg-[#111113] border border-white/[0.06] p-5">
-                      <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />Taraflar</h3>
+                      <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />Taraflar</h3>
                       {hasParties ? (
                         <div className="space-y-2">
                           {result.parties.davaci && <EntityCard label="Davacı" value={result.parties.davaci} />}
@@ -234,11 +234,11 @@ export default function BelgePage() {
                           {result.parties.davaci_vekili && <EntityCard label="Davacı Vekili" value={result.parties.davaci_vekili} />}
                           {result.parties.davali_vekili && <EntityCard label="Davalı Vekili" value={result.parties.davali_vekili} />}
                         </div>
-                      ) : (<p className="text-[12px] text-[#5C5C5F]">Taraf bilgisi bulunamadı.</p>)}
+                      ) : (<p className="text-[14px] text-[#5C5C5F]">Taraf bilgisi bulunamadı.</p>)}
                     </div>
 
                     <div className="rounded-2xl bg-[#111113] border border-white/[0.06] p-5">
-                      <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-[#A78BFA] rounded-full" />Dava Bilgileri</h3>
+                      <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-[#A78BFA] rounded-full" />Dava Bilgileri</h3>
                       {hasCaseInfo ? (
                         <div className="space-y-2">
                           {result.case_info.mahkeme && <EntityCard label="Mahkeme" value={result.case_info.mahkeme} />}
@@ -246,31 +246,31 @@ export default function BelgePage() {
                           {result.case_info.karar_no && <EntityCard label="Karar No" value={result.case_info.karar_no} />}
                           {result.case_info.tarih && <EntityCard label="Tarih" value={result.case_info.tarih} />}
                         </div>
-                      ) : (<p className="text-[12px] text-[#5C5C5F]">Dava bilgisi bulunamadı.</p>)}
+                      ) : (<p className="text-[14px] text-[#5C5C5F]">Dava bilgisi bulunamadı.</p>)}
                     </div>
                   </div>
 
                   <div className="rounded-2xl bg-[#111113] border border-white/[0.06] p-5">
-                    <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2">
+                    <h3 className="text-[15px] font-semibold text-[#ECECEE] mb-3 flex items-center gap-2">
                       <div className="w-1 h-4 bg-[#3DD68C] rounded-full" />Bulunan Referanslar
-                      {result.citations.length > 0 && (<span className="text-[11px] font-normal text-[#5C5C5F]">({result.citations.length})</span>)}
+                      {result.citations.length > 0 && (<span className="text-[13px] font-normal text-[#5C5C5F]">({result.citations.length})</span>)}
                     </h3>
                     {result.citations.length > 0 ? (
                       <div className="space-y-2">
                         {result.citations.map((c, i) => (
                           <button key={i} onClick={() => { localStorage.setItem("lexora_verify_text", c.raw_text); window.open("/dogrulama", "_blank"); }}
-                            className="w-full flex items-start gap-3 rounded-xl bg-[#09090B] px-3 py-2.5 border border-white/[0.04] hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.02] transition-all text-left group">
-                            <span className={`text-[10px] uppercase tracking-wider font-semibold mt-0.5 whitespace-nowrap px-1.5 py-0.5 rounded ${PATTERN_COLORS[c.pattern_type] || "text-[#8B8B8E] bg-white/[0.06]"}`}>
+                            className="w-full flex items-start gap-3 rounded-xl bg-[#09090B] px-4 py-2.5.5 border border-white/[0.04] hover:border-[#6C6CFF]/20 hover:bg-[#6C6CFF]/[0.02] transition-all text-left group">
+                            <span className={`text-[12px] uppercase tracking-wider font-semibold mt-0.5 whitespace-nowrap px-1.5 py-0.5 rounded ${PATTERN_COLORS[c.pattern_type] || "text-[#8B8B8E] bg-white/[0.06]"}`}>
                               {PATTERN_LABELS[c.pattern_type] || c.pattern_type}
                             </span>
-                            <span className="text-[13px] text-[#ECECEE] break-all group-hover:text-[#6C6CFF] transition-colors">{c.raw_text}</span>
+                            <span className="text-[15px] text-[#ECECEE] break-all group-hover:text-[#6C6CFF] transition-colors">{c.raw_text}</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="shrink-0 mt-0.5 text-[#3A3A3F] group-hover:text-[#6C6CFF] transition-colors">
                               <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </button>
                         ))}
                       </div>
-                    ) : (<p className="text-[12px] text-[#5C5C5F]">Belgede hukuki referans bulunamadı.</p>)}
+                    ) : (<p className="text-[14px] text-[#5C5C5F]">Belgede hukuki referans bulunamadı.</p>)}
                   </div>
                 </div>
               )}
@@ -278,7 +278,7 @@ export default function BelgePage() {
               {/* Viewer Tab */}
               {activeTab === "viewer" && (
                 <div className="rounded-2xl bg-[#111113] border border-white/[0.06] p-5">
-                  <pre className="text-[13px] text-[#ECECEE]/90 whitespace-pre-wrap leading-[1.7] max-h-[600px] overflow-auto rounded-xl bg-[#09090B] border border-white/[0.04] p-5">{result.text}</pre>
+                  <pre className="text-[15px] text-[#ECECEE]/90 whitespace-pre-wrap leading-[1.7] max-h-[600px] overflow-auto rounded-xl bg-[#09090B] border border-white/[0.04] p-5">{result.text}</pre>
                 </div>
               )}
             </motion.div>
@@ -291,7 +291,7 @@ export default function BelgePage() {
         {toast && (
           <motion.div role="alert" aria-live="polite" initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-[#16161A] border border-white/[0.08] rounded-xl shadow-2xl flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#3DD68C]" /><span className="text-[13px] text-[#ECECEE]">{toast}</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-[#3DD68C]" /><span className="text-[15px] text-[#ECECEE]">{toast}</span>
           </motion.div>
         )}
       </AnimatePresence>

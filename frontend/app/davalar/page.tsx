@@ -84,7 +84,7 @@ const CaseCard = React.memo(function CaseCard({
     >
       <button
         onClick={() => onSelect(c.id)}
-        className={`flex-1 text-left bg-[#111113] border rounded-l-xl p-3.5 transition-all duration-150 ${
+        className={`flex-1 text-left bg-[#111113] border rounded-l-xl p-4 transition-all duration-150 ${
           isSelected
             ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04]"
             : "border-white/[0.06] hover:border-white/[0.10]"
@@ -92,13 +92,13 @@ const CaseCard = React.memo(function CaseCard({
       >
         <div className="flex items-center gap-2 mb-1.5">
           {hasCritical && <span className="w-2 h-2 rounded-full bg-[#E5484D] animate-pulse shrink-0" title="Kritik sure" />}
-          <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
+          <span className={`px-2 py-1 text-[12px] font-medium rounded ${STATUS_COLORS[c.status] || "bg-[#5C5C5F]/10 text-[#5C5C5F]"}`}>
             {c.status === "aktif" ? "Aktif" : c.status === "beklemede" ? "Beklemede" : "Kapandi"}
           </span>
-          <span className="text-[10px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
+          <span className="text-[12px] text-[#5C5C5F]">{CASE_TYPES[c.case_type] || c.case_type}</span>
         </div>
-        <h3 className="text-[13px] font-medium text-[#ECECEE] line-clamp-1">{c.title}</h3>
-        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#5C5C5F]">
+        <h3 className="text-[15px] font-medium text-[#ECECEE] line-clamp-1">{c.title}</h3>
+        <div className="flex items-center gap-3 mt-1.5 text-[13px] text-[#5C5C5F]">
           {c.court && <span>{c.court}</span>}
           {c.case_number && <span>E. {c.case_number}</span>}
           {c.opponent && <span>vs. {c.opponent}</span>}
@@ -276,7 +276,7 @@ export default function DavalarPage() {
 
   const filteredCases = statusFilter === "all" ? cases : cases.filter((c) => c.status === statusFilter);
 
-  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[13px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
+  const inputCls = "w-full bg-[#16161A] border border-white/[0.06] rounded-lg px-3 py-2 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors";
 
   // Not logged in
   if (!token && !loading) {
@@ -286,9 +286,9 @@ export default function DavalarPage() {
           <div className="w-12 h-12 mx-auto rounded-xl bg-[#6C6CFF]/10 flex items-center justify-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6C6CFF" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
           </div>
-          <h2 className="text-[15px] font-semibold text-[#ECECEE]">Dava Dosyaları</h2>
-          <p className="text-[13px] text-[#5C5C5F]">Davalarınızı yönetmek için giriş yapmanız gerekiyor.</p>
-          <a href="/api/v1/auth/login" className="inline-block px-4 py-2 bg-[#6C6CFF] rounded-lg text-white text-[13px] font-medium hover:bg-[#5B5BEE] transition-colors">
+          <h2 className="text-[17px] font-semibold text-[#ECECEE]">Dava Dosyaları</h2>
+          <p className="text-[15px] text-[#5C5C5F]">Davalarınızı yönetmek için giriş yapmanız gerekiyor.</p>
+          <a href="/api/v1/auth/login" className="inline-block px-4 py-2 bg-[#6C6CFF] rounded-lg text-white text-[15px] font-medium hover:bg-[#5B5BEE] transition-colors">
             Giriş Yap
           </a>
         </div>
@@ -300,7 +300,7 @@ export default function DavalarPage() {
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Toast notification */}
       {toast && (
-        <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[13px] rounded-lg animate-fade-in">
+        <div role="alert" aria-live="polite" className="fixed top-4 right-4 z-50 px-4 py-2 bg-[#3DD68C]/20 border border-[#3DD68C]/30 text-[#3DD68C] text-[15px] rounded-lg animate-fade-in">
           {toast}
         </div>
       )}
@@ -309,13 +309,13 @@ export default function DavalarPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Dava Dosyalari</h1>
-            <p className="text-[12px] text-[#5C5C5F] mt-0.5">
+            <p className="text-[14px] text-[#5C5C5F] mt-0.5">
               {cases.length} dava dosyası
             </p>
           </div>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="px-3 py-1.5 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[12px] font-medium text-white transition-colors"
+            className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] rounded-lg text-[14px] font-medium text-white transition-colors"
           >
             + Yeni Dava
           </button>
@@ -332,7 +332,7 @@ export default function DavalarPage() {
             <button
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
-              className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${
+              className={`px-4 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
                 statusFilter === f.value
                   ? "bg-[#6C6CFF]/20 text-[#6C6CFF]"
                   : "text-[#5C5C5F] hover:text-[#8B8B8E]"
@@ -366,10 +366,10 @@ export default function DavalarPage() {
               <div className="w-10 h-10 mx-auto rounded-xl bg-[#111113] flex items-center justify-center">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5C5C5F" strokeWidth={1.5}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
               </div>
-              <p className="text-[13px] text-[#5C5C5F]">Henüz dava dosyanız yok.</p>
+              <p className="text-[15px] text-[#5C5C5F]">Henüz dava dosyanız yok.</p>
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="text-[12px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
+                className="text-[14px] text-[#6C6CFF] hover:text-[#8B8BFF] transition-colors"
               >
                 İlk davanızı oluşturun
               </button>
@@ -400,13 +400,13 @@ export default function DavalarPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-[14px] font-semibold text-[#ECECEE]">{selectedCase.title}</h2>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowDeleteConfirm(true)} className="px-2.5 py-1 text-[12px] font-medium text-[#E5484D] hover:bg-[#E5484D]/10 rounded-md transition-colors">Sil</button>
-                <button onClick={() => setSelectedCase(null)} className="text-[12px] text-[#5C5C5F] hover:text-[#ECECEE]">Kapat</button>
+                <button onClick={() => setShowDeleteConfirm(true)} className="px-2.5 py-1 text-[14px] font-medium text-[#E5484D] hover:bg-[#E5484D]/10 rounded-md transition-colors">Sil</button>
+                <button onClick={() => setSelectedCase(null)} className="text-[14px] text-[#5C5C5F] hover:text-[#ECECEE]">Kapat</button>
               </div>
             </div>
 
             {/* Case info */}
-            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 space-y-2 text-[13px]">
+            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 space-y-2 text-[15px]">
               <div className="flex"><span className="w-28 text-[#5C5C5F]">Mahkeme</span><span className="text-[#ECECEE]">{selectedCase.court || "—"}</span></div>
               <div className="flex"><span className="w-28 text-[#5C5C5F]">Esas No</span><span className="text-[#ECECEE]">{selectedCase.case_number || "—"}</span></div>
               <div className="flex"><span className="w-28 text-[#5C5C5F]">Karşı Taraf</span><span className="text-[#ECECEE]">{selectedCase.opponent || "—"}</span></div>
@@ -414,7 +414,7 @@ export default function DavalarPage() {
               <div className="flex"><span className="w-28 text-[#5C5C5F]">Atanan</span><span className="text-[#ECECEE]">{selectedCase.assigned_to || "—"}</span></div>
               {selectedCase.notes && (
                 <div className="pt-2 border-t border-white/[0.04]">
-                  <p className="text-[12px] text-[#8B8B8E]">{selectedCase.notes}</p>
+                  <p className="text-[14px] text-[#8B8B8E]">{selectedCase.notes}</p>
                 </div>
               )}
             </div>
@@ -422,15 +422,15 @@ export default function DavalarPage() {
             {/* Deadlines */}
             {selectedCase.deadlines && selectedCase.deadlines.length > 0 && (
               <div>
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Süreler ({selectedCase.deadlines.length})</h3>
+                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Süreler ({selectedCase.deadlines.length})</h3>
                 <div className="space-y-1.5">
                   {selectedCase.deadlines.map((dl) => (
                     <div key={dl.id} className={`bg-[#111113] border border-white/[0.06] rounded-lg p-3 flex items-center justify-between ${dl.is_completed ? "opacity-50" : ""}`}>
                       <div>
-                        <p className="text-[13px] text-[#ECECEE]">{dl.title}</p>
-                        <p className="text-[11px] text-[#5C5C5F]">{dl.deadline_date}</p>
+                        <p className="text-[15px] text-[#ECECEE]">{dl.title}</p>
+                        <p className="text-[13px] text-[#5C5C5F]">{dl.deadline_date}</p>
                       </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${dl.is_completed ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
+                      <span className={`text-[12px] font-medium px-2 py-0.5 rounded ${dl.is_completed ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
                         {dl.is_completed ? "Tamamlandı" : "Bekliyor"}
                       </span>
                     </div>
@@ -442,12 +442,12 @@ export default function DavalarPage() {
             {/* Saved searches */}
             {selectedCase.saved_searches && selectedCase.saved_searches.length > 0 && (
               <div>
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Kayıtlı Aramalar ({selectedCase.saved_searches.length})</h3>
+                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Kayıtlı Aramalar ({selectedCase.saved_searches.length})</h3>
                 <div className="space-y-1.5">
                   {selectedCase.saved_searches.map((ss) => (
                     <div key={ss.id} className="bg-[#111113] border border-white/[0.06] rounded-lg p-3">
-                      <p className="text-[13px] text-[#ECECEE]">{ss.query}</p>
-                      <p className="text-[11px] text-[#5C5C5F]">{ss.result_count} sonuç — {ss.search_type}</p>
+                      <p className="text-[15px] text-[#ECECEE]">{ss.query}</p>
+                      <p className="text-[13px] text-[#5C5C5F]">{ss.result_count} sonuç — {ss.search_type}</p>
                     </div>
                   ))}
                 </div>
@@ -457,14 +457,14 @@ export default function DavalarPage() {
             {/* Documents */}
             {selectedCase.documents && selectedCase.documents.length > 0 && (
               <div>
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Belgeler ({selectedCase.documents.length})</h3>
+                <h3 className="text-[14px] font-semibold uppercase tracking-wider text-[#5C5C5F] mb-2">Belgeler ({selectedCase.documents.length})</h3>
                 <div className="space-y-1.5">
                   {selectedCase.documents.map((doc) => (
                     <div key={doc.id} className="bg-[#111113] border border-white/[0.06] rounded-lg p-3 flex items-center gap-3">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded">{doc.file_type.toUpperCase()}</span>
+                      <span className="text-[12px] font-medium px-2 py-1 bg-[#6C6CFF]/10 text-[#6C6CFF] rounded">{doc.file_type.toUpperCase()}</span>
                       <div>
-                        <p className="text-[13px] text-[#ECECEE]">{doc.file_name}</p>
-                        <p className="text-[11px] text-[#5C5C5F]">{doc.document_type}</p>
+                        <p className="text-[15px] text-[#ECECEE]">{doc.file_name}</p>
+                        <p className="text-[13px] text-[#5C5C5F]">{doc.document_type}</p>
                       </div>
                     </div>
                   ))}
@@ -496,20 +496,20 @@ export default function DavalarPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth={1.5}><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" /></svg>
               </div>
               <div className="text-center">
-                <h2 className="text-[15px] font-semibold text-[#ECECEE]">Dava Dosyasını Kapat</h2>
-                <p className="text-[13px] text-[#5C5C5F] mt-2">Bu dava dosyası kapatılacak. Emin misiniz?</p>
+                <h2 className="text-[17px] font-semibold text-[#ECECEE]">Dava Dosyasını Kapat</h2>
+                <p className="text-[15px] text-[#5C5C5F] mt-2">Bu dava dosyası kapatılacak. Emin misiniz?</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={handleDeleteCase}
                   disabled={deleting}
-                  className="flex-1 py-2 bg-[#E5484D] hover:bg-[#D13438] rounded-lg text-[13px] font-medium text-white transition-colors disabled:opacity-50"
+                  className="flex-1 py-2 bg-[#E5484D] hover:bg-[#D13438] rounded-lg text-[15px] font-medium text-white transition-colors disabled:opacity-50"
                 >
                   {deleting ? "Kapatılıyor..." : "Dosyayı Kapat"}
                 </button>
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors"
+                  className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors"
                 >
                   İptal
                 </button>
@@ -536,14 +536,14 @@ export default function DavalarPage() {
               className="bg-[#111113] border border-white/[0.08] rounded-2xl p-6 w-full max-w-md space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-[15px] font-semibold text-[#ECECEE]">Yeni Dava Dosyası</h2>
+              <h2 className="text-[17px] font-semibold text-[#ECECEE]">Yeni Dava Dosyası</h2>
               <form onSubmit={handleCreateCase} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Dava Başlığı *</label>
+                  <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Dava Başlığı *</label>
                   <input name="title" required placeholder="Ahmet Yılmaz vs XYZ A.Ş." className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Dava Türü *</label>
+                  <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Dava Türü *</label>
                   <select name="case_type" required className={inputCls + " cursor-pointer"}>
                     <option value="is_hukuku">İş Hukuku</option>
                     <option value="ceza">Ceza</option>
@@ -554,28 +554,28 @@ export default function DavalarPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Mahkeme</label>
+                    <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Mahkeme</label>
                     <input name="court" placeholder="İstanbul 3. İş Mahkemesi" className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Esas Numarası</label>
+                    <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Esas Numarası</label>
                     <input name="case_number" placeholder="2026/1234" className={inputCls} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Karşı Taraf</label>
+                  <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Karşı Taraf</label>
                   <input name="opponent" placeholder="Şirket / Kişi adı" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-[#5C5C5F] mb-1">Notlar</label>
+                  <label className="block text-[13px] font-medium text-[#5C5C5F] mb-1">Notlar</label>
                   <textarea name="notes" rows={2} placeholder="Ek bilgiler..." className={inputCls + " resize-none"} />
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button type="submit" disabled={createLoading} className="flex-1 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/50 disabled:cursor-not-allowed rounded-lg text-[13px] font-medium text-white transition-colors flex items-center justify-center gap-2">
+                  <button type="submit" disabled={createLoading} className="flex-1 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#6C6CFF]/50 disabled:cursor-not-allowed rounded-lg text-[15px] font-medium text-white transition-colors flex items-center justify-center gap-2">
                     {createLoading && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {createLoading ? "Oluşturuluyor..." : "Oluştur"}
                   </button>
-                  <button type="button" onClick={() => setShowCreateForm(false)} className="px-4 py-2 text-[13px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
+                  <button type="button" onClick={() => setShowCreateForm(false)} className="px-4 py-2 text-[15px] text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
                     İptal
                   </button>
                 </div>

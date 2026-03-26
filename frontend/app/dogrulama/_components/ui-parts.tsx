@@ -52,19 +52,19 @@ export function SummaryStats({ results }: { results: VerifyResponse }) {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <motion.div variants={listItem} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 text-center">
         <p className="text-2xl font-semibold text-[#ECECEE]">{results.total_citations}</p>
-        <p className="text-[12px] text-[#8B8B8E] mt-1">Toplam Atıf</p>
+        <p className="text-[14px] text-[#8B8B8E] mt-1">Toplam Atıf</p>
       </motion.div>
       <motion.div variants={listItem} className="bg-[#3DD68C]/[0.03] border border-[#3DD68C]/20 rounded-xl p-4 text-center">
         <p className="text-2xl font-semibold text-[#3DD68C]">{results.verified}</p>
-        <p className="text-[12px] text-[#8B8B8E] mt-1">Doğrulanan</p>
+        <p className="text-[14px] text-[#8B8B8E] mt-1">Doğrulanan</p>
       </motion.div>
       <motion.div variants={listItem} className="bg-[#E5484D]/[0.03] border border-[#E5484D]/20 rounded-xl p-4 text-center">
         <p className="text-2xl font-semibold text-[#E5484D]">{results.not_found}</p>
-        <p className="text-[12px] text-[#8B8B8E] mt-1">Bulunamayan</p>
+        <p className="text-[14px] text-[#8B8B8E] mt-1">Bulunamayan</p>
       </motion.div>
       <motion.div variants={listItem} className="bg-[#FFB224]/[0.03] border border-[#FFB224]/20 rounded-xl p-4 text-center">
         <p className="text-2xl font-semibold text-[#FFB224]">{results.partial_match}</p>
-        <p className="text-[12px] text-[#8B8B8E] mt-1">Kısmi Eşleşme</p>
+        <p className="text-[14px] text-[#8B8B8E] mt-1">Kısmi Eşleşme</p>
       </motion.div>
     </div>
   );
@@ -76,8 +76,8 @@ export function ConfidenceBar({ confidence }: { confidence: number }) {
   return (
     <motion.div variants={listItem} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[12px] font-medium text-[#8B8B8E]">Genel Güven Skoru</span>
-        <span className={`text-[15px] font-semibold ${getBarTextColor(confidence)}`}>%{Math.round(confidence * 100)}</span>
+        <span className="text-[14px] font-medium text-[#8B8B8E]">Genel Güven Skoru</span>
+        <span className={`text-[17px] font-semibold ${getBarTextColor(confidence)}`}>%{Math.round(confidence * 100)}</span>
       </div>
       <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
         <motion.div className={`h-full rounded-full ${getBarColor(confidence)}`}
@@ -94,22 +94,22 @@ export function CitationCard({ detail }: { detail: CitationResult }) {
   return (
     <motion.div variants={listItem} className={`border rounded-xl p-4 ${statusConfig.cardBorder} ${statusConfig.cardBg}`}>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide ${
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[12px] font-medium uppercase tracking-wide ${
           detail.reference.citation_type === "ictihat" ? "bg-[#6C6CFF]/10 text-[#6C6CFF]"
           : detail.reference.citation_type === "mevzuat" ? "bg-[#A78BFA]/10 text-[#A78BFA]"
           : "bg-white/[0.04] text-[#8B8B8E]"
         }`}>
           {detail.reference.citation_type === "ictihat" ? "İçtihat" : detail.reference.citation_type === "mevzuat" ? "Mevzuat" : detail.reference.citation_type.toUpperCase()}
         </span>
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium ${statusConfig.badgeClass}`}>
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] font-medium ${statusConfig.badgeClass}`}>
           <span className={statusConfig.iconColor}><StatusIcon status={detail.status} /></span>
           {statusConfig.label}
         </span>
       </div>
-      <p className="text-[13px] font-mono font-medium text-[#ECECEE] mb-2">{detail.reference.raw_text}</p>
-      {detail.found_match && (<p className="text-[12px] text-[#8B8B8E] mb-1">Kaynak: {detail.found_match}</p>)}
-      {detail.suggestion && (<p className="text-[12px] text-[#5C5C5F] italic mt-1">Öneri: {detail.suggestion}</p>)}
-      <div className="mt-2"><span className="text-[11px] text-[#5C5C5F]">Doğrulama süresi: {(detail.verification_ms / 1000).toFixed(1)}s</span></div>
+      <p className="text-[15px] font-mono font-medium text-[#ECECEE] mb-2">{detail.reference.raw_text}</p>
+      {detail.found_match && (<p className="text-[14px] text-[#8B8B8E] mb-1">Kaynak: {detail.found_match}</p>)}
+      {detail.suggestion && (<p className="text-[14px] text-[#5C5C5F] italic mt-1">Öneri: {detail.suggestion}</p>)}
+      <div className="mt-2"><span className="text-[13px] text-[#5C5C5F]">Doğrulama süresi: {(detail.verification_ms / 1000).toFixed(1)}s</span></div>
     </motion.div>
   );
 }

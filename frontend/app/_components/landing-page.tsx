@@ -244,25 +244,25 @@ export default function LandingPage() {
     <div className="min-h-full bg-[#09090B] overflow-auto">
       {/* ============ NAV ============ */}
       <nav className="border-b border-white/[0.06] bg-[#09090B]/60 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-7 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#6C6CFF]/20 flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6C6CFF" strokeWidth={2}>
                 <path d="M3 6l9-3 9 3M3 6v12l9 3 9-3V6M3 6l9 3m0 0l9-3m-9 3v12" />
               </svg>
             </div>
-            <span className="text-[20px] font-bold text-[#ECECEE] tracking-tight">Lexora</span>
+            <span className="text-[22px] font-bold text-[#ECECEE] tracking-tight">Lexora</span>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/giris"
-              className="px-5 py-2.5 text-[13px] font-medium text-[#8B8B8E] hover:text-white transition-colors"
+              className="px-6 py-2.5.5 text-[15px] font-medium text-[#8B8B8E] hover:text-white transition-colors"
             >
               Giris Yap
             </Link>
             <Link
               href="/kayit"
-              className="px-6 py-2.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[13px] font-semibold rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(108,108,255,0.25)] hover:shadow-[0_0_30px_rgba(108,108,255,0.4)]"
+              className="px-7 py-2.5.5 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[15px] font-semibold rounded-xl transition-all duration-200 shadow-[0_0_20px_rgba(108,108,255,0.25)] hover:shadow-[0_0_30px_rgba(108,108,255,0.4)]"
             >
               Ucretsiz Deneyin
             </Link>
@@ -303,7 +303,7 @@ export default function LandingPage() {
           }}
         />
 
-        <div className="max-w-7xl mx-auto px-6 pt-24 md:pt-32 pb-20 relative">
+        <div className="max-w-7xl mx-auto px-7 pt-24 md:pt-32 pb-20 relative">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -315,10 +315,10 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] mb-8"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/[0.05] border border-white/[0.08] mb-8"
             >
               <span className="w-2 h-2 rounded-full bg-[#3DD68C] animate-[glow-pulse_2s_ease-in-out_infinite]" />
-              <span className="text-[12px] font-medium text-[#8B8B8E]">Yapay zeka destekli hukuk platformu</span>
+              <span className="text-[14px] font-medium text-[#8B8B8E]">Yapay zeka destekli hukuk platformu</span>
             </motion.div>
 
             {/* Headline */}
@@ -333,7 +333,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="mt-6 text-[17px] md:text-[20px] text-[#8B8B8E] leading-relaxed max-w-2xl mx-auto"
+              className="mt-6 text-[19px] md:text-[22px] text-[#8B8B8E] leading-relaxed max-w-2xl mx-auto"
             >
               65.000+ ictihat karari, 900+ kanun, 7 farkli kaynak — tek platformda.
             </motion.p>
@@ -347,14 +347,14 @@ export default function LandingPage() {
             >
               <Link
                 href="/kayit"
-                className="group relative px-10 py-4 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[16px] font-semibold rounded-2xl transition-all duration-300 hover:-translate-y-1 shadow-[0_0_30px_rgba(108,108,255,0.3)] hover:shadow-[0_0_50px_rgba(108,108,255,0.5)]"
+                className="group relative px-10 py-5 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[18px] font-semibold rounded-2xl transition-all duration-300 hover:-translate-y-1 shadow-[0_0_30px_rgba(108,108,255,0.3)] hover:shadow-[0_0_50px_rgba(108,108,255,0.5)]"
               >
                 <span className="relative z-10">Ucretsiz Deneyin</span>
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#6C6CFF] to-[#A78BFA] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
               <Link
                 href="/giris"
-                className="px-10 py-4 bg-white/[0.05] hover:bg-white/[0.10] text-[#ECECEE] text-[16px] font-medium rounded-2xl border border-white/[0.10] hover:border-white/[0.20] transition-all duration-300 hover:-translate-y-1 backdrop-blur-sm"
+                className="px-10 py-5 bg-white/[0.05] hover:bg-white/[0.10] text-[#ECECEE] text-[18px] font-medium rounded-2xl border border-white/[0.10] hover:border-white/[0.20] transition-all duration-300 hover:-translate-y-1 backdrop-blur-sm"
               >
                 Giris Yap
               </Link>
@@ -369,7 +369,7 @@ export default function LandingPage() {
             className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mt-20 max-w-4xl mx-auto"
           >
             {/* Dynamic counter from API */}
-            <div className="group text-center p-6 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#6C6CFF]/30 hover:bg-[#6C6CFF]/[0.04] transition-all duration-300">
+            <div className="group text-center p-7 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#6C6CFF]/30 hover:bg-[#6C6CFF]/[0.04] transition-all duration-300">
               <div className="text-[32px] md:text-[42px] font-bold text-[#6C6CFF]">
                 {healthLoading ? (
                   <Shimmer className="h-10 w-24 mx-auto" />
@@ -377,25 +377,25 @@ export default function LandingPage() {
                   <AnimatedNumber end={totalPoints} suffix="+" duration={2200} />
                 )}
               </div>
-              <p className="text-[13px] text-[#5C5C5F] mt-1 font-medium">Ictihat Karari</p>
+              <p className="text-[15px] text-[#5C5C5F] mt-1 font-medium">Ictihat Karari</p>
             </div>
-            <div className="group text-center p-6 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#A78BFA]/30 hover:bg-[#A78BFA]/[0.04] transition-all duration-300">
+            <div className="group text-center p-7 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#A78BFA]/30 hover:bg-[#A78BFA]/[0.04] transition-all duration-300">
               <div className="text-[32px] md:text-[42px] font-bold text-[#A78BFA]">
                 <AnimatedNumber end={7} duration={1200} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] mt-1 font-medium">Veri Kaynagi</p>
+              <p className="text-[15px] text-[#5C5C5F] mt-1 font-medium">Veri Kaynagi</p>
             </div>
-            <div className="group text-center p-6 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#FFB224]/30 hover:bg-[#FFB224]/[0.04] transition-all duration-300">
+            <div className="group text-center p-7 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#FFB224]/30 hover:bg-[#FFB224]/[0.04] transition-all duration-300">
               <div className="text-[32px] md:text-[42px] font-bold text-[#FFB224]">
                 <AnimatedNumber end={900} suffix="+" duration={1800} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] mt-1 font-medium">Kanun & Mevzuat</p>
+              <p className="text-[15px] text-[#5C5C5F] mt-1 font-medium">Kanun & Mevzuat</p>
             </div>
-            <div className="group text-center p-6 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#3DD68C]/30 hover:bg-[#3DD68C]/[0.04] transition-all duration-300">
+            <div className="group text-center p-7 bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-[#3DD68C]/30 hover:bg-[#3DD68C]/[0.04] transition-all duration-300">
               <div className="text-[32px] md:text-[42px] font-bold text-[#3DD68C]">
                 <AnimatedNumber end={93} duration={1500} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] mt-1 font-medium">Sure Kurali</p>
+              <p className="text-[15px] text-[#5C5C5F] mt-1 font-medium">Sure Kurali</p>
             </div>
           </motion.div>
         </div>
@@ -404,7 +404,7 @@ export default function LandingPage() {
       {/* ============ VERI HAVUZU ============ */}
       <section className="relative border-t border-white/[0.06]">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0C0C0E] to-[#09090B] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 py-24 relative">
+        <div className="max-w-7xl mx-auto px-7 py-24 relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -412,11 +412,11 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <span className="inline-block text-[12px] font-semibold tracking-[0.2em] uppercase text-[#6C6CFF] mb-4">Veri Havuzu</span>
+            <span className="inline-block text-[14px] font-semibold tracking-[0.2em] uppercase text-[#6C6CFF] mb-4">Veri Havuzu</span>
             <h2 className="text-[28px] md:text-[40px] font-bold text-[#ECECEE] tracking-tight">
               7 Resmi Kaynaktan<br className="hidden sm:block" /> Tek Platformda Erisim
             </h2>
-            <p className="text-[15px] text-[#5C5C5F] mt-4 max-w-xl mx-auto leading-relaxed">
+            <p className="text-[17px] text-[#5C5C5F] mt-4 max-w-xl mx-auto leading-relaxed">
               Turkiye'nin en kapsamli hukuki veri tabani. Resmi ve guvenilir kaynaklardan derlenen veriler.
             </p>
           </motion.div>
@@ -433,7 +433,7 @@ export default function LandingPage() {
                 key={src.name}
                 variants={itemVariants}
                 whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
+                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-7 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
               >
                 {/* Glow on hover */}
                 <div
@@ -447,8 +447,8 @@ export default function LandingPage() {
                   >
                     {src.icon}
                   </div>
-                  <h3 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">{src.name}</h3>
-                  <p className="text-[13px] text-[#5C5C5F] leading-relaxed">{src.desc}</p>
+                  <h3 className="text-[18px] font-semibold text-[#ECECEE] mb-1.5">{src.name}</h3>
+                  <p className="text-[15px] text-[#5C5C5F] leading-relaxed">{src.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -466,7 +466,7 @@ export default function LandingPage() {
                 key={src.name}
                 variants={itemVariants}
                 whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
+                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-7 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
               >
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
@@ -479,8 +479,8 @@ export default function LandingPage() {
                   >
                     {src.icon}
                   </div>
-                  <h3 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">{src.name}</h3>
-                  <p className="text-[13px] text-[#5C5C5F] leading-relaxed">{src.desc}</p>
+                  <h3 className="text-[18px] font-semibold text-[#ECECEE] mb-1.5">{src.name}</h3>
+                  <p className="text-[15px] text-[#5C5C5F] leading-relaxed">{src.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -490,7 +490,7 @@ export default function LandingPage() {
 
       {/* ============ FEATURES ============ */}
       <section className="relative border-t border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-6 py-24">
+        <div className="max-w-7xl mx-auto px-7 py-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -498,11 +498,11 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <span className="inline-block text-[12px] font-semibold tracking-[0.2em] uppercase text-[#A78BFA] mb-4">Ozellikler</span>
+            <span className="inline-block text-[14px] font-semibold tracking-[0.2em] uppercase text-[#A78BFA] mb-4">Ozellikler</span>
             <h2 className="text-[28px] md:text-[40px] font-bold text-[#ECECEE] tracking-tight">
               Avukatlar Icin Tasarlandi
             </h2>
-            <p className="text-[15px] text-[#5C5C5F] mt-4 max-w-xl mx-auto leading-relaxed">
+            <p className="text-[17px] text-[#5C5C5F] mt-4 max-w-xl mx-auto leading-relaxed">
               Hukuki arastirmadan dava yonetimine, tum ihtiyaclariniz tek platformda.
             </p>
           </motion.div>
@@ -519,7 +519,7 @@ export default function LandingPage() {
                 key={f.title}
                 variants={itemVariants}
                 whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-7 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
+                className="group relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 hover:border-white/[0.16] transition-all duration-300 overflow-hidden"
               >
                 {/* Gradient glow on hover */}
                 <div
@@ -533,8 +533,8 @@ export default function LandingPage() {
                   >
                     {f.icon}
                   </div>
-                  <h3 className="text-[17px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors mb-2">{f.title}</h3>
-                  <p className="text-[13px] text-[#5C5C5F] leading-relaxed group-hover:text-[#8B8B8E] transition-colors">{f.desc}</p>
+                  <h3 className="text-[19px] font-semibold text-[#ECECEE] group-hover:text-white transition-colors mb-2">{f.title}</h3>
+                  <p className="text-[15px] text-[#5C5C5F] leading-relaxed group-hover:text-[#8B8B8E] transition-colors">{f.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -544,7 +544,7 @@ export default function LandingPage() {
 
       {/* ============ TRUST BAR ============ */}
       <section className="relative border-t border-white/[0.06] border-b border-b-white/[0.06] bg-gradient-to-r from-[#6C6CFF]/[0.04] via-[#A78BFA]/[0.04] to-[#3DD68C]/[0.04]">
-        <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="max-w-7xl mx-auto px-7 py-16">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -556,29 +556,29 @@ export default function LandingPage() {
               <div className="text-[36px] md:text-[48px] font-bold text-[#ECECEE]">
                 <AnimatedNumber end={7} duration={1000} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] font-medium mt-1">Kaynak</p>
+              <p className="text-[15px] text-[#5C5C5F] font-medium mt-1">Kaynak</p>
             </div>
             <div className="hidden md:block w-px h-16 bg-white/[0.08]" />
             <div className="text-center">
               <div className="text-[36px] md:text-[48px] font-bold text-[#ECECEE]">
                 <AnimatedNumber end={65000} suffix="+" duration={2200} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] font-medium mt-1">Karar</p>
+              <p className="text-[15px] text-[#5C5C5F] font-medium mt-1">Karar</p>
             </div>
             <div className="hidden md:block w-px h-16 bg-white/[0.08]" />
             <div className="text-center">
               <div className="text-[36px] md:text-[48px] font-bold text-[#ECECEE]">
                 <AnimatedNumber end={900} suffix="+" duration={1800} />
               </div>
-              <p className="text-[13px] text-[#5C5C5F] font-medium mt-1">Kanun</p>
+              <p className="text-[15px] text-[#5C5C5F] font-medium mt-1">Kanun</p>
             </div>
             <div className="hidden md:block w-px h-16 bg-white/[0.08]" />
             <div className="text-center flex flex-col items-center">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#3DD68C] animate-[glow-pulse_2s_ease-in-out_infinite]" />
-                <span className="text-[20px] md:text-[24px] font-bold text-[#3DD68C]">Gunluk</span>
+                <span className="text-[22px] md:text-[28px] font-bold text-[#3DD68C]">Gunluk</span>
               </div>
-              <p className="text-[13px] text-[#5C5C5F] font-medium mt-1">Guncelleme</p>
+              <p className="text-[15px] text-[#5C5C5F] font-medium mt-1">Guncelleme</p>
             </div>
           </motion.div>
         </div>
@@ -592,7 +592,7 @@ export default function LandingPage() {
             style={{ background: "radial-gradient(ellipse at center, rgba(108,108,255,0.08) 0%, transparent 60%)" }}
           />
         </div>
-        <div className="max-w-3xl mx-auto px-6 py-24 text-center relative">
+        <div className="max-w-3xl mx-auto px-7 py-24 text-center relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -604,7 +604,7 @@ export default function LandingPage() {
               <br />
               <span className="text-[#ECECEE]">bir ust seviyeye tasiyin</span>
             </h2>
-            <p className="text-[15px] text-[#5C5C5F] mt-4 max-w-lg mx-auto leading-relaxed">
+            <p className="text-[17px] text-[#5C5C5F] mt-4 max-w-lg mx-auto leading-relaxed">
               Ucretsiz hesap olusturun ve yapay zeka destekli hukuk platformuyla hemen aramaya baslayin.
             </p>
             <motion.div
@@ -615,7 +615,7 @@ export default function LandingPage() {
             >
               <Link
                 href="/kayit"
-                className="group relative inline-block mt-8 px-12 py-4 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[16px] font-semibold rounded-2xl transition-all duration-300 hover:-translate-y-1 shadow-[0_0_30px_rgba(108,108,255,0.3)] hover:shadow-[0_0_60px_rgba(108,108,255,0.5)]"
+                className="group relative inline-block mt-8 px-12 py-5 bg-[#6C6CFF] hover:bg-[#7B7BFF] text-white text-[18px] font-semibold rounded-2xl transition-all duration-300 hover:-translate-y-1 shadow-[0_0_30px_rgba(108,108,255,0.3)] hover:shadow-[0_0_60px_rgba(108,108,255,0.5)]"
               >
                 <span className="relative z-10">Ucretsiz Deneyin</span>
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#6C6CFF] to-[#A78BFA] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -627,7 +627,7 @@ export default function LandingPage() {
 
       {/* ============ FOOTER ============ */}
       <footer className="border-t border-white/[0.06] bg-[#09090B]">
-        <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="max-w-7xl mx-auto px-7 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-[#6C6CFF]/20 flex items-center justify-center">
@@ -635,20 +635,20 @@ export default function LandingPage() {
                   <path d="M3 6l9-3 9 3M3 6v12l9 3 9-3V6M3 6l9 3m0 0l9-3m-9 3v12" />
                 </svg>
               </div>
-              <span className="text-[14px] font-semibold text-[#5C5C5F]">Lexora</span>
+              <span className="text-[16px] font-semibold text-[#5C5C5F]">Lexora</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6">
-              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Gizlilik Politikasi</a>
-              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Kullanim Kosullari</a>
-              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">KVKK Aydinlatma</a>
-              <a href="#" className="text-[12px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Iletisim</a>
+              <a href="#" className="text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Gizlilik Politikasi</a>
+              <a href="#" className="text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Kullanim Kosullari</a>
+              <a href="#" className="text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">KVKK Aydinlatma</a>
+              <a href="#" className="text-[14px] text-[#5C5C5F] hover:text-[#8B8B8E] transition-colors">Iletisim</a>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-[11px] text-[#3A3A3F]">
+            <p className="text-[13px] text-[#3A3A3F]">
               &copy; 2026 Lexora. Tum haklari saklidir.
             </p>
-            <p className="text-[11px] text-[#3A3A3F]">
+            <p className="text-[13px] text-[#3A3A3F]">
               Lexora avukatin isini destekler, yapmaz. Nihai hukuki degerlendirme avukata aittir.
             </p>
           </div>

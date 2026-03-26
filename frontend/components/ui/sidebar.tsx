@@ -78,10 +78,10 @@ export default function Sidebar() {
         {/* Search hint */}
         {!isCollapsed && (
           <div className="px-2 pt-3 pb-1">
-            <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[#5C5C5F] text-[12px]">
+            <div className="flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[#5C5C5F] text-[14px]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               <span className="flex-1">Komut paleti</span>
-              <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-[#5C5C5F] font-mono">⌘K</kbd>
+              <kbd className="text-[12px] px-1.5 py-0.5 rounded bg-white/[0.04] text-[#5C5C5F] font-mono">⌘K</kbd>
             </div>
           </div>
         )}
@@ -91,7 +91,7 @@ export default function Sidebar() {
           {navGroups.map((group) => (
             <div key={group.label}>
               {!isCollapsed && (
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#3A3A3F] px-2.5 mb-1">
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-[#3A3A3F] px-2.5 mb-1">
                   {group.label}
                 </p>
               )}
@@ -103,7 +103,7 @@ export default function Sidebar() {
                       key={item.href}
                       href={item.href}
                       onClick={isMobile ? closeMobile : undefined}
-                      className={`relative flex items-center gap-2.5 h-9 px-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 ${
+                      className={`relative flex items-center gap-2.5 h-9 px-2.5 rounded-xl text-[15px] font-medium transition-all duration-150 ${
                         isCollapsed ? "justify-center" : ""
                       } ${
                         isActive
@@ -126,7 +126,7 @@ export default function Sidebar() {
                         <div className="flex items-center justify-between flex-1 min-w-0">
                           <span className="truncate">{item.label}</span>
                           {item.shortcut && (
-                            <span className="text-[10px] text-[#3A3A3F] ml-auto flex-shrink-0 font-mono">
+                            <span className="text-[12px] text-[#3A3A3F] ml-auto flex-shrink-0 font-mono">
                               ⌘{item.shortcut}
                             </span>
                           )}
@@ -146,7 +146,7 @@ export default function Sidebar() {
 
           <Link
             href="/ayarlar"
-            className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#5C5C5F] hover:bg-white/[0.03] hover:text-[#8B8B8E] transition-colors ${isCollapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#5C5C5F] hover:bg-white/[0.03] hover:text-[#8B8B8E] transition-colors ${isCollapsed ? "justify-center" : ""}`}
             title={isCollapsed ? "Ayarlar" : undefined}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0">
@@ -156,7 +156,7 @@ export default function Sidebar() {
             {!isCollapsed && (
               <div className="flex items-center justify-between flex-1 min-w-0">
                 <span>Ayarlar</span>
-                <span className="text-[10px] text-[#3A3A3F] ml-auto flex-shrink-0 font-mono">⌘5</span>
+                <span className="text-[12px] text-[#3A3A3F] ml-auto flex-shrink-0 font-mono">⌘5</span>
               </div>
             )}
           </Link>
@@ -164,7 +164,7 @@ export default function Sidebar() {
           {!isMobile && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#5C5C5F] hover:bg-white/[0.03] hover:text-[#8B8B8E] transition-colors ${collapsed ? "justify-center" : ""}`}
+              className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#5C5C5F] hover:bg-white/[0.03] hover:text-[#8B8B8E] transition-colors ${collapsed ? "justify-center" : ""}`}
               title={collapsed ? "Genislet" : "Daralt"}
             >
               <motion.svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0"
@@ -231,7 +231,7 @@ function UserSection({ collapsed, isMobile }: { collapsed: boolean; isMobile: bo
       <div className="space-y-0.5">
         <Link
           href="/giris"
-          className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#6C6CFF] hover:bg-[#6C6CFF]/10 transition-colors ${collapsed ? "justify-center" : ""}`}
+          className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#6C6CFF] hover:bg-[#6C6CFF]/10 transition-colors ${collapsed ? "justify-center" : ""}`}
           title={collapsed ? "Giris Yap" : undefined}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0"><path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
@@ -239,7 +239,7 @@ function UserSection({ collapsed, isMobile }: { collapsed: boolean; isMobile: bo
         </Link>
         <Link
           href="/kayit"
-          className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#A78BFA] hover:bg-[#A78BFA]/10 transition-colors ${collapsed ? "justify-center" : ""}`}
+          className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#A78BFA] hover:bg-[#A78BFA]/10 transition-colors ${collapsed ? "justify-center" : ""}`}
           title={collapsed ? "Kayit Ol" : undefined}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0"><path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
@@ -253,22 +253,22 @@ function UserSection({ collapsed, isMobile }: { collapsed: boolean; isMobile: bo
     <div className="space-y-0.5">
       <div className={`flex items-center gap-2.5 h-10 px-2.5 rounded-xl ${collapsed ? "justify-center" : ""}`}>
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#6C6CFF] to-[#A78BFA] flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-[11px] font-bold">{initials}</span>
+          <span className="text-white text-[13px] font-bold">{initials}</span>
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <span className="text-[13px] font-medium text-[#ECECEE] truncate block">{user?.full_name || "Kullanici"}</span>
-            <span className="text-[10px] text-[#5C5C5F] capitalize">{user?.role || ""}</span>
+            <span className="text-[15px] font-medium text-[#ECECEE] truncate block">{user?.full_name || "Kullanici"}</span>
+            <span className="text-[12px] text-[#5C5C5F] capitalize">{user?.role || ""}</span>
           </div>
         )}
       </div>
       {user?.role === "platform_admin" && (
-        <Link href="/admin" className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#A78BFA] hover:bg-[#A78BFA]/10 transition-colors ${collapsed ? "justify-center" : ""}`}>
+        <Link href="/admin" className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#A78BFA] hover:bg-[#A78BFA]/10 transition-colors ${collapsed ? "justify-center" : ""}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           {!collapsed && <span>Admin Panel</span>}
         </Link>
       )}
-      <button onClick={logout} className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[13px] font-medium text-[#E5484D]/70 hover:text-[#E5484D] hover:bg-[#E5484D]/10 transition-colors ${collapsed ? "justify-center" : ""}`}>
+      <button onClick={logout} className={`flex items-center gap-2.5 w-full h-9 px-2.5 rounded-xl text-[15px] font-medium text-[#E5484D]/70 hover:text-[#E5484D] hover:bg-[#E5484D]/10 transition-colors ${collapsed ? "justify-center" : ""}`}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="flex-shrink-0"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
         {!collapsed && <span>Cikis Yap</span>}
       </button>

@@ -75,7 +75,7 @@ export default function MevzuatPage() {
       {/* Header */}
       <div>
         <h1 className="text-[20px] font-bold tracking-tight text-[#ECECEE]">Mevzuat</h1>
-        <p className="text-[13px] text-[#5C5C5F] mt-1">Kanun, yonetmelik ve diger mevzuat arama</p>
+        <p className="text-[15px] text-[#5C5C5F] mt-1">Kanun, yonetmelik ve diger mevzuat arama</p>
       </div>
 
       {/* Search */}
@@ -89,12 +89,12 @@ export default function MevzuatPage() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder="Kanun adi, numarasi veya madde arayin (or: 4857, is kanunu, 4857 madde 18)"
-          className="w-full bg-[#111113] border border-white/[0.06] rounded-2xl pl-12 pr-24 py-4 text-[15px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#16161A] transition-all duration-200"
+          className="w-full bg-[#111113] border border-white/[0.06] rounded-2xl pl-12 pr-24 py-4 text-[17px] text-[#ECECEE] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 focus:bg-[#16161A] transition-all duration-200"
         />
         <button
           onClick={() => handleSearch()}
           disabled={loading || !query.trim()}
-          className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[13px] font-medium text-white transition-all"
+          className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[15px] font-medium text-white transition-all"
         >
           {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Ara"}
         </button>
@@ -103,7 +103,7 @@ export default function MevzuatPage() {
       {/* Popular Laws */}
       {!results && !loading && !error && (
         <div className="space-y-4">
-          <h2 className="text-[13px] font-semibold text-[#8B8B8E]">Sik Aranan Kanunlar</h2>
+          <h2 className="text-[15px] font-semibold text-[#8B8B8E]">Sik Aranan Kanunlar</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {POPULAR_LAWS.map((law, i) => (
               <motion.button
@@ -115,7 +115,7 @@ export default function MevzuatPage() {
                 className="text-left bg-[#111113] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.12] hover:bg-[#16161A] transition-all group"
               >
                 <span className="text-[20px] font-bold tabular-nums" style={{ color: law.color }}>{law.no}</span>
-                <p className="text-[12px] text-[#8B8B8E] mt-1 group-hover:text-[#ECECEE] transition-colors">{law.name}</p>
+                <p className="text-[14px] text-[#8B8B8E] mt-1 group-hover:text-[#ECECEE] transition-colors">{law.name}</p>
               </motion.button>
             ))}
           </div>
@@ -124,7 +124,7 @@ export default function MevzuatPage() {
 
       {/* Status */}
       {results && !loading && (
-        <p className="text-[12px] text-[#5C5C5F]">{results.toplam} sonuc bulundu</p>
+        <p className="text-[14px] text-[#5C5C5F]">{results.toplam} sonuc bulundu</p>
       )}
 
       {/* Loading */}
@@ -138,9 +138,9 @@ export default function MevzuatPage() {
 
       {/* Error */}
       {error && (
-        <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[13px] text-[#E5484D]">
+        <div className="bg-[#E5484D]/10 border border-[#E5484D]/20 rounded-xl p-4 text-[15px] text-[#E5484D]">
           {error}
-          <button onClick={() => handleSearch()} className="block mt-2 text-[12px] underline underline-offset-2 hover:text-[#E5484D]">Tekrar Dene</button>
+          <button onClick={() => handleSearch()} className="block mt-2 text-[14px] underline underline-offset-2 hover:text-[#E5484D]">Tekrar Dene</button>
         </div>
       )}
 
@@ -163,11 +163,11 @@ export default function MevzuatPage() {
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${getTurBadge(r.tur)}`}>{r.tur}</span>
-                  {r.kanun_no && <span className="text-[12px] font-mono text-[#8B8B8E]">No: {r.kanun_no}</span>}
+                  <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium uppercase ${getTurBadge(r.tur)}`}>{r.tur}</span>
+                  {r.kanun_no && <span className="text-[14px] font-mono text-[#8B8B8E]">No: {r.kanun_no}</span>}
                 </div>
-                <h3 className="text-[14px] font-semibold text-[#ECECEE]">{r.kanun_adi}</h3>
-                <div className="flex items-center gap-4 mt-2 text-[11px] text-[#5C5C5F]">
+                <h3 className="text-[16px] font-semibold text-[#ECECEE]">{r.kanun_adi}</h3>
+                <div className="flex items-center gap-4 mt-2 text-[13px] text-[#5C5C5F]">
                   {r.resmi_gazete_tarihi && <span>RG: {r.resmi_gazete_tarihi}</span>}
                   {r.resmi_gazete_sayisi && <span>Sayi: {r.resmi_gazete_sayisi}</span>}
                 </div>
@@ -186,9 +186,9 @@ export default function MevzuatPage() {
               >
                 <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
                   <div>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${getTurBadge(selectedMevzuat.tur)}`}>{selectedMevzuat.tur}</span>
-                    <h3 className="text-[15px] font-semibold text-[#ECECEE] mt-1">{selectedMevzuat.kanun_adi}</h3>
-                    {selectedMevzuat.kanun_no && <p className="text-[12px] text-[#5C5C5F]">No: {selectedMevzuat.kanun_no}</p>}
+                    <span className={`px-1.5 py-0.5 rounded text-[12px] font-medium uppercase ${getTurBadge(selectedMevzuat.tur)}`}>{selectedMevzuat.tur}</span>
+                    <h3 className="text-[17px] font-semibold text-[#ECECEE] mt-1">{selectedMevzuat.kanun_adi}</h3>
+                    {selectedMevzuat.kanun_no && <p className="text-[14px] text-[#5C5C5F]">No: {selectedMevzuat.kanun_no}</p>}
                   </div>
                   <button onClick={() => { setSelectedMevzuat(null); setMevzuatContent(null); }} className="p-1.5 text-[#5C5C5F] hover:text-[#ECECEE] transition-colors">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -198,10 +198,10 @@ export default function MevzuatPage() {
                   {contentLoading ? (
                     <div className="flex items-center gap-2 py-12 justify-center">
                       <div className="w-4 h-4 border-2 border-[#6C6CFF]/30 border-t-[#6C6CFF] rounded-full animate-spin" />
-                      <span className="text-[12px] text-[#5C5C5F]">Metin yukleniyor...</span>
+                      <span className="text-[14px] text-[#5C5C5F]">Metin yukleniyor...</span>
                     </div>
                   ) : mevzuatContent ? (
-                    <pre className="text-[13px] text-[#ECECEE] leading-[1.8] whitespace-pre-wrap font-[family-name:var(--font-serif)]">{mevzuatContent}</pre>
+                    <pre className="text-[15px] text-[#ECECEE] leading-[1.8] whitespace-pre-wrap font-[family-name:var(--font-serif)]">{mevzuatContent}</pre>
                   ) : null}
                 </div>
               </motion.div>
@@ -213,8 +213,8 @@ export default function MevzuatPage() {
       {/* No results */}
       {results && results.sonuclar.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-[14px] text-[#8B8B8E]">Sonuc bulunamadi</p>
-          <p className="text-[12px] text-[#5C5C5F] mt-1">Farkli anahtar kelimeler veya kanun numarasi deneyin</p>
+          <p className="text-[16px] text-[#8B8B8E]">Sonuc bulunamadi</p>
+          <p className="text-[14px] text-[#5C5C5F] mt-1">Farkli anahtar kelimeler veya kanun numarasi deneyin</p>
         </div>
       )}
     </div>
