@@ -277,10 +277,25 @@ async def active_ingestion_tasks():
                 elif "daire" in name: source = "daire"
                 elif "topics" in name: source = "yargitay"
                 elif "date_range" in name: source = "yargitay"
+                # Build readable description
+                kwargs = t.get("kwargs", {})
+                desc = name.split(".")[-1]
+                if source == "daire" and kwargs.get("daire_id"):
+                    desc = f"{kwargs.get('court_type', 'yargitay')} {kwargs['daire_id']}. Daire ({kwargs.get('pages', '?')} sayfa)"
+                elif source == "aihm":
+                    desc = f"AİHM ({kwargs.get('max_results', '?')} max)"
+                elif source == "aym":
+                    desc = f"AYM ({kwargs.get('pages', '?')} sayfa)"
+                elif source == "rekabet":
+                    desc = f"Rekabet ({kwargs.get('max_pages', '?')} sayfa)"
+                elif source == "kvkk":
+                    desc = f"KVKK ({kwargs.get('max_decisions', '?')} karar)"
+
                 tasks.append({
                     "id": t.get("id", ""),
                     "name": name.split(".")[-1],
                     "source": source,
+                    "desc": desc,
                     "started": t.get("time_start"),
                 })
         return {"running": len(tasks) > 0, "tasks": tasks}

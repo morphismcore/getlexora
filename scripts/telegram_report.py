@@ -122,20 +122,9 @@ def main():
     L.append("")
 
     if any_ingestion_active and celery_active:
-        SOURCE_LABELS = {
-            "yargitay": "Yargitay", "danistay": "Danistay",
-            "aym": "AYM", "aihm": "AiHM",
-            "rekabet": "Rekabet", "kvkk": "KVKK",
-            "mevzuat": "Mevzuat", "batch": "Toplu",
-            "exhaustive": "Exhaustive", "daire": "Daire",
-        }
-        names = []
+        L.append(f"CEKIM DURUMU: AKTIF ({len(celery_active)} task)")
         for t in celery_active:
-            src = t.get("source", "")
-            name = t.get("name", "")
-            label = SOURCE_LABELS.get(src, name)
-            names.append(label)
-        L.append(f"CEKIM DURUMU: AKTIF ({', '.join(names)})")
+            L.append(f"  - {t.get('desc', t.get('name', '?'))}")
     elif any_ingestion_active:
         L.append("CEKIM DURUMU: AKTIF")
     else:
