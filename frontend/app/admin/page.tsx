@@ -96,17 +96,13 @@ const ROLES = ["platform_admin", "admin", "partner", "avukat", "stajyer", "asist
 const ROLE_LABELS: Record<string, string> = { platform_admin: "Platform Admin", admin: "Firma Admin", partner: "Partner", avukat: "Avukat", stajyer: "Stajyer", asistan: "Asistan" };
 const ROLE_COLORS: Record<string, string> = { platform_admin: "bg-purple-500/10 text-purple-400", admin: "bg-[#6C6CFF]/10 text-[#6C6CFF]", partner: "bg-[#FFB224]/10 text-[#FFB224]", avukat: "bg-[#3DD68C]/10 text-[#3DD68C]", stajyer: "bg-[#8B8B8E]/10 text-[#8B8B8E]", asistan: "bg-[#8B8B8E]/10 text-[#8B8B8E]" };
 
-type TabKey = "users" | "firms" | "deadline-rules" | "holidays" | "system" | "embedding" | "monitoring" | "settings";
+type TabKey = "genel" | "kullanicilar" | "veri-yonetimi" | "sistem";
 
 const TAB_CONFIG: { key: TabKey; label: string; icon: string }[] = [
-  { key: "users", label: "Kullanicilar", icon: "M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" },
-  { key: "firms", label: "Firmalar", icon: "M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" },
-  { key: "deadline-rules", label: "Sure Kurallari", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
-  { key: "holidays", label: "Tatiller", icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" },
-  { key: "system", label: "Sistem", icon: "M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008H15v-.008z" },
-  { key: "embedding", label: "Embedding", icon: "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" },
-  { key: "monitoring", label: "Monitoring", icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" },
-  { key: "settings", label: "Ayarlar", icon: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
+  { key: "genel", label: "Genel", icon: "M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" },
+  { key: "kullanicilar", label: "Kullanicilar", icon: "M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" },
+  { key: "veri-yonetimi", label: "Veri Yonetimi", icon: "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" },
+  { key: "sistem", label: "Sistem", icon: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
 ];
 
 const CATEGORY_COLORS: Record<string, { color: string; bg: string }> = {
@@ -317,7 +313,7 @@ function SlideOver({
 export default function AdminPage() {
   const { user, token } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<TabKey>("users");
+  const [tab, setTab] = useState<TabKey>("genel");
   const [users, setUsers] = useState<UserItem[]>([]);
   const [firms, setFirms] = useState<FirmItem[]>([]);
   const [stats, setStats] = useState<PlatformStats | null>(null);
@@ -498,80 +494,142 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Pending users alert */}
-      {tab === "users" && pendingUsers.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-4 space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-[#FFB224]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            <h3 className="text-[13px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
-          </div>
-          {pendingUsers.map((u) => (
-            <div key={u.id} className="flex items-center justify-between bg-[#09090B] rounded-lg p-3">
-              <div>
-                <p className="text-[13px] text-[#ECECEE] font-medium">{u.full_name}</p>
-                <p className="text-[11px] text-[#5C5C5F]">{u.email} {u.baro ? `— ${u.baro}` : ""}</p>
+      {/* ── Genel (Dashboard) tab ── */}
+      {tab === "genel" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
+          {/* Pending users alert */}
+          {pendingUsers.length > 0 && (
+            <div className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#FFB224]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                <h3 className="text-[13px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => approveUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
-                <button onClick={() => rejectUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
+              {pendingUsers.map((u) => (
+                <div key={u.id} className="flex items-center justify-between bg-[#09090B] rounded-lg p-3">
+                  <div>
+                    <p className="text-[13px] text-[#ECECEE] font-medium">{u.full_name}</p>
+                    <p className="text-[11px] text-[#5C5C5F]">{u.email} {u.baro ? `— ${u.baro}` : ""}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => approveUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
+                    <button onClick={() => rejectUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button onClick={() => setTab("kullanicilar")} className="bg-[#111113] border border-white/[0.06] hover:border-[#6C6CFF]/30 rounded-xl p-5 text-left transition-colors group">
+              <div className="w-10 h-10 rounded-xl bg-[#6C6CFF]/10 flex items-center justify-center mb-3">
+                <HIcon d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" className="w-5 h-5 text-[#6C6CFF]" />
+              </div>
+              <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Kullanicilar & Firmalar</p>
+              <p className="text-[12px] text-[#5C5C5F]">{users.length} kullanici, {firms.length} firma</p>
+            </button>
+            <button onClick={() => setTab("veri-yonetimi")} className="bg-[#111113] border border-white/[0.06] hover:border-[#3DD68C]/30 rounded-xl p-5 text-left transition-colors group">
+              <div className="w-10 h-10 rounded-xl bg-[#3DD68C]/10 flex items-center justify-center mb-3">
+                <HIcon d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" className="w-5 h-5 text-[#3DD68C]" />
+              </div>
+              <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Veri Yonetimi</p>
+              <p className="text-[12px] text-[#5C5C5F]">{(embeddings?.total || 0).toLocaleString("tr-TR")} embedding</p>
+            </button>
+            <button onClick={() => setTab("sistem")} className="bg-[#111113] border border-white/[0.06] hover:border-[#FFB224]/30 rounded-xl p-5 text-left transition-colors group">
+              <div className="w-10 h-10 rounded-xl bg-[#FFB224]/10 flex items-center justify-center mb-3">
+                <HIcon d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z" className="w-5 h-5 text-[#FFB224]" />
+              </div>
+              <p className="text-[14px] font-medium text-[#ECECEE] mb-1">Sistem Ayarlari</p>
+              <p className="text-[12px] text-[#5C5C5F]">Sure kurallari, tatiller, ayarlar</p>
+            </button>
+          </div>
+
+          {/* System health summary */}
+          {systemHealth && (
+            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
+              <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3">Sistem Durumu</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
+                  <div key={key} className="bg-[#09090B] rounded-lg p-3 flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${val.status === "ok" ? "bg-[#3DD68C]" : "bg-[#E5484D] animate-pulse"}`} />
+                    <span className="text-[12px] text-[#ECECEE] capitalize">{key}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </motion.div>
       )}
 
-      {/* Users tab */}
-      {tab === "users" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden">
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[11px] uppercase tracking-wider">
-              <th className="text-left p-3">Kullanici</th><th className="text-left p-3">E-posta</th><th className="text-left p-3">Baro</th><th className="text-left p-3">Rol</th><th className="text-left p-3">Durum</th>
-            </tr></thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                  <td className="p-3 text-[#ECECEE]">{u.full_name}</td>
-                  <td className="p-3 text-[#8B8B8E]">{u.email}</td>
-                  <td className="p-3 text-[#8B8B8E]">{u.baro || "—"}</td>
-                  <td className="p-3">
-                    <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} className="bg-transparent text-[12px] text-[#ECECEE] cursor-pointer focus:outline-none">
-                      {ROLES.map((r) => <option key={r} value={r} className="bg-[#16161A]">{ROLE_LABELS[r]}</option>)}
-                    </select>
-                  </td>
-                  <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${u.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
-                      {u.is_active ? "Aktif" : "Beklemede"}
-                    </span>
-                  </td>
-                </tr>
+      {/* ── Kullanicilar tab (users + firms combined) ── */}
+      {tab === "kullanicilar" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          {/* Pending users */}
+          {pendingUsers.length > 0 && (
+            <div className="bg-[#FFB224]/10 border border-[#FFB224]/20 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#FFB224]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                <h3 className="text-[13px] font-semibold text-[#FFB224]">Onay Bekleyen ({pendingUsers.length})</h3>
+              </div>
+              {pendingUsers.map((u) => (
+                <div key={u.id} className="flex items-center justify-between bg-[#09090B] rounded-lg p-3">
+                  <div>
+                    <p className="text-[13px] text-[#ECECEE] font-medium">{u.full_name}</p>
+                    <p className="text-[11px] text-[#5C5C5F]">{u.email} {u.baro ? `— ${u.baro}` : ""}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => approveUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#3DD68C]/20 text-[#3DD68C] rounded-md hover:bg-[#3DD68C]/30 transition-colors">Onayla</button>
+                    <button onClick={() => rejectUser(u.id)} className="px-3 py-1 text-[11px] font-medium bg-[#E5484D]/20 text-[#E5484D] rounded-md hover:bg-[#E5484D]/30 transition-colors">Reddet</button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </motion.div>
-      )}
+            </div>
+          )}
 
-      {/* Firms tab */}
-      {tab === "firms" && (() => {
-        const kurumsalFirms = firms.filter((f) => f.firm_type === "kurumsal");
-        const bireyselFirms = firms.filter((f) => f.firm_type === "bireysel");
-        return (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            {firms.length === 0 ? (
-              <EmptyState
-                icon="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
-                title="Henuz firma yok"
-                description="Firmalar kullanicilar tarafindan olusturulacak."
-              />
-            ) : (
+          {/* Users table */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
+              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Kullanicilar</h3>
+              <span className="text-[12px] text-[#5C5C5F]">({users.length})</span>
+            </div>
+            <div className="bg-[#111113] border border-white/[0.06] rounded-xl overflow-hidden overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead><tr className="border-b border-white/[0.06] text-[#5C5C5F] text-[11px] uppercase tracking-wider">
+                  <th className="text-left p-3">Kullanici</th><th className="text-left p-3 hidden md:table-cell">E-posta</th><th className="text-left p-3 hidden sm:table-cell">Baro</th><th className="text-left p-3">Rol</th><th className="text-left p-3">Durum</th>
+                </tr></thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                      <td className="p-3 text-[#ECECEE]">{u.full_name}</td>
+                      <td className="p-3 text-[#8B8B8E] hidden md:table-cell">{u.email}</td>
+                      <td className="p-3 text-[#8B8B8E] hidden sm:table-cell">{u.baro || "—"}</td>
+                      <td className="p-3">
+                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} className="bg-transparent text-[12px] text-[#ECECEE] cursor-pointer focus:outline-none">
+                          {ROLES.map((r) => <option key={r} value={r} className="bg-[#16161A]">{ROLE_LABELS[r]}</option>)}
+                        </select>
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${u.is_active ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#FFB224]/10 text-[#FFB224]"}`}>
+                          {u.is_active ? "Aktif" : "Beklemede"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Firms */}
+          {(() => {
+            const kurumsalFirms = firms.filter((f) => f.firm_type === "kurumsal");
+            const bireyselFirms = firms.filter((f) => f.firm_type === "bireysel");
+            return (
               <>
-                {/* Kurumsal Burolar */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
+                    <div className="w-1 h-5 rounded-full bg-[#A78BFA]" />
                     <h3 className="text-[14px] font-semibold text-[#ECECEE]">Kurumsal Burolar</h3>
                     <span className="text-[12px] text-[#5C5C5F]">({kurumsalFirms.length})</span>
                   </div>
@@ -580,7 +638,7 @@ export default function AdminPage() {
                   ) : (
                     <div className="space-y-2">
                       {kurumsalFirms.map((f) => (
-                        <div key={f.id} className="bg-[#09090B] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
+                        <div key={f.id} className="bg-[#111113] border border-[#6C6CFF]/20 rounded-xl p-4 flex items-center justify-between hover:border-[#6C6CFF]/40 transition-colors">
                           <div>
                             <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
                             <p className="text-[12px] text-[#5C5C5F]">{f.email || "\u2014"} · {f.member_count}/{f.max_users} uye</p>
@@ -593,8 +651,6 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Bireysel Avukatlar */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
@@ -606,7 +662,7 @@ export default function AdminPage() {
                   ) : (
                     <div className="space-y-2">
                       {bireyselFirms.map((f) => (
-                        <div key={f.id} className="bg-[#09090B] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
+                        <div key={f.id} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
                           <div>
                             <p className="text-[14px] font-medium text-[#ECECEE]">{f.name}</p>
                             <p className="text-[12px] text-[#5C5C5F]">{f.member_count}/{f.max_users} uye</p>
@@ -620,51 +676,69 @@ export default function AdminPage() {
                   )}
                 </div>
               </>
-            )}
-          </motion.div>
-        );
-      })()}
-
-      {/* Deadline Rules tab */}
-      {tab === "deadline-rules" && (
-        <DeadlineRulesTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
-      )}
-
-      {/* Holidays tab */}
-      {tab === "holidays" && (
-        <HolidaysTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
-      )}
-
-      {/* System tab */}
-      {tab === "system" && systemHealth && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
-            <div key={key} className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between hover:border-white/[0.12] transition-colors">
-              <div>
-                <p className="text-[14px] font-medium text-[#ECECEE] capitalize">{key}</p>
-                {val.embeddings !== undefined && <p className="text-[12px] text-[#5C5C5F]">{val.embeddings} embedding</p>}
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${val.status === "ok" ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
-                {val.status}
-              </span>
-            </div>
-          ))}
+            );
+          })()}
         </motion.div>
       )}
 
-      {/* Embedding tab */}
-      {tab === "embedding" && (
+      {/* ── Veri Yonetimi tab ── */}
+      {tab === "veri-yonetimi" && (
         <IngestionDashboard token={token} apiUrl={API_URL} onToast={(msg: string) => showToast(msg)} />
       )}
 
-      {/* Monitoring tab */}
-      {tab === "monitoring" && (
-        <MonitoringDashboard token={token} apiUrl={API_URL} />
-      )}
+      {/* ── Sistem tab (deadline-rules + holidays + system health + settings combined) ── */}
+      {tab === "sistem" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          {/* System health */}
+          {systemHealth && (
+            <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
+              <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-3">Servis Durumu</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(systemHealth.checks || {}).map(([key, val]: [string, any]) => (
+                  <div key={key} className="bg-[#09090B] rounded-lg p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${val.status === "ok" ? "bg-[#3DD68C]" : "bg-[#E5484D] animate-pulse"}`} />
+                      <span className="text-[12px] text-[#ECECEE] capitalize">{key}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${val.status === "ok" ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+                      {val.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Settings tab */}
-      {tab === "settings" && (
-        <SettingsTab apiUrl={API_URL} />
+          {/* Monitoring */}
+          <MonitoringDashboard token={token} apiUrl={API_URL} />
+
+          {/* Deadline rules */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
+              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Sure Kurallari</h3>
+            </div>
+            <DeadlineRulesTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
+          </div>
+
+          {/* Holidays */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
+              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Tatiller</h3>
+            </div>
+            <HolidaysTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
+          </div>
+
+          {/* Settings */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#FFB224]" />
+              <h3 className="text-[14px] font-semibold text-[#ECECEE]">Platform Ayarlari</h3>
+            </div>
+            <SettingsTab apiUrl={API_URL} />
+          </div>
+        </motion.div>
       )}
     </div>
   );
@@ -2248,6 +2322,12 @@ function SettingsTab({ apiUrl }: { apiUrl: string }) {
 // ══  INGESTION DASHBOARD (EXISTING)  ═════════════════
 // ══════════════════════════════════════════════════════
 
+interface IngestConfig {
+  yargitay_year_from: number;
+  danistay_year_from: number;
+  [key: string]: number;
+}
+
 function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; apiUrl: string; onToast: (msg: string) => void }) {
   const [breakdown, setBreakdown] = useState<EmbeddingBreakdown | null>(null);
   const [state, setState] = useState<IngestionState | null>(null);
@@ -2272,6 +2352,71 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
   // Advanced panel toggle
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // Ingestion config state
+  const [ingestConfig, setIngestConfig] = useState<IngestConfig>({ yargitay_year_from: 2020, danistay_year_from: 2020 });
+  const [configSaving, setConfigSaving] = useState(false);
+  const [exhaustiveStarting, setExhaustiveStarting] = useState(false);
+
+  // GPU status
+  const [gpuConnected, setGpuConnected] = useState<boolean | null>(null);
+
+  // Fetch ingestion config
+  const fetchIngestConfig = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/config`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const data = await r.json();
+        setIngestConfig(data);
+      }
+    } catch { /* ignore */ }
+  }, [token, apiUrl]);
+
+  // Save ingestion config
+  const saveIngestConfig = async () => {
+    if (!token) return;
+    setConfigSaving(true);
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/config`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(ingestConfig),
+      });
+      if (r.ok) onToast("Yapilandirma kaydedildi");
+      else onToast("Kaydetme basarisiz");
+    } catch { onToast("Baglanti hatasi"); }
+    setConfigSaving(false);
+  };
+
+  // Start exhaustive ingestion
+  const startExhaustive = async () => {
+    if (!token) return;
+    setExhaustiveStarting(true);
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/ingest/exhaustive`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(ingestConfig),
+      });
+      if (r.ok) onToast("Exhaustive ingestion baslatildi");
+      else if (r.status === 409) onToast("Bir ingestion zaten calisiyor");
+      else onToast("Baslatma basarisiz");
+    } catch { onToast("Baglanti hatasi"); }
+    setExhaustiveStarting(false);
+  };
+
+  // Fetch GPU status
+  const fetchGpuStatus = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`${apiUrl}/api/v1/admin/system`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const data = await r.json();
+        setGpuConnected(data.checks?.gpu?.status === "ok" || data.checks?.embedding_gpu?.status === "ok" || false);
+      }
+    } catch { setGpuConnected(false); }
+  }, [token, apiUrl]);
+
   // Fetch breakdown on mount
   const fetchBreakdown = useCallback(async () => {
     if (!token) return;
@@ -2290,7 +2435,7 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
     } catch { /* ignore */ }
   }, [token, apiUrl]);
 
-  useEffect(() => { fetchBreakdown(); fetchProgress(); }, [fetchBreakdown, fetchProgress]);
+  useEffect(() => { fetchBreakdown(); fetchProgress(); fetchIngestConfig(); fetchGpuStatus(); }, [fetchBreakdown, fetchProgress, fetchIngestConfig, fetchGpuStatus]);
 
   // SSE connection — uses one-time ticket instead of JWT in URL
   useEffect(() => {
@@ -2533,6 +2678,62 @@ function IngestionDashboard({ token, apiUrl, onToast }: { token: string | null; 
               : "Henuz ingestion calistirilmadi"}
           </p>
         )}
+      </div>
+
+      {/* GPU Status */}
+      <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full ${gpuConnected ? "bg-[#3DD68C]" : gpuConnected === false ? "bg-[#E5484D]" : "bg-[#5C5C5F] animate-pulse"}`} />
+          <span className="text-[13px] font-medium text-[#ECECEE]">GPU Embedding</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${gpuConnected ? "bg-[#3DD68C]/10 text-[#3DD68C]" : "bg-[#E5484D]/10 text-[#E5484D]"}`}>
+          {gpuConnected ? "Bagli" : gpuConnected === false ? "Bagli Degil" : "Kontrol ediliyor..."}
+        </span>
+      </div>
+
+      {/* Ingestion Config */}
+      <div className="bg-[#111113] border border-white/[0.06] rounded-xl p-5">
+        <h3 className="text-[13px] font-semibold text-[#ECECEE] mb-4">Ingestion Yapilandirmasi</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="text-[11px] text-[#5C5C5F] block mb-1.5">Yargitay - Baslangic Yili</label>
+            <input
+              type="number"
+              value={ingestConfig.yargitay_year_from}
+              onChange={(e) => setIngestConfig({ ...ingestConfig, yargitay_year_from: parseInt(e.target.value) || 2020 })}
+              min={2000}
+              max={2030}
+              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-[#5C5C5F] block mb-1.5">Danistay - Baslangic Yili</label>
+            <input
+              type="number"
+              value={ingestConfig.danistay_year_from}
+              onChange={(e) => setIngestConfig({ ...ingestConfig, danistay_year_from: parseInt(e.target.value) || 2020 })}
+              min={2000}
+              max={2030}
+              className="w-full bg-[#09090B] border border-white/[0.06] rounded-lg px-3 py-2.5 text-[13px] text-[#ECECEE] focus:outline-none focus:border-[#6C6CFF]/50 transition-colors"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={saveIngestConfig}
+            disabled={configSaving}
+            className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#5B5BEE] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          >
+            {configSaving ? "Kaydediliyor..." : "Kaydet"}
+          </button>
+          <button
+            onClick={startExhaustive}
+            disabled={state?.running || exhaustiveStarting}
+            className="px-4 py-2 bg-gradient-to-r from-[#6C6CFF] to-[#A78BFA] hover:from-[#5B5BEE] hover:to-[#9678E5] disabled:bg-[#1A1A1F] disabled:from-[#1A1A1F] disabled:to-[#1A1A1F] disabled:text-[#5C5C5F] rounded-lg text-[12px] font-medium text-white transition-colors"
+          >
+            {exhaustiveStarting ? "Baslatiliyor..." : state?.running ? "Calisiyor..." : "Exhaustive Baslat"}
+          </button>
+        </div>
       </div>
 
       {/* Control Buttons */}

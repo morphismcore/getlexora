@@ -263,7 +263,7 @@ function formatLegalText(text: string, searchQuery?: string): ReactNode[] {
     }
 
     return (
-      <p key={i} className="text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3 whitespace-pre-wrap">
+      <p key={i} className="text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3 whitespace-pre-wrap break-words">
         {content}
       </p>
     );
@@ -493,7 +493,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
       key={result.karar_id}
       variants={listItem}
       onClick={() => onSelect(result)}
-      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 relative ${
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 relative overflow-hidden min-w-0 ${
         isSelected
           ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
           : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
@@ -559,7 +559,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
       {/* Summary with highlights */}
       <p
         ref={summaryRef}
-        className={`text-[13px] text-[#8B8B8E] leading-relaxed group-hover:text-[#A0A0A3] transition-colors ${expanded ? "" : "line-clamp-3"}`}
+        className={`text-[13px] text-[#8B8B8E] leading-relaxed break-words group-hover:text-[#A0A0A3] transition-colors ${expanded ? "" : "line-clamp-3"}`}
       >
         {highlightText(result.ozet, query)}
       </p>
@@ -1510,7 +1510,7 @@ export default function AramaPage() {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* ═══════ ICTIHAT TAB ═══════ */}
         {activeTab === "ictihat" && (
@@ -1557,7 +1557,7 @@ export default function AramaPage() {
             {(loading || results || error) && (
               <div
                 ref={resultsContainerRef}
-                className={`overflow-y-auto transition-all duration-200 ${
+                className={`overflow-y-auto overflow-x-hidden min-w-0 transition-all duration-200 ${
                   mobileShowDetail ? "hidden md:block" : "flex-1 md:flex-none"
                 } ${
                   selectedResult ? "md:w-[44%] md:shrink-0 md:border-r md:border-white/[0.06]" : "flex-1"
@@ -1805,7 +1805,7 @@ export default function AramaPage() {
               {selectedResult ? (
                 <motion.div
                   key="detail"
-                  className={`flex-1 overflow-y-auto bg-[#0C0C0E] ${
+                  className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-[#0C0C0E] ${
                     mobileShowDetail ? "block" : "hidden md:block"
                   }`}
                   initial={{ opacity: 0, x: 20 }}
@@ -2010,7 +2010,7 @@ export default function AramaPage() {
                             <div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Özet</h3>
                           </div>
-                          <p className="text-[13px] text-[#ECECEE] leading-[1.7]">
+                          <p className="text-[13px] text-[#ECECEE] leading-[1.7] break-words">
                             {highlightText(kararDetail.ozet, query)}
                           </p>
                         </div>
@@ -2021,7 +2021,7 @@ export default function AramaPage() {
                             <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
                           </div>
-                          <div className="prose prose-invert max-w-none">
+                          <div className="prose prose-invert max-w-none overflow-hidden break-words">
                             {kararDetail.tam_metin ? formatLegalText(kararDetail.tam_metin, query) : (
                               <p className="text-[#5C5C5F] italic">Tam metin yüklenemedi. Özet gösteriliyor.</p>
                             )}
@@ -2138,7 +2138,7 @@ export default function AramaPage() {
               <>
                 {/* Left: list */}
                 <div
-                  className={`overflow-y-auto transition-all duration-200 ${
+                  className={`overflow-y-auto overflow-x-hidden min-w-0 transition-all duration-200 ${
                     selectedMevzuat ? "hidden md:block md:w-[44%] md:shrink-0 md:border-r md:border-white/[0.06]" : "flex-1"
                   }`}
                 >
@@ -2176,7 +2176,7 @@ export default function AramaPage() {
                               key={`${m.mevzuatNo}-${idx}`}
                               variants={listItem}
                               onClick={() => handleSelectMevzuat(m)}
-                              className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 ${
+                              className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 overflow-hidden min-w-0 ${
                                 isSelected
                                   ? "border-[#A78BFA]/30 bg-[#A78BFA]/[0.04] shadow-[0_0_0_1px_rgba(167,139,250,0.15)]"
                                   : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
@@ -2200,7 +2200,7 @@ export default function AramaPage() {
                               </div>
 
                               {/* Title */}
-                              <p className="text-[13px] text-[#ECECEE] font-medium leading-relaxed mb-2 group-hover:text-white transition-colors">
+                              <p className="text-[13px] text-[#ECECEE] font-medium leading-relaxed mb-2 break-words group-hover:text-white transition-colors">
                                 {m.mevzuatAd}
                               </p>
 
@@ -2231,7 +2231,7 @@ export default function AramaPage() {
                   {selectedMevzuat ? (
                     <motion.div
                       key="mevzuat-detail"
-                      className="flex-1 overflow-y-auto bg-[#0C0C0E]"
+                      className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-[#0C0C0E]"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -2322,7 +2322,7 @@ export default function AramaPage() {
                                   ))}
                               </div>
                             ) : (
-                              <div className="prose prose-invert max-w-none">
+                              <div className="prose prose-invert max-w-none overflow-hidden break-words">
                                 {formatLegalText(mevzuatContent.content)}
                               </div>
                             )}
