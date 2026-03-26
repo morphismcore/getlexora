@@ -103,7 +103,7 @@ class EmbeddingService:
 
     # ── Public API ──────────────────────────────────────────
 
-    _GPU_BATCH = 128
+    _GPU_BATCH = 64
     _CPU_BATCH = 8
 
     def embed_texts(self, texts: list[str], batch_size: int | None = None) -> list[dict]:
