@@ -61,6 +61,17 @@ class IctihatResult(BaseModel):
     kaynak_url: str | None = None
 
 
+class FacetBucket(BaseModel):
+    value: str
+    count: int
+
+
+class SearchFacets(BaseModel):
+    mahkeme: list[FacetBucket] = []
+    daire: list[FacetBucket] = []
+    yil: list[FacetBucket] = []
+
+
 class SearchResponse(BaseModel):
     sonuclar: list[IctihatResult]
     toplam_bulunan: int
@@ -70,6 +81,7 @@ class SearchResponse(BaseModel):
     query_kullanilan: str
     guven_skoru: float | None = None
     warnings: list[str] = []
+    facets: SearchFacets | None = None
 
 
 # --- Citation Verification ---

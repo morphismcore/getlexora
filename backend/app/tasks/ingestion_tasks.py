@@ -194,6 +194,65 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
 @celery_app.task(
     bind=True,
     base=LexoraTask,
+    name="app.tasks.ingestion_tasks.ingest_rekabet_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    time_limit=14400,
+    soft_time_limit=13800,
+)
+def ingest_rekabet_task(self, max_pages: int = 1100):
+    """Rekabet Kurumu kararlari ingestion."""
+    task_id = self.request.id
+    logger.info("celery_ingest_rekabet_start", task_id=task_id, max_pages=max_pages)
+
+    self.update_state(state="PROGRESS", meta={
+        "source": "rekabet",
+        "max_pages": max_pages,
+        "progress_pct": 0,
+    })
+    _publish_progress({
+        "task_id": task_id,
+        "state": "STARTED",
+        "source": "rekabet",
+    })
+
+    pipeline = _create_pipeline()
+
+    async def _run():
+        return await pipeline.ingest_rekabet(max_pages=max_pages)
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        _publish_progress({
+            "task_id": task_id,
+            "state": "SUCCESS",
+            "source": "rekabet",
+            "result": result,
+        })
+        logger.info("celery_ingest_rekabet_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        _publish_progress({
+            "task_id": task_id,
+            "state": "FAILURE",
+            "source": "rekabet",
+            "error": str(exc),
+        })
+        logger.error("celery_ingest_rekabet_error", task_id=task_id, error=str(exc))
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_aihm_task",
     autoretry_for=(Exception,),
     max_retries=3,
@@ -245,6 +304,65 @@ def ingest_aihm_task(self, max_results: int = 500):
             "error": str(exc),
         })
         logger.error("celery_ingest_aihm_error", task_id=task_id, error=str(exc))
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
+    name="app.tasks.ingestion_tasks.ingest_kvkk_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    time_limit=7200,
+    soft_time_limit=6600,
+)
+def ingest_kvkk_task(self, max_decisions: int = 1000):
+    """KVKK Kurul kararlari ingestion."""
+    task_id = self.request.id
+    logger.info("celery_ingest_kvkk_start", task_id=task_id, max_decisions=max_decisions)
+
+    self.update_state(state="PROGRESS", meta={
+        "source": "kvkk",
+        "max_decisions": max_decisions,
+        "progress_pct": 0,
+    })
+    _publish_progress({
+        "task_id": task_id,
+        "state": "STARTED",
+        "source": "kvkk",
+    })
+
+    pipeline = _create_pipeline()
+
+    async def _run():
+        return await pipeline.ingest_kvkk(max_decisions=max_decisions)
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        _publish_progress({
+            "task_id": task_id,
+            "state": "SUCCESS",
+            "source": "kvkk",
+            "result": result,
+        })
+        logger.info("celery_ingest_kvkk_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        _publish_progress({
+            "task_id": task_id,
+            "state": "FAILURE",
+            "source": "kvkk",
+            "error": str(exc),
+        })
+        logger.error("celery_ingest_kvkk_error", task_id=task_id, error=str(exc))
         raise
 
 

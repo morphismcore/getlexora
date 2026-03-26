@@ -40,6 +40,8 @@ class VectorStoreService:
         self.ictihat_collection = settings.qdrant_collection_ictihat
         self.mevzuat_collection = settings.qdrant_collection_mevzuat
         self.embedding_dim = settings.embedding_dim
+        self.rrf_dense_weight = settings.rrf_dense_weight
+        self.rrf_sparse_weight = settings.rrf_sparse_weight
 
     async def initialize_collections(self):
         """Koleksiyonları oluştur (yoksa)."""
@@ -189,21 +191,19 @@ class VectorStoreService:
         sparse_points: list,
         limit: int,
         k: int = 60,
-        dense_weight: float = 0.55,
-        sparse_weight: float = 0.45,
     ) -> list[dict]:
-        """Weighted Reciprocal Rank Fusion — dense'e daha fazla ağırlık verir."""
+        """Weighted Reciprocal Rank Fusion — weights from settings (rrf_dense_weight, rrf_sparse_weight)."""
         scores = {}
 
         for rank, p in enumerate(dense_points):
             pid = str(p.id)
             scores[pid] = scores.get(pid, {"score": 0, "payload": p.payload})
-            scores[pid]["score"] += dense_weight * (1.0 / (k + rank + 1))
+            scores[pid]["score"] += self.rrf_dense_weight * (1.0 / (k + rank + 1))
 
         for rank, p in enumerate(sparse_points):
             pid = str(p.id)
             scores[pid] = scores.get(pid, {"score": 0, "payload": p.payload})
-            scores[pid]["score"] += sparse_weight * (1.0 / (k + rank + 1))
+            scores[pid]["score"] += self.rrf_sparse_weight * (1.0 / (k + rank + 1))
 
         ranked = sorted(scores.items(), key=lambda x: x[1]["score"], reverse=True)
 

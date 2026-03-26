@@ -47,8 +47,12 @@ class Settings(BaseSettings):
 
     # RAG
     rag_top_k: int = 20
-    rag_rerank_top_k: int = 5
+    rag_rerank_top_k: int = 30
     rag_min_relevance: float = 0.4
+
+    # RRF (Reciprocal Rank Fusion) weights
+    rrf_dense_weight: float = 0.55
+    rrf_sparse_weight: float = 0.45
 
     # Reranking (cross-encoder)
     reranking_enabled: bool = True

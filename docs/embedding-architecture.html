@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexora — Embedding Mimarisi</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0b0f;
+  --bg-card: #12131a;
+  --bg-elevated: #1a1b25;
+  --border: #252636;
+  --border-glow: #2a2b40;
+  --text: #e4e4ef;
+  --text-dim: #7a7b8e;
+  --text-muted: #4a4b5e;
+  --ingest-primary: #4a7fff;
+  --ingest-glow: #4a7fff33;
+  --ingest-soft: #4a7fff15;
+  --search-primary: #34d399;
+  --search-glow: #34d39933;
+  --search-soft: #34d39915;
+  --storage-primary: #f59e0b;
+  --storage-glow: #f59e0b33;
+  --storage-soft: #f59e0b15;
+  --accent-red: #ef4444;
+  --accent-purple: #a78bfa;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ═══ NOISE OVERLAY ═══ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ═══ GRID BACKGROUND ═══ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ═══ HEADER ═══ */
+.header {
+  padding: 60px 40px 40px;
+  text-align: center;
+  position: relative;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+}
+
+.header h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--text) 0%, var(--text-dim) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header .subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+
+/* ═══ NAV ═══ */
+.nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 30px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(var(--bg), var(--bg) 80%, transparent);
+}
+
+.nav a {
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.nav a[data-section="ingest"] {
+  color: var(--ingest-primary);
+  background: var(--ingest-soft);
+}
+.nav a[data-section="ingest"]:hover {
+  border-color: var(--ingest-primary);
+  box-shadow: 0 0 20px var(--ingest-glow);
+}
+.nav a[data-section="search"] {
+  color: var(--search-primary);
+  background: var(--search-soft);
+}
+.nav a[data-section="search"]:hover {
+  border-color: var(--search-primary);
+  box-shadow: 0 0 20px var(--search-glow);
+}
+.nav a[data-section="storage"] {
+  color: var(--storage-primary);
+  background: var(--storage-soft);
+}
+.nav a[data-section="storage"]:hover {
+  border-color: var(--storage-primary);
+  box-shadow: 0 0 20px var(--storage-glow);
+}
+
+/* ═══ SECTIONS ═══ */
+.section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 30px;
+}
+
+.section-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 400;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.section-desc {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  max-width: 600px;
+  margin-bottom: 50px;
+}
+
+/* ═══ INGEST SECTION ═══ */
+.ingest .section-label { color: var(--ingest-primary); }
+.ingest .section-label .dot { background: var(--ingest-primary); }
+
+/* ═══ PIPELINE ═══ */
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.pipeline-stage {
+  position: relative;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: stage-in 0.6s forwards;
+}
+
+.pipeline-stage:nth-child(1) { animation-delay: 0.1s; }
+.pipeline-stage:nth-child(2) { animation-delay: 0.3s; }
+.pipeline-stage:nth-child(3) { animation-delay: 0.5s; }
+.pipeline-stage:nth-child(4) { animation-delay: 0.7s; }
+.pipeline-stage:nth-child(5) { animation-delay: 0.9s; }
+
+@keyframes stage-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Stage header */
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s;
+}
+
+.stage-header:hover {
+  border-color: var(--border-glow);
+  transform: translateX(4px);
+}
+
+.stage-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ingest .stage-num {
+  background: var(--ingest-soft);
+  color: var(--ingest-primary);
+  border: 1px solid var(--ingest-primary);
+}
+
+.search-flow .stage-num {
+  background: var(--search-soft);
+  color: var(--search-primary);
+  border: 1px solid var(--search-primary);
+}
+
+.stage-content h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.stage-content p {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.stage-tag {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+}
+
+/* ═══ ARROW CONNECTOR ═══ */
+.arrow-connector {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  height: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.arrow-connector .arrow-line {
+  width: 2px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.ingest .arrow-connector .arrow-line { background: var(--ingest-primary); opacity: 0.2; }
+.search-flow .arrow-connector .arrow-line { background: var(--search-primary); opacity: 0.2; }
+
+.arrow-connector .arrow-line::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  animation: flow-down 1.5s linear infinite;
+}
+
+.ingest .arrow-connector .arrow-line::after {
+  background: linear-gradient(to bottom, transparent, var(--ingest-primary));
+}
+.search-flow .arrow-connector .arrow-line::after {
+  background: linear-gradient(to bottom, transparent, var(--search-primary));
+}
+
+@keyframes flow-down {
+  0% { top: -50%; }
+  100% { top: 100%; }
+}
+
+.arrow-connector .arrow-tip {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.ingest .arrow-connector .arrow-tip { color: var(--ingest-primary); }
+.search-flow .arrow-connector .arrow-tip { color: var(--search-primary); }
+
+/* ═══ SOURCES GRID ═══ */
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.source-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.source-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ingest-primary);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.source-card:hover::before { opacity: 1; }
+.source-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+
+.source-card .source-icon {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.source-card h4 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.source-card .source-api {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.source-card .source-type {
+  margin-top: 8px;
+  font-size: 0.6rem;
+  color: var(--ingest-primary);
+  padding: 2px 8px;
+  background: var(--ingest-soft);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* ═══ PROCESS BOX ═══ */
+.process-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 10px;
+}
+
+.process-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.process-step {
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 120px;
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+
+.process-step:hover {
+  transform: scale(1.05);
+}
+
+.process-step .step-icon {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.process-step .step-detail {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.process-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  padding: 0 6px;
+  animation: arrow-pulse 2s infinite;
+}
+
+@keyframes arrow-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ═══ VECTOR VISUAL ═══ */
+.vector-visual {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.vector-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.vector-num {
+  width: 4px;
+  border-radius: 2px;
+  animation: vector-wave 3s ease-in-out infinite;
+}
+
+@keyframes vector-wave {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.3); }
+}
+
+.vector-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.vector-label strong {
+  color: var(--text);
+}
+
+/* ═══ QDRANT BOX ═══ */
+.qdrant-box {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+  border: 1px solid var(--border-glow);
+  border-radius: 14px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.qdrant-box::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent, var(--ingest-glow), transparent, var(--search-glow), transparent);
+  animation: rotate-glow 8s linear infinite;
+  opacity: 0.3;
+}
+
+@keyframes rotate-glow {
+  to { transform: rotate(360deg); }
+}
+
+.qdrant-box .qdrant-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.qdrant-box h3 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.qdrant-box .qdrant-subtitle {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.collection-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  transition: all 0.3s;
+}
+
+.collection-card:hover {
+  border-color: var(--border-glow);
+}
+
+.collection-card .coll-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collection-card .coll-name .coll-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+.collection-card .coll-count {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+
+.collection-card .coll-detail {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.collection-card.ictihat .coll-dot { background: var(--ingest-primary); }
+.collection-card.ictihat .coll-count { color: var(--ingest-primary); }
+.collection-card.mevzuat .coll-dot { background: var(--accent-purple); }
+.collection-card.mevzuat .coll-count { color: var(--accent-purple); }
+
+/* ═══ SEARCH SECTION ═══ */
+.search-section .section-label { color: var(--search-primary); }
+.search-section .section-label .dot { background: var(--search-primary); }
+
+.search-demo {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 10px;
+}
+
+.search-input-demo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.search-input-demo .search-icon { color: var(--search-primary); font-size: 1rem; }
+
+.search-input-demo .typed-text {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-style: italic;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--search-primary);
+  animation: typing 4s steps(44) 1s forwards, blink 0.7s step-end infinite;
+  width: 0;
+}
+
+@keyframes typing {
+  to { width: 100%; }
+}
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+.search-note {
+  font-size: 0.6rem;
+  color: var(--search-primary);
+  padding: 6px 12px;
+  background: var(--search-soft);
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* ═══ COSINE VISUAL ═══ */
+.cosine-visual {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.cosine-canvas-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 20px auto;
+  aspect-ratio: 2/1;
+}
+
+canvas#cosineCanvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.cosine-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 12px;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.cosine-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cosine-legend .leg-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ═══ RESULTS DEMO ═══ */
+.results-demo {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.3s;
+}
+
+.result-item:hover {
+  border-color: var(--search-primary);
+}
+
+.result-score {
+  width: 50px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.result-score .score-num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--search-primary);
+}
+
+.result-score .score-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+}
+
+.result-score .score-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.result-score .score-bar-fill {
+  height: 100%;
+  background: var(--search-primary);
+  border-radius: 2px;
+}
+
+.result-meta {
+  flex: 1;
+}
+
+.result-meta h4 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.result-meta p {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.result-meta .meta-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.result-meta .meta-tag {
+  font-size: 0.55rem;
+  padding: 2px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+}
+
+/* ═══ IMPORTANT NOTE ═══ */
+.important-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-top: 20px;
+  font-size: 0.72rem;
+}
+
+.important-note.note-search {
+  background: var(--search-soft);
+  border: 1px solid var(--search-primary);
+  color: var(--search-primary);
+}
+
+.important-note .note-icon { font-size: 1.1rem; flex-shrink: 0; }
+.important-note p { line-height: 1.6; }
+
+/* ═══ STORAGE SECTION ═══ */
+.storage-section .section-label { color: var(--storage-primary); }
+.storage-section .section-label .dot { background: var(--storage-primary); }
+
+.calculator {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+}
+
+.calc-input-group {
+  margin-bottom: 30px;
+}
+
+.calc-input-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.75rem;
+  margin-bottom: 12px;
+}
+
+.calc-input-group label .count-display {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--storage-primary);
+}
+
+.calc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.calc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--storage-primary);
+  cursor: pointer;
+  box-shadow: 0 0 15px var(--storage-glow);
+  transition: transform 0.2s;
+}
+
+.calc-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.calc-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+}
+
+.calc-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.calc-result-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  transition: all 0.3s;
+}
+
+.calc-result-card:hover { border-color: var(--border-glow); }
+
+.calc-result-card .calc-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.calc-result-card .calc-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.calc-result-card .calc-formula {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.calc-result-card.total {
+  border-color: var(--storage-primary);
+  background: var(--storage-soft);
+}
+
+.calc-result-card.total .calc-value { color: var(--storage-primary); }
+
+.calc-bar-visual {
+  margin-top: 24px;
+}
+
+.calc-bar-visual h4 {
+  font-size: 0.7rem;
+  margin-bottom: 12px;
+  color: var(--text-dim);
+}
+
+.bar-stack {
+  display: flex;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.bar-segment {
+  transition: width 0.6s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--bg);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.bar-segment.vectors { background: var(--ingest-primary); }
+.bar-segment.payload { background: var(--accent-purple); }
+.bar-segment.index { background: var(--storage-primary); }
+
+.bar-legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+
+.bar-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar-legend .bl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* ═══ FOOTER ═══ */
+.footer {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 700px) {
+  .sources-grid { grid-template-columns: 1fr; }
+  .collections-grid { grid-template-columns: 1fr; }
+  .process-steps { flex-direction: column; }
+  .process-arrow { transform: rotate(90deg); }
+  .nav { flex-wrap: wrap; }
+  .section { padding: 40px 16px; }
+  .calc-results { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header class="header">
+  <h1>Lexora Embedding Mimarisi</h1>
+  <p class="subtitle">Vektör Veritabanı &middot; Semantik Arama &middot; Mimari Dokümantasyon</p>
+</header>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav class="nav">
+  <a href="#ingest" data-section="ingest">01 Veri Toplama</a>
+  <a href="#search" data-section="search">02 Arama Akışı</a>
+  <a href="#storage" data-section="storage">03 Depolama Hesabı</a>
+</nav>
+
+<!-- ═══════════ SECTION 1: INGESTION ═══════════ -->
+<section id="ingest" class="section ingest">
+  <div class="section-label"><span class="dot"></span> AKIŞ 01 — TEK SEFERLIK</div>
+  <h2 class="section-title">Veri Toplama &amp; Embedding Pipeline</h2>
+  <p class="section-desc">Dış kaynaklardan veri çekilir, temizlenir, parçalanır, vektöre dönüştürülür ve Qdrant'a kaydedilir. Bu süreç bir kere yapılır, sonra aramalar tamamen yerel çalışır.</p>
+
+  <div class="pipeline">
+
+    <!-- STAGE 1: Sources -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">01</div>
+        <div class="stage-content">
+          <h3>Veri Kaynakları</h3>
+          <p>Dış API'lerden ham veri çekiliyor</p>
+        </div>
+        <span class="stage-tag" style="background:var(--ingest-soft);color:var(--ingest-primary);">DIŞ API</span>
+      </div>
+      <div style="padding: 14px 0;">
+        <div class="sources-grid">
+          <div class="source-card">
+            <div class="source-icon">&#x2696;</div>
+            <h4>Yargıtay Kararları</h4>
+            <div class="source-api">bedesten.adalet.gov.tr/emsal-karar</div>
+            <div class="source-type">YARGITAYKARARI</div>
+          </div>
+          <div class="source-card">
+            <div class="source-icon">&#x2696;</div>
+            <h4>Danıştay Kararları</h4>
+            <div class="source-api">bedesten.adalet.gov.tr/emsal-karar</div>
+            <div class="source-type">DANISTAYKARAR</div>
+          </div>
+          <div class="source-card">
+            <div class="source-icon">&#x1F3DB;</div>
+            <h4>AYM Bireysel Başvuru</h4>
+            <div class="source-api">kararlarbilgibankasi.anayasa.gov.tr</div>
+            <div class="source-type">BİREYSEL BAŞVURU</div>
+          </div>
+          <div class="source-card">
+            <div class="source-icon">&#x1F30D;</div>
+            <h4>AİHM / HUDOC</h4>
+            <div class="source-api">hudoc.echr.coe.int</div>
+            <div class="source-type">TÜRKİYE ALEYHİNE</div>
+          </div>
+          <div class="source-card">
+            <div class="source-icon">&#x1F4DC;</div>
+            <h4>Mevzuat</h4>
+            <div class="source-api">bedesten.adalet.gov.tr/mevzuat</div>
+            <div class="source-type">914 KANUN + 63 KHK</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- STAGE 2: Worker -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">02</div>
+        <div class="stage-content">
+          <h3>Celery Worker</h3>
+          <p>Arka planda asenkron veri işleme (concurrency: 2 thread)</p>
+        </div>
+        <span class="stage-tag" style="background:var(--ingest-soft);color:var(--ingest-primary);">WORKER</span>
+      </div>
+      <div style="padding: 14px 0;">
+        <div class="process-box">
+          <div class="process-steps">
+            <div class="process-step">
+              <div class="step-icon">&#x1F4E5;</div>
+              <div>Belge Çek</div>
+              <div class="step-detail">API'den tam metin</div>
+            </div>
+            <span class="process-arrow">&#x2192;</span>
+            <div class="process-step">
+              <div class="step-icon">&#x1F9F9;</div>
+              <div>HTML Temizle</div>
+              <div class="step-detail">Tag, style kaldır</div>
+            </div>
+            <span class="process-arrow">&#x2192;</span>
+            <div class="process-step">
+              <div class="step-icon">&#x2702;</div>
+              <div>Parçala</div>
+              <div class="step-detail">Madde/karar bazlı chunk</div>
+            </div>
+            <span class="process-arrow">&#x2192;</span>
+            <div class="process-step" style="border-color: var(--ingest-primary);">
+              <div class="step-icon">&#x1F9E0;</div>
+              <div>Embed Et</div>
+              <div class="step-detail">BAAI/bge-m3 modeli</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- STAGE 3: Vector -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">03</div>
+        <div class="stage-content">
+          <h3>Vektör Üretimi</h3>
+          <p>Her metin parçası 1024 boyutlu bir sayı dizisine dönüşür</p>
+        </div>
+        <span class="stage-tag" style="background:var(--ingest-soft);color:var(--ingest-primary);">1024-DIM</span>
+      </div>
+      <div style="padding: 14px 0;">
+        <div class="vector-visual">
+          <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:4px;">Her chunk &rarr; 1024 float32 sayı</div>
+          <div class="vector-display" id="vectorDisplay"></div>
+          <div class="vector-label">"<strong>İşverenin iş kazasında kusursuz sorumluluğu...</strong>" &rarr; <span style="color:var(--ingest-primary)">[0.0234, -0.1892, 0.4521, ..., 0.0087]</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- STAGE 4: Qdrant -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">04</div>
+        <div class="stage-content">
+          <h3>Qdrant Vektör Veritabanı</h3>
+          <p>Vektörler + metadata kalıcı olarak saklanıyor</p>
+        </div>
+        <span class="stage-tag" style="background:var(--ingest-soft);color:var(--ingest-primary);">DEPOLAMA</span>
+      </div>
+      <div style="padding: 14px 0;">
+        <div class="qdrant-box">
+          <div class="qdrant-inner">
+            <h3>&#x1F4BE; Qdrant v1.13</h3>
+            <div class="qdrant-subtitle">Vektör veritabanı &middot; Cosine benzerliği &middot; HNSW indeks</div>
+            <div class="collections-grid">
+              <div class="collection-card ictihat">
+                <div class="coll-name"><span class="coll-dot"></span> ictihat_embeddings</div>
+                <div class="coll-count" id="ictihatCount">8,726</div>
+                <div class="coll-detail">Yargıtay + Danıştay + AYM + AİHM<br>Payload: mahkeme, daire, esas_no, tarih, metin</div>
+              </div>
+              <div class="collection-card mevzuat">
+                <div class="coll-name"><span class="coll-dot"></span> mevzuat_embeddings</div>
+                <div class="coll-count" id="mevzuatCount">3,871</div>
+                <div class="coll-detail">914 Kanun + 63 KHK maddeleri<br>Payload: kanun_no, kanun_adi, madde_no, metin</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 2: SEARCH ═══════════ -->
+<section id="search" class="section search-section">
+  <div class="section-label"><span class="dot"></span> AKIŞ 02 — HER SORGU</div>
+  <h2 class="section-title">Arama Akışı</h2>
+  <p class="section-desc">Kullanıcı bir soru yazar, aynı model ile vektöre dönüştürülür, Qdrant'ta en yakın vektörler bulunur. Hiçbir dış API çağrılmaz — her şey sunucuda gerçekleşir.</p>
+
+  <div class="pipeline search-flow">
+
+    <!-- Step 1: User query -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">01</div>
+        <div class="stage-content">
+          <h3>Kullanıcı Sorusu</h3>
+          <p>Doğal dilde hukuki soru yazılır</p>
+        </div>
+        <span class="stage-tag" style="background:var(--search-soft);color:var(--search-primary);">GİRDİ</span>
+      </div>
+      <div style="padding: 14px 0;">
+        <div class="search-demo">
+          <div class="search-input-demo">
+            <span class="search-icon">&#x1F50D;</span>
+            <span class="typed-text">İş kazasında işverenin sorumluluğu nedir?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- Step 2: Embed query -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">02</div>
+        <div class="stage-content">
+          <h3>Sorgu Vektöre Dönüşür</h3>
+          <p>Aynı BAAI/bge-m3 modeli ile 1024 boyutlu vektör üretilir</p>
+        </div>
+        <span class="stage-tag" style="background:var(--search-soft);color:var(--search-primary);">AYNI MODEL</span>
+      </div>
+      <div style="padding:14px 0;">
+        <div class="process-box">
+          <div class="process-steps">
+            <div class="process-step">
+              <div class="step-icon">&#x1F4AC;</div>
+              <div>Soru Metni</div>
+            </div>
+            <span class="process-arrow">&#x2192;</span>
+            <div class="process-step" style="border-color:var(--search-primary);">
+              <div class="step-icon">&#x1F9E0;</div>
+              <div>bge-m3</div>
+              <div class="step-detail">~50ms</div>
+            </div>
+            <span class="process-arrow">&#x2192;</span>
+            <div class="process-step">
+              <div class="step-icon">&#x1F522;</div>
+              <div>[1024 sayı]</div>
+              <div class="step-detail">4 KB vektör</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- Step 3: Cosine search -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">03</div>
+        <div class="stage-content">
+          <h3>Cosine Similarity Araması</h3>
+          <p>Qdrant, vektörler arasında açısal benzerlik hesaplayarak en yakın 5-10 sonucu bulur</p>
+        </div>
+        <span class="stage-tag" style="background:var(--search-soft);color:var(--search-primary);">~5ms</span>
+      </div>
+      <div style="padding:14px 0;">
+        <div class="cosine-visual">
+          <div style="font-size:0.72rem;margin-bottom:4px;">Vektör Uzayında Benzerlik Araması</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">Sorgu vektörüne en yakın noktalar bulunuyor</div>
+          <div class="cosine-canvas-wrap">
+            <canvas id="cosineCanvas" width="600" height="300"></canvas>
+          </div>
+          <div class="cosine-legend">
+            <span><span class="leg-dot" style="background:var(--search-primary)"></span> Sorgu vektörü</span>
+            <span><span class="leg-dot" style="background:var(--ingest-primary)"></span> Benzer sonuçlar (yakın)</span>
+            <span><span class="leg-dot" style="background:var(--text-muted)"></span> Alakasız vektörler (uzak)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-connector"><div class="arrow-line"></div><span class="arrow-tip">&#x25BC;</span></div>
+
+    <!-- Step 4: Results -->
+    <div class="pipeline-stage">
+      <div class="stage-header">
+        <div class="stage-num">04</div>
+        <div class="stage-content">
+          <h3>Sonuçlar + Metadata</h3>
+          <p>Vektörlerle birlikte saklanan metin ve metadata doğrudan döner</p>
+        </div>
+        <span class="stage-tag" style="background:var(--search-soft);color:var(--search-primary);">PAYLOAD</span>
+      </div>
+      <div style="padding:14px 0;">
+        <div class="results-demo">
+          <div class="result-item">
+            <div class="result-score">
+              <div class="score-num">0.94</div>
+              <div class="score-label">benzerlik</div>
+              <div class="score-bar"><div class="score-bar-fill" style="width:94%"></div></div>
+            </div>
+            <div class="result-meta">
+              <h4>Yargıtay 21. Hukuk Dairesi — E. 2019/5234 K. 2020/1456</h4>
+              <p>"...işverenin iş kazasından doğan sorumluluğu kusursuz sorumluluk olup, işverenin kusuru aranmaksızın..."</p>
+              <div class="meta-tags">
+                <span class="meta-tag">mahkeme: yargitay</span>
+                <span class="meta-tag">daire: 21. Hukuk</span>
+                <span class="meta-tag">tarih: 15.03.2020</span>
+              </div>
+            </div>
+          </div>
+          <div class="result-item">
+            <div class="result-score">
+              <div class="score-num">0.89</div>
+              <div class="score-label">benzerlik</div>
+              <div class="score-bar"><div class="score-bar-fill" style="width:89%"></div></div>
+            </div>
+            <div class="result-meta">
+              <h4>İş Kanunu Madde 77 — İşverenin Yükümlülükleri</h4>
+              <p>"İşverenler işyerlerinde iş sağlığı ve güvenliğinin sağlanması için gerekli her türlü önlemi almak..."</p>
+              <div class="meta-tags">
+                <span class="meta-tag">kanun_no: 4857</span>
+                <span class="meta-tag">tür: Kanun</span>
+                <span class="meta-tag">kaynak: mevzuat</span>
+              </div>
+            </div>
+          </div>
+          <div class="result-item">
+            <div class="result-score">
+              <div class="score-num">0.85</div>
+              <div class="score-label">benzerlik</div>
+              <div class="score-bar"><div class="score-bar-fill" style="width:85%"></div></div>
+            </div>
+            <div class="result-meta">
+              <h4>Danıştay 10. Daire — E. 2021/890</h4>
+              <p>"...iş güvenliği tedbirlerinin alınmaması halinde idari yaptırım ve tazminat sorumluluğu..."</p>
+              <div class="meta-tags">
+                <span class="meta-tag">mahkeme: danistay</span>
+                <span class="meta-tag">daire: 10. Daire</span>
+                <span class="meta-tag">tarih: 22.06.2021</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="important-note note-search">
+          <span class="note-icon">&#x26A1;</span>
+          <p><strong>Dış API çağrısı YOK.</strong> Tüm arama yereldir. Bedesten, AYM, AİHM API'lerine sadece veri toplama aşamasında gidilir. Arama sırasında vektörler + metadata zaten Qdrant'ta saklanıyor — sonuçlar milisaniyede döner.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ SECTION 3: STORAGE ═══════════ -->
+<section id="storage" class="section storage-section">
+  <div class="section-label"><span class="dot"></span> AKIŞ 03 — HESAPLAMA</div>
+  <h2 class="section-title">Depolama Hesaplayıcı</h2>
+  <p class="section-desc">Vektör sayısına göre tahmini disk kullanımını hesapla. 1024 boyutlu float32 vektörler + metin payload + HNSW indeks overhead.</p>
+
+  <div class="calculator">
+    <div class="calc-input-group">
+      <label>
+        <span>Vektör Sayısı</span>
+        <span class="count-display" id="vectorCountDisplay">50,000</span>
+      </label>
+      <input type="range" class="calc-slider" id="vectorSlider" min="10000" max="1000000" step="10000" value="50000">
+      <div class="calc-ticks">
+        <span>10K</span>
+        <span>100K</span>
+        <span>250K</span>
+        <span>500K</span>
+        <span>750K</span>
+        <span>1M</span>
+      </div>
+    </div>
+
+    <div class="calc-results" id="calcResults">
+      <div class="calc-result-card">
+        <div class="calc-label">Vektör Depolama</div>
+        <div class="calc-value" id="vecStorage">195 MB</div>
+        <div class="calc-formula">vektör &times; 1024 dim &times; 4 byte (float32)</div>
+      </div>
+      <div class="calc-result-card">
+        <div class="calc-label">Payload (Metin + Meta)</div>
+        <div class="calc-value" id="payloadStorage">98 MB</div>
+        <div class="calc-formula">vektör &times; ~2 KB ortalama metin</div>
+      </div>
+      <div class="calc-result-card">
+        <div class="calc-label">HNSW İndeks Overhead</div>
+        <div class="calc-value" id="indexStorage">293 MB</div>
+        <div class="calc-formula">vektör depolama &times; 1.5 (graf yapısı)</div>
+      </div>
+      <div class="calc-result-card total">
+        <div class="calc-label">Toplam Tahmini</div>
+        <div class="calc-value" id="totalStorage">586 MB</div>
+        <div class="calc-formula">Vektör + payload + HNSW indeks</div>
+      </div>
+    </div>
+
+    <div class="calc-bar-visual">
+      <h4>Dağılım</h4>
+      <div class="bar-stack" id="barStack">
+        <div class="bar-segment vectors" id="barVec" style="width:33%">Vektör</div>
+        <div class="bar-segment payload" id="barPayload" style="width:17%">Payload</div>
+        <div class="bar-segment index" id="barIndex" style="width:50%">İndeks</div>
+      </div>
+      <div class="bar-legend">
+        <span><span class="bl-dot" style="background:var(--ingest-primary)"></span> Vektör depolama</span>
+        <span><span class="bl-dot" style="background:var(--accent-purple)"></span> Payload (metin)</span>
+        <span><span class="bl-dot" style="background:var(--storage-primary)"></span> HNSW indeks</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  Lexora Embedding Mimarisi &middot; Qdrant v1.13 &middot; BAAI/bge-m3 (1024-dim) &middot; Cosine Similarity
+</footer>
+
+<script>
+// ═══ VECTOR DISPLAY ═══
+(function() {
+  const container = document.getElementById('vectorDisplay');
+  const count = 120;
+  for (let i = 0; i < count; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'vector-num';
+    const h = 10 + Math.random() * 30;
+    const hue = 220 + Math.random() * 20;
+    bar.style.height = h + 'px';
+    bar.style.background = `hsl(${hue}, 70%, 60%)`;
+    bar.style.animationDelay = (i * 0.025) + 's';
+    container.appendChild(bar);
+  }
+})();
+
+// ═══ COSINE SIMILARITY CANVAS ═══
+(function() {
+  const canvas = document.getElementById('cosineCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const queryPt = { x: W * 0.5, y: H * 0.4 };
+
+  const similar = [];
+  for (let i = 0; i < 6; i++) {
+    similar.push({
+      x: queryPt.x + (Math.random() - 0.5) * 120,
+      y: queryPt.y + (Math.random() - 0.5) * 80,
+      r: 4 + Math.random() * 3,
+    });
+  }
+
+  const others = [];
+  for (let i = 0; i < 50; i++) {
+    others.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: 2 + Math.random() * 2,
+    });
+  }
+
+  let frame = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    frame++;
+
+    // Draw grid
+    ctx.strokeStyle = 'rgba(37,38,54,0.5)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+
+    // Draw other points
+    others.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(74,75,94,0.3)';
+      ctx.fill();
+    });
+
+    // Draw lines from query to similar
+    similar.forEach(p => {
+      ctx.beginPath();
+      ctx.moveTo(queryPt.x, queryPt.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = 'rgba(74,127,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Draw similar points
+    similar.forEach((p, i) => {
+      const pulse = Math.sin(frame * 0.03 + i) * 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + pulse, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(74,127,255,0.7)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + pulse + 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(74,127,255,0.1)';
+      ctx.fill();
+    });
+
+    // Draw query point
+    const qPulse = Math.sin(frame * 0.05) * 3;
+    ctx.beginPath();
+    ctx.arc(queryPt.x, queryPt.y, 10 + qPulse, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(52,211,153,0.15)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(queryPt.x, queryPt.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#34d399';
+    ctx.fill();
+
+    // Label
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillStyle = '#34d399';
+    ctx.fillText('sorgu', queryPt.x + 12, queryPt.y + 4);
+
+    // Radius circle
+    ctx.beginPath();
+    ctx.arc(queryPt.x, queryPt.y, 80, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(52,211,153,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+// ═══ STORAGE CALCULATOR ═══
+(function() {
+  const slider = document.getElementById('vectorSlider');
+  const countDisplay = document.getElementById('vectorCountDisplay');
+  const vecEl = document.getElementById('vecStorage');
+  const payEl = document.getElementById('payloadStorage');
+  const idxEl = document.getElementById('indexStorage');
+  const totEl = document.getElementById('totalStorage');
+  const barVec = document.getElementById('barVec');
+  const barPay = document.getElementById('barPayload');
+  const barIdx = document.getElementById('barIndex');
+
+  function fmt(mb) {
+    if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB';
+    return Math.round(mb) + ' MB';
+  }
+
+  function fmtCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    return (n / 1000).toFixed(0) + 'K';
+  }
+
+  function update() {
+    const n = parseInt(slider.value);
+    countDisplay.textContent = n.toLocaleString('tr-TR');
+
+    const vecMB = (n * 1024 * 4) / (1024 * 1024);
+    const payMB = (n * 2048) / (1024 * 1024);
+    const idxMB = vecMB * 1.5;
+    const totMB = vecMB + payMB + idxMB;
+
+    vecEl.textContent = fmt(vecMB);
+    payEl.textContent = fmt(payMB);
+    idxEl.textContent = fmt(idxMB);
+    totEl.textContent = fmt(totMB);
+
+    const vecPct = (vecMB / totMB * 100).toFixed(1);
+    const payPct = (payMB / totMB * 100).toFixed(1);
+    const idxPct = (idxMB / totMB * 100).toFixed(1);
+
+    barVec.style.width = vecPct + '%';
+    barPay.style.width = payPct + '%';
+    barIdx.style.width = idxPct + '%';
+
+    barVec.textContent = vecPct > 15 ? 'Vektör ' + fmt(vecMB) : '';
+    barPay.textContent = payPct > 10 ? 'Payload ' + fmt(payMB) : '';
+    barIdx.textContent = idxPct > 15 ? 'İndeks ' + fmt(idxMB) : '';
+  }
+
+  slider.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>

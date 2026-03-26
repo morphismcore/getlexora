@@ -22,9 +22,12 @@ from app.services.embedding import EmbeddingService
 from app.services.citation_verifier import CitationVerifierService
 from app.services.query_expansion import QueryExpansionService
 from app.services.reranker import RerankerService
+from collections import defaultdict
 from app.models.schemas import (
     SearchRequest,
     SearchResponse,
+    SearchFacets,
+    FacetBucket,
     IctihatResult,
     RAGResponse,
     VerificationStatus,
@@ -178,10 +181,13 @@ class RAGPipeline:
         merge_limit = max(request.max_sonuc * request.sayfa, 60)
         results = self._merge_results(api_results, vector_results, merge_limit)
 
-        # 3. Cross-encoder reranking — only TOP results for speed
+        # 2b. Deduplicate by karar identity (esas_no + karar_no)
+        results = self._deduplicate_results(results)
+
+        # 3. Cross-encoder reranking — process up to 30 results
         if self.reranker and self.settings.reranking_enabled and len(results) > 1:
             try:
-                rerank_top_k = min(len(results), self.settings.rag_rerank_top_k or 20)
+                rerank_top_k = min(len(results), self.settings.rag_rerank_top_k or 30)
                 results = self.reranker.rerank_ictihat(
                     query=request.query,
                     results=results,
@@ -194,6 +200,9 @@ class RAGPipeline:
                 )
             except Exception as e:
                 logger.warning("reranking_skip", error=str(e))
+
+        # 3b. Build facets from full result set (before pagination)
+        facets = self._build_facets(results)
 
         # 4. Sort based on siralama parameter
         if request.siralama == "tarih_desc":
@@ -219,6 +228,7 @@ class RAGPipeline:
             sure_ms=elapsed,
             query_kullanilan=request.query,
             warnings=search_warnings if search_warnings else [],
+            facets=facets,
         )
 
         # Cache the search response (TTL: 5 minutes)
@@ -506,6 +516,56 @@ Ozet: {r.ozet}
             "unverified": unverified,
             "verified_count": len(found_citations) - len(unverified),
         }
+
+    @staticmethod
+    def _deduplicate_results(results: list[IctihatResult]) -> list[IctihatResult]:
+        """
+        Deduplicate by karar identity.
+        Multiple chunks from the same karar (same esas_no + karar_no) appear
+        as separate results. Keep only the one with the highest relevance_score.
+        """
+        groups: dict[str, IctihatResult] = {}
+        for r in results:
+            # Build a dedup key: prefer esas_no+karar_no, fall back to karar_id
+            if r.esas_no and r.karar_no:
+                key = f"{r.esas_no}|{r.karar_no}"
+            else:
+                key = r.karar_id
+            existing = groups.get(key)
+            if existing is None or r.relevance_score > existing.relevance_score:
+                groups[key] = r
+        deduped = list(groups.values())
+        deduped.sort(key=lambda x: x.relevance_score, reverse=True)
+        return deduped
+
+    @staticmethod
+    def _build_facets(results: list[IctihatResult]) -> SearchFacets:
+        """Build facet counts from the full (pre-pagination) result set."""
+        mahkeme_counts: dict[str, int] = defaultdict(int)
+        daire_counts: dict[str, int] = defaultdict(int)
+        yil_counts: dict[str, int] = defaultdict(int)
+
+        for r in results:
+            if r.mahkeme:
+                mahkeme_counts[r.mahkeme] += 1
+            if r.daire:
+                daire_counts[r.daire] += 1
+            if r.tarih:
+                # Extract year from tarih (formats: "YYYY-MM-DD", "DD.MM.YYYY", "YYYY", etc.)
+                year = None
+                if len(r.tarih) >= 4:
+                    if r.tarih[:4].isdigit():
+                        year = r.tarih[:4]
+                    elif len(r.tarih) >= 10 and r.tarih[6:10].isdigit():
+                        year = r.tarih[6:10]
+                if year:
+                    yil_counts[year] += 1
+
+        return SearchFacets(
+            mahkeme=[FacetBucket(value=k, count=v) for k, v in sorted(mahkeme_counts.items(), key=lambda x: -x[1])],
+            daire=[FacetBucket(value=k, count=v) for k, v in sorted(daire_counts.items(), key=lambda x: -x[1])],
+            yil=[FacetBucket(value=k, count=v) for k, v in sorted(yil_counts.items(), key=lambda x: -x[1])],
+        )
 
     def _merge_results(
         self,

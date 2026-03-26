@@ -30,6 +30,8 @@ from app.tasks.ingestion_tasks import (
     ingest_topics_task,
     ingest_aym_task,
     ingest_aihm_task,
+    ingest_rekabet_task,
+    ingest_kvkk_task,
     ingest_mevzuat_task,
     ingest_batch_task,
     ingest_daire_task,
@@ -603,6 +605,26 @@ async def admin_ingest_aym(
     """AYM bireysel basvuru kararlarini ingest et (Celery worker)."""
     result = ingest_aym_task.delay(pages=10, ihlal_only=True)
     return {"status": "started", "source": "aym", "task_id": result.id}
+
+
+@router.post("/ingest/rekabet")
+async def admin_ingest_rekabet(
+    max_pages: int = 1100,
+    admin: User = Depends(require_platform_admin),
+):
+    """Rekabet Kurumu kararlarini ingest et (Celery worker)."""
+    result = ingest_rekabet_task.delay(max_pages=max_pages)
+    return {"status": "started", "source": "rekabet", "task_id": result.id}
+
+
+@router.post("/ingest/kvkk")
+async def admin_ingest_kvkk(
+    max_decisions: int = 1000,
+    admin: User = Depends(require_platform_admin),
+):
+    """KVKK Kurul kararlarini ingest et (Celery worker)."""
+    result = ingest_kvkk_task.delay(max_decisions=max_decisions)
+    return {"status": "started", "source": "kvkk", "task_id": result.id}
 
 
 @router.post("/ingest/aihm")

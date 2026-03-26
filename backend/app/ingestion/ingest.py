@@ -1018,6 +1018,266 @@ class IngestionPipeline:
         _log("success", f"✅ AYM tamamlandı — {total_embedded} embedding")
         return summary
 
+    async def ingest_rekabet(self, max_pages: int = 1100) -> dict:
+        """Rekabet Kurumu kararlarını ingest et."""
+        from app.services.rekabet import RekabetService
+
+        rekabet = RekabetService()
+        total_fetched = 0
+        total_embedded = 0
+        total_errors = 0
+
+        checkpoint = self._load_checkpoint()
+        start_page = checkpoint.get("rekabet_last_page", 0) + 1
+
+        _log("info", f"Rekabet Kurumu ingestion basladi — sayfa {start_page}/{max_pages}")
+        _update_state(
+            running=True, source="rekabet", task="Rekabet Kurulu",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=max_pages, completed_topics=start_page - 1,
+        )
+
+        try:
+            for page in range(start_page, max_pages + 1):
+                try:
+                    result = await rekabet.search_decisions(page=page)
+                    decisions = result.get("decisions", [])
+
+                    if not decisions:
+                        _log("info", f"Rekabet sayfa {page} bos — bitis")
+                        break
+
+                    # Gercek toplam sayfa bilgisi
+                    actual_total = result.get("total_pages", max_pages)
+                    if page > actual_total:
+                        _log("info", f"Rekabet son sayfa asildi ({page} > {actual_total})")
+                        break
+
+                    total_fetched += len(decisions)
+                    _update_state(fetched=total_fetched, task=f"Sayfa {page}/{actual_total}")
+
+                    all_chunks = []
+                    for decision in decisions:
+                        karar_id = decision.get("karar_id", "")
+                        if not karar_id:
+                            continue
+
+                        try:
+                            doc = await rekabet.get_decision(karar_id)
+                            content = doc.get("content", "")
+                            if not content or len(content) < self.settings.min_karar_chars:
+                                continue
+                        except Exception as e:
+                            logger.warning("rekabet_doc_error", karar_id=karar_id, error=str(e))
+                            total_errors += 1
+                            continue
+
+                        doc_meta = doc.get("metadata", {})
+                        metadata = {
+                            "karar_id": f"rekabet_{karar_id}",
+                            "mahkeme": "rekabet",
+                            "daire": "Rekabet Kurulu",
+                            "esas_no": doc_meta.get("decision_no", ""),
+                            "karar_no": doc_meta.get("decision_no", ""),
+                            "tarih": doc_meta.get("date", decision.get("date", "")),
+                            "kaynak": "rekabet_kurumu",
+                            "konu": doc_meta.get("title", decision.get("title", "")),
+                        }
+
+                        chunks = self.chunker.chunk_karar(content, metadata)
+                        if not chunks:
+                            chunks = self.chunker.chunk_generic(content, metadata)
+                        all_chunks.extend(chunks)
+
+                        await asyncio.sleep(2.0)
+
+                    if all_chunks:
+                        texts = [c["text"] for c in all_chunks]
+                        embeddings = await self.embedding.embed_texts_async(texts)
+
+                        points = []
+                        for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
+                            point_id = self._generate_id(
+                                chunk["metadata"].get("karar_id", "") + str(i)
+                            )
+                            points.append({
+                                "id": point_id,
+                                "dense_vector": emb["dense_vector"],
+                                "sparse_vector": emb.get("sparse_vector"),
+                                "payload": {
+                                    **chunk["metadata"],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                    "ozet": chunk["text"][:self.settings.max_ozet_chars],
+                                },
+                            })
+
+                        await self.vector_store.upsert_points(
+                            collection=self.settings.qdrant_collection_ictihat,
+                            points=points,
+                        )
+                        total_embedded += len(points)
+
+                    _update_state(
+                        embedded=total_embedded,
+                        completed_topics=page,
+                        errors=total_errors,
+                    )
+
+                    # Checkpoint kaydet
+                    checkpoint["rekabet_last_page"] = page
+                    self._save_checkpoint(checkpoint)
+
+                    if page % 50 == 0:
+                        _log("info", f"Rekabet sayfa {page}/{actual_total} — {total_fetched} karar, {total_embedded} embedding, {total_errors} hata")
+
+                    await asyncio.sleep(1.5)
+
+                except Exception as e:
+                    logger.error("rekabet_page_error", page=page, error=str(e))
+                    _update_state(errors=total_errors + 1)
+                    total_errors += 1
+                    continue
+        finally:
+            await rekabet.close()
+            _update_state(running=False, source=None, task=None)
+
+        summary = {
+            "source": "rekabet",
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+            "total_errors": total_errors,
+            "last_page": checkpoint.get("rekabet_last_page", 0),
+        }
+        _log("success", f"Rekabet tamamlandi — {total_embedded} embedding, {total_errors} hata")
+        return summary
+
+    async def ingest_kvkk(self, max_decisions: int = 1000) -> dict:
+        """KVKK Kurul kararlarını ingest et."""
+        from app.services.kvkk import KvkkService
+
+        kvkk = KvkkService()
+        total_fetched = 0
+        total_embedded = 0
+        total_errors = 0
+
+        checkpoint = self._load_checkpoint()
+        completed_ids = set(checkpoint.get("kvkk_completed_ids", []))
+
+        _log("info", f"KVKK ingestion basladi — maks {max_decisions} karar, {len(completed_ids)} onceden tamamlanmis")
+        _update_state(
+            running=True, source="kvkk", task="KVKK Kurul Kararlari",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=max_decisions, completed_topics=len(completed_ids),
+        )
+
+        try:
+            # Karar listesini cek
+            decisions = await kvkk.list_decisions()
+            _log("info", f"KVKK toplam {len(decisions)} karar bulundu")
+
+            # Limit uygula
+            decisions = decisions[:max_decisions]
+            _update_state(total_topics=len(decisions))
+
+            for idx, decision in enumerate(decisions, 1):
+                decision_id = decision["id"]
+
+                if decision_id in completed_ids:
+                    continue
+
+                try:
+                    doc = await kvkk.get_decision(decision["url"])
+                    content = doc.get("content", "")
+                    total_fetched += 1
+
+                    if not content or len(content) < self.settings.min_karar_chars:
+                        logger.warning("kvkk_content_too_short", id=decision_id, length=len(content))
+                        total_errors += 1
+                        continue
+
+                    doc_meta = doc.get("metadata", {})
+                    metadata = {
+                        "karar_id": f"kvkk_{decision_id}",
+                        "mahkeme": "kvkk",
+                        "daire": "Kurul Kararı",
+                        "esas_no": "",
+                        "karar_no": doc_meta.get("karar_no", ""),
+                        "tarih": doc_meta.get("tarih", ""),
+                        "kaynak": "kvkk",
+                        "konu": doc_meta.get("konu", decision.get("title", "")),
+                    }
+
+                    chunks = self.chunker.chunk_karar(content, metadata)
+                    if not chunks:
+                        chunks = self.chunker.chunk_generic(content, metadata)
+
+                    if chunks:
+                        texts = [c["text"] for c in chunks]
+                        embeddings = await self.embedding.embed_texts_async(texts)
+
+                        points = []
+                        for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+                            point_id = self._generate_id(
+                                chunk["metadata"].get("karar_id", "") + str(i)
+                            )
+                            points.append({
+                                "id": point_id,
+                                "dense_vector": emb["dense_vector"],
+                                "sparse_vector": emb.get("sparse_vector"),
+                                "payload": {
+                                    **chunk["metadata"],
+                                    "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                    "ozet": chunk["text"][:self.settings.max_ozet_chars],
+                                },
+                            })
+
+                        await self.vector_store.upsert_points(
+                            collection=self.settings.qdrant_collection_ictihat,
+                            points=points,
+                        )
+                        total_embedded += len(points)
+
+                    # Checkpoint kaydet
+                    completed_ids.add(decision_id)
+                    checkpoint["kvkk_completed_ids"] = list(completed_ids)
+                    checkpoint["last_update"] = datetime.now().isoformat()
+                    self._save_checkpoint(checkpoint)
+
+                    _update_state(
+                        fetched=total_fetched,
+                        embedded=total_embedded,
+                        completed_topics=len(completed_ids),
+                        errors=total_errors,
+                        task=f"KVKK {idx}/{len(decisions)}",
+                    )
+
+                    if idx % 50 == 0:
+                        _log("info", f"KVKK {idx}/{len(decisions)} — {total_embedded} embedding, {total_errors} hata")
+
+                    # Polite delay
+                    await asyncio.sleep(2.5)
+
+                except Exception as e:
+                    logger.error("kvkk_decision_error", id=decision_id, error=str(e))
+                    total_errors += 1
+                    _update_state(errors=total_errors)
+                    continue
+        finally:
+            await kvkk.close()
+            _update_state(running=False, source=None, task=None)
+
+        summary = {
+            "source": "kvkk",
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+            "total_errors": total_errors,
+            "completed_ids": len(completed_ids),
+        }
+        _log("success", f"KVKK tamamlandi — {total_embedded} embedding, {total_errors} hata")
+        return summary
+
     async def ingest_aihm(
         self,
         max_results: int = 500,

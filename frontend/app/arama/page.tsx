@@ -25,11 +25,23 @@ interface IctihatResult {
   kaynak?: string;
 }
 
+interface FacetItem {
+  value: string;
+  count: number;
+}
+
+interface SearchFacets {
+  mahkeme?: FacetItem[];
+  daire?: FacetItem[];
+  yil?: FacetItem[];
+}
+
 interface SearchResponse {
   sonuclar: IctihatResult[];
   toplam_bulunan: number;
   toplam_sayfa: number;
   sure_ms: number;
+  facets?: SearchFacets;
 }
 
 interface KararDetail {
@@ -210,7 +222,7 @@ function formatDuration(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatLegalText(text: string): ReactNode[] {
+function formatLegalText(text: string, searchQuery?: string): ReactNode[] {
   if (!text) return [];
 
   // Split by double newlines (paragraphs)
@@ -220,20 +232,22 @@ function formatLegalText(text: string): ReactNode[] {
     const trimmed = para.trim();
     if (!trimmed) return null;
 
+    const content = searchQuery ? highlightText(trimmed, searchQuery) : trimmed;
+
     // Detect section headers (DAVACI, DAVALI, etc.)
     const isHeader = /^(DAVACI|DAVALI|HÜKÜM|KARAR|GEREKÇESİ|SONUÇ|İDDİA|SAVUNMA|DELİLLER|T\.C\.|TÜRK MİLLETİ ADINA)/i.test(trimmed);
 
     if (isHeader) {
       return (
         <div key={i} className="mt-4 mb-2">
-          <p className="text-[13px] font-semibold text-[#6C6CFF]">{trimmed}</p>
+          <p className="text-[13px] font-semibold text-[#6C6CFF]">{content}</p>
         </div>
       );
     }
 
     return (
       <p key={i} className="text-[13px] text-[#ECECEE]/90 leading-relaxed mb-3 whitespace-pre-wrap">
-        {trimmed}
+        {content}
       </p>
     );
   }).filter(Boolean) as ReactNode[];
@@ -435,6 +449,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
   onSelect,
   isBookmarked,
   onToggleBookmark,
+  onCopyOzet,
 }: {
   result: IctihatResult;
   isSelected: boolean;
@@ -442,8 +457,20 @@ const SearchResultCard = React.memo(function SearchResultCard({
   onSelect: (result: IctihatResult) => void;
   isBookmarked: boolean;
   onToggleBookmark: (karar_id: string) => void;
+  onCopyOzet?: (text: string) => void;
 }) {
   const court = getCourtStyle(result.mahkeme);
+  const [expanded, setExpanded] = useState(false);
+  const summaryRef = useRef<HTMLParagraphElement>(null);
+  const [isClamped, setIsClamped] = useState(false);
+
+  useEffect(() => {
+    const el = summaryRef.current;
+    if (el) {
+      setIsClamped(el.scrollHeight > el.clientHeight + 1);
+    }
+  }, [result.ozet]);
+
   return (
     <motion.button
       key={result.karar_id}
@@ -455,7 +482,7 @@ const SearchResultCard = React.memo(function SearchResultCard({
           : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
       }`}
     >
-      {/* Top row: court badge + daire + bookmark */}
+      {/* Top row: court badge + daire + bookmark + copy */}
       <div className="flex items-center gap-2 mb-2">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} ${court.glow}`}>
           {court.label || result.mahkeme}
@@ -469,20 +496,34 @@ const SearchResultCard = React.memo(function SearchResultCard({
         {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
         )}
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onToggleBookmark(result.karar_id); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onToggleBookmark(result.karar_id); } }}
-          className={`ml-auto shrink-0 p-1 rounded-md transition-all ${
-            isBookmarked
-              ? "text-[#6C6CFF] hover:text-[#8B8BFF]"
-              : "text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
-          }`}
-          title={isBookmarked ? "Kayıttan kaldır" : "Kaydet"}
-        >
-          <BookmarkIcon filled={isBookmarked} />
-        </span>
+        <div className="ml-auto flex items-center gap-1">
+          {onCopyOzet && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onCopyOzet(result.ozet); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onCopyOzet(result.ozet); } }}
+              className="shrink-0 p-1 rounded-md transition-all text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
+              title="Özeti kopyala"
+            >
+              <CopyIcon />
+            </span>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); onToggleBookmark(result.karar_id); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onToggleBookmark(result.karar_id); } }}
+            className={`shrink-0 p-1 rounded-md transition-all ${
+              isBookmarked
+                ? "text-[#6C6CFF] hover:text-[#8B8BFF]"
+                : "text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
+            }`}
+            title={isBookmarked ? "Kayıttan kaldır" : "Kaydet"}
+          >
+            <BookmarkIcon filled={isBookmarked} />
+          </span>
+        </div>
       </div>
 
       {/* Case numbers row */}
@@ -499,9 +540,23 @@ const SearchResultCard = React.memo(function SearchResultCard({
       </div>
 
       {/* Summary with highlights */}
-      <p className="text-[13px] text-[#8B8B8E] line-clamp-3 leading-relaxed group-hover:text-[#A0A0A3] transition-colors">
+      <p
+        ref={summaryRef}
+        className={`text-[13px] text-[#8B8B8E] leading-relaxed group-hover:text-[#A0A0A3] transition-colors ${expanded ? "" : "line-clamp-3"}`}
+      >
         {highlightText(result.ozet, query)}
       </p>
+      {(isClamped || expanded) && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setExpanded((v) => !v); } }}
+          className="inline-block mt-1 text-[11px] text-[#6C6CFF] hover:text-[#8B8BFF] cursor-pointer transition-colors"
+        >
+          {expanded ? "Kapat" : "Devamini gor"}
+        </span>
+      )}
 
       {/* Relevance bar */}
       {result.relevance_score !== undefined && (
@@ -1088,6 +1143,16 @@ export default function AramaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
+  // Auto re-search when facet filters (mahkeme/daire) change while results are visible
+  const facetFilterInitRef = useRef(true);
+  useEffect(() => {
+    if (facetFilterInitRef.current) { facetFilterInitRef.current = false; return; }
+    if (query.trim() && results && activeTab === "ictihat") {
+      handleSearch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mahkeme, daire]);
+
   const handleNewSearch = useCallback(() => {
     setCurrentPage(1);
     // If page was already 1, effect won't fire, so call directly
@@ -1482,6 +1547,63 @@ export default function AramaPage() {
                     </div>
                   )}
 
+                  {/* Facet badges */}
+                  {results?.facets && !loading && (
+                    <div className="flex flex-wrap gap-1.5 px-1 mb-1">
+                      {(results.facets.mahkeme || []).map((f) => {
+                        const style = getCourtStyle(f.value);
+                        const isActive = mahkeme !== "Tümü" && (MAHKEME_VALUE_MAP[mahkeme] || "").toLowerCase() === f.value.toLowerCase();
+                        return (
+                          <button
+                            key={`f-m-${f.value}`}
+                            onClick={() => {
+                              const displayName = Object.entries(MAHKEME_VALUE_MAP).find(([, v]) => v.toLowerCase() === f.value.toLowerCase())?.[0];
+                              if (displayName) {
+                                setMahkeme(isActive ? "Tümü" : displayName);
+                                setCurrentPage(1);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border transition-all ${
+                              isActive
+                                ? `${style.bg} ${style.text} border-current/20`
+                                : `bg-[#111113] text-[#8B8B8E] border-white/[0.06] hover:border-white/[0.12] hover:text-[#ECECEE]`
+                            }`}
+                          >
+                            {style.label || f.value}
+                            <span className={`text-[10px] tabular-nums ${isActive ? "opacity-80" : "text-[#5C5C5F]"}`}>({f.count})</span>
+                          </button>
+                        );
+                      })}
+                      {(results.facets.daire || []).slice(0, 5).map((f) => (
+                        <button
+                          key={`f-d-${f.value}`}
+                          onClick={() => {
+                            const isActive = daire === f.value;
+                            setDaire(isActive ? "Tümü" : f.value);
+                            setCurrentPage(1);
+                          }}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border transition-all ${
+                            daire === f.value
+                              ? "bg-[#6C6CFF]/10 text-[#6C6CFF] border-[#6C6CFF]/20"
+                              : "bg-[#111113] text-[#8B8B8E] border-white/[0.06] hover:border-white/[0.12] hover:text-[#ECECEE]"
+                          }`}
+                        >
+                          {f.value}
+                          <span className={`text-[10px] tabular-nums ${daire === f.value ? "opacity-80" : "text-[#5C5C5F]"}`}>({f.count})</span>
+                        </button>
+                      ))}
+                      {(results.facets.yil || []).slice(0, 4).map((f) => (
+                        <span
+                          key={`f-y-${f.value}`}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium bg-[#111113] text-[#5C5C5F] border border-white/[0.04]"
+                        >
+                          {f.value}
+                          <span className="text-[10px] tabular-nums">({f.count})</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Loading skeletons */}
                   {loading && (
                     <div className="space-y-2.5">
@@ -1528,6 +1650,7 @@ export default function AramaPage() {
                           onSelect={handleSelectResult}
                           isBookmarked={bookmarks.has(result.karar_id)}
                           onToggleBookmark={toggleBookmark}
+                          onCopyOzet={(text) => { handleCopyText(text); setToast("Metin kopyalandi"); }}
                         />
                       ))}
                     </motion.div>
@@ -1661,6 +1784,21 @@ export default function AramaPage() {
                           >
                             {copied ? <CheckIcon /> : <CopyIcon />}
                             {copied ? "Kopyalandı" : "Metni Kopyala"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              const header = `${selectedResult.mahkeme}${selectedResult.daire ? " " + selectedResult.daire : ""}\nEsas No: ${selectedResult.esas_no}\nKarar No: ${selectedResult.karar_no}\nTarih: ${selectedResult.tarih}\n\n`;
+                              const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${selectedResult.mahkeme} - ${selectedResult.esas_no}</title><style>body{font-family:serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.7;color:#222}h1{font-size:18px;border-bottom:2px solid #333;padding-bottom:10px}h2{font-size:14px;color:#555;margin-bottom:20px}.meta{color:#666;font-size:13px;margin-bottom:30px}p{text-align:justify;margin-bottom:12px}</style></head><body><h1>${selectedResult.mahkeme}${selectedResult.daire ? " " + selectedResult.daire : ""}</h1><div class="meta"><strong>Esas No:</strong> ${selectedResult.esas_no} | <strong>Karar No:</strong> ${selectedResult.karar_no} | <strong>Tarih:</strong> ${selectedResult.tarih}</div><h2>Ozet</h2><p>${kararDetail.ozet}</p><h2>Karar Metni</h2>${(kararDetail.tam_metin || "").split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join("")}</body></html>`;
+                              const w = window.open("", "_blank");
+                              if (w) { w.document.write(htmlContent); w.document.close(); w.print(); }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-white/[0.10] transition-all"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                              <path d="M6 2h9l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M14 2v6h6M10 13h4M10 17h4M8 9h2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            PDF Indir
                           </button>
                           <button
                             onClick={() => toggleBookmark(selectedResult.karar_id)}
@@ -1801,7 +1939,7 @@ export default function AramaPage() {
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
                           </div>
                           <div className="prose prose-invert max-w-none">
-                            {kararDetail.tam_metin ? formatLegalText(kararDetail.tam_metin) : (
+                            {kararDetail.tam_metin ? formatLegalText(kararDetail.tam_metin, query) : (
                               <p className="text-[#5C5C5F] italic">Tam metin yüklenemedi. Özet gösteriliyor.</p>
                             )}
                           </div>
