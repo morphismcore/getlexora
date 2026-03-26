@@ -10,6 +10,8 @@ import { ROLES, ROLE_LABELS, TAB_CONFIG } from "./constants";
 import { HIcon } from "./components";
 
 import IngestionDashboard from "./ingestion-dashboard";
+import DeadlineRulesTab from "./deadline-rules-tab";
+import HolidaysTab from "./holidays-tab";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -223,6 +225,25 @@ export default function AdminPage() {
       {/* Veri Yonetimi tab */}
       {tab === "veri-yonetimi" && (
         <IngestionDashboard token={token} apiUrl={API_URL} onToast={(msg: string) => showToast(msg)} />
+      )}
+
+      {tab === "sureler" && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#6C6CFF]" />
+              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Süre Kuralları</h3>
+            </div>
+            <DeadlineRulesTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-5 rounded-full bg-[#3DD68C]" />
+              <h3 className="text-[16px] font-semibold text-[#ECECEE]">Tatiller & Adli Tatil</h3>
+            </div>
+            <HolidaysTab token={token} apiUrl={API_URL} headers={headers} onToast={showToast} />
+          </div>
+        </motion.div>
       )}
 
     </div>

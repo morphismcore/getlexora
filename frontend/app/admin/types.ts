@@ -161,4 +161,4 @@ export interface RuleFormData {
   is_active: boolean;
 }
 
-export type TabKey = "genel" | "kullanicilar" | "veri-yonetimi";
+export type TabKey = "genel" | "kullanicilar" | "veri-yonetimi" | "sureler";
