@@ -179,11 +179,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/giris");
   }, [router]);
 
-  // Show nothing while checking auth (prevents flash)
+  // Show clean loading state while checking auth (prevents flash of unstyled content)
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#09090B]">
-        <div className="w-6 h-6 border-2 border-[#6C6CFF] border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 bg-[#111113] border border-white/[0.06] rounded-xl flex items-center justify-center">
+            <span className="text-[18px] font-bold bg-gradient-to-br from-[#6C6CFF] to-[#A78BFA] bg-clip-text text-transparent">L</span>
+          </div>
+          <div className="w-6 h-6 border-2 border-[#6C6CFF] border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
