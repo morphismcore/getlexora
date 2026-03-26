@@ -273,6 +273,12 @@ class RAGPipeline:
             if request.tarih_bitis:
                 filters["yil_max"] = request.tarih_bitis.year
 
+            # Only search in meaningful legal sections (skip taraflar, baslik, boilerplate)
+            filters["section_type"] = [
+                "degerlendirme", "sonuc", "olaylar", "temyiz_nedenleri",
+                "ilk_derece", "tam_metin",
+            ]
+
             return await self.vector_store.search_hybrid(
                 collection=self.settings.qdrant_collection_ictihat,
                 dense_vector=query_embedding["dense_vector"],

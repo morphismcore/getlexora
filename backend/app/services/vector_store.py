@@ -254,6 +254,16 @@ class VectorStoreService:
             conditions.append(
                 FieldCondition(key="yil", range=Range(lte=filters["yil_max"]))
             )
+        if "section_type" in filters:
+            val = filters["section_type"]
+            if isinstance(val, list):
+                conditions.append(
+                    FieldCondition(key="section_type", match=MatchAny(any=val))
+                )
+            else:
+                conditions.append(
+                    FieldCondition(key="section_type", match=MatchValue(value=val))
+                )
 
         return Filter(must=conditions) if conditions else None
 
