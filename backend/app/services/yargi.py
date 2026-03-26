@@ -6,6 +6,7 @@ Yargıtay, Danıştay, BAM ve yerel mahkeme kararlarını arar.
 
 import asyncio
 import base64
+import time
 import structlog
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -44,6 +45,13 @@ YARGITAY_CEZA_DAIRELERI = {
     "CGK": "Ceza Genel Kurulu",
 }
 
+DANISTAY_DAIRELERI = {
+    "2": "2. Daire", "3": "3. Daire", "4": "4. Daire", "5": "5. Daire",
+    "6": "6. Daire", "7": "7. Daire", "8": "8. Daire", "9": "9. Daire",
+    "10": "10. Daire", "12": "12. Daire", "13": "13. Daire",
+    "VDDK": "Vergi Dava Daireleri Kurulu",
+}
+
 # Bedesten API zorunlu header'lar
 BEDESTEN_HEADERS = {
     "Accept": "*/*",
@@ -59,19 +67,53 @@ BEDESTEN_HEADERS = {
 class YargiService:
     """Bedesten API üzerinden içtihat arama servisi."""
 
+    # Circuit breaker state (class-level, shared across instances)
+    _consecutive_failures: int = 0
+    _circuit_open_until: float = 0.0
+    _CIRCUIT_FAILURE_THRESHOLD: int = 5
+    _CIRCUIT_OPEN_DURATION: float = 60.0  # seconds
+
     def __init__(self, cache=None):
         settings = get_settings()
         self.bedesten_url = settings.bedesten_base_url
         self.cache = cache
         self.client = httpx.AsyncClient(
-            timeout=30.0,
+            timeout=settings.bedesten_timeout,
             headers=BEDESTEN_HEADERS,
         )
+
+    @classmethod
+    def _check_circuit(cls) -> bool:
+        """Return True if circuit is open (should skip request)."""
+        if cls._consecutive_failures >= cls._CIRCUIT_FAILURE_THRESHOLD:
+            if time.monotonic() < cls._circuit_open_until:
+                return True
+            # Half-open: allow one attempt
+            cls._consecutive_failures = cls._CIRCUIT_FAILURE_THRESHOLD - 1
+        return False
+
+    @classmethod
+    def _record_success(cls):
+        """Reset circuit breaker on success."""
+        cls._consecutive_failures = 0
+        cls._circuit_open_until = 0.0
+
+    @classmethod
+    def _record_failure(cls):
+        """Record failure and potentially open circuit."""
+        cls._consecutive_failures += 1
+        if cls._consecutive_failures >= cls._CIRCUIT_FAILURE_THRESHOLD:
+            cls._circuit_open_until = time.monotonic() + cls._CIRCUIT_OPEN_DURATION
+            logger.warning(
+                "bedesten_circuit_open",
+                failures=cls._consecutive_failures,
+                open_until_seconds=cls._CIRCUIT_OPEN_DURATION,
+            )
 
     async def close(self):
         await self.client.aclose()
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=5, max=60))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def search_bedesten(
         self,
         keyword: str,
@@ -86,6 +128,11 @@ class YargiService:
         Bedesten API'de karar arama.
         POST /emsal-karar/searchDocuments
         """
+        # Circuit breaker check
+        if self._check_circuit():
+            logger.warning("bedesten_circuit_open_skip", keyword=keyword)
+            return {"data": {"total": 0, "emsalKararList": []}}
+
         payload = {
             "data": {
                 "pageSize": min(page_size, 10),  # API max 10
@@ -129,6 +176,7 @@ class YargiService:
             total = data.get("data", {}).get("total", 0)
             results = data.get("data", {}).get("emsalKararList", [])
 
+            self._record_success()
             logger.info(
                 "bedesten_search_ok",
                 keyword=keyword,
@@ -147,12 +195,18 @@ class YargiService:
 
             return data
         except httpx.HTTPError as e:
+            self._record_failure()
             logger.error("bedesten_search_error", error=str(e), keyword=keyword)
             raise
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(min=5, max=60))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def get_document(self, document_id: str) -> dict:
         """Tam karar metnini getir (base64 encoded HTML/PDF)."""
+        # Circuit breaker check
+        if self._check_circuit():
+            logger.warning("bedesten_circuit_open_skip_doc", doc_id=document_id)
+            return {"data": {}}
+
         # Check cache first
         if self.cache:
             try:
@@ -195,6 +249,8 @@ class YargiService:
                     except Exception as e:
                         logger.warning("bedesten_pdf_extract_error", doc_id=document_id, error=str(e))
 
+            self._record_success()
+
             # Store in cache (TTL: 24 hours)
             if self.cache:
                 try:
@@ -204,6 +260,7 @@ class YargiService:
 
             return data
         except httpx.HTTPError as e:
+            self._record_failure()
             logger.error("bedesten_document_error", error=str(e), doc_id=document_id)
             raise
 
@@ -213,6 +270,8 @@ class YargiService:
         court_types: list[str] | None = None,
         daire: str | None = None,
         max_results: int = 20,
+        date_from: str | None = None,
+        date_to: str | None = None,
     ) -> list[dict]:
         """
         Birden fazla karar türünde paralel arama.
@@ -241,6 +300,8 @@ class YargiService:
                     item_type=item_type,
                     birim_adi=birim_adi,
                     page_size=min(per_type, 10),
+                    date_from=date_from,
+                    date_to=date_to,
                 )
             )
 

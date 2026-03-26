@@ -28,6 +28,7 @@ interface IctihatResult {
 interface SearchResponse {
   sonuclar: IctihatResult[];
   toplam_bulunan: number;
+  toplam_sayfa: number;
   sure_ms: number;
 }
 
@@ -397,6 +398,12 @@ const ChevronIcon = ({ direction = "left" }: { direction?: "left" | "right" }) =
   </svg>
 );
 
+const BookmarkIcon = ({ filled = false, size = 14 }: { filled?: boolean; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5}>
+    <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 /* ─── Relevance Bar ─── */
 function RelevanceBar({ score }: { score: number }) {
   const pct = Math.round(score * 100);
@@ -426,11 +433,15 @@ const SearchResultCard = React.memo(function SearchResultCard({
   isSelected,
   query,
   onSelect,
+  isBookmarked,
+  onToggleBookmark,
 }: {
   result: IctihatResult;
   isSelected: boolean;
   query: string;
   onSelect: (result: IctihatResult) => void;
+  isBookmarked: boolean;
+  onToggleBookmark: (karar_id: string) => void;
 }) {
   const court = getCourtStyle(result.mahkeme);
   return (
@@ -438,13 +449,13 @@ const SearchResultCard = React.memo(function SearchResultCard({
       key={result.karar_id}
       variants={listItem}
       onClick={() => onSelect(result)}
-      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 ${
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-4 transition-all duration-200 relative ${
         isSelected
           ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
           : "border-white/[0.06] hover:border-white/[0.10] hover:bg-[#141418]"
       }`}
     >
-      {/* Top row: court badge + daire */}
+      {/* Top row: court badge + daire + bookmark */}
       <div className="flex items-center gap-2 mb-2">
         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} ${court.glow}`}>
           {court.label || result.mahkeme}
@@ -458,6 +469,20 @@ const SearchResultCard = React.memo(function SearchResultCard({
         {result.kaynak === "aihm" && result.mahkeme !== "aihm" && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#3DD68C]/10 text-[#3DD68C]">AİHM</span>
         )}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onToggleBookmark(result.karar_id); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onToggleBookmark(result.karar_id); } }}
+          className={`ml-auto shrink-0 p-1 rounded-md transition-all ${
+            isBookmarked
+              ? "text-[#6C6CFF] hover:text-[#8B8BFF]"
+              : "text-[#3A3A3F] opacity-0 group-hover:opacity-100 hover:text-[#8B8B8E]"
+          }`}
+          title={isBookmarked ? "Kayıttan kaldır" : "Kaydet"}
+        >
+          <BookmarkIcon filled={isBookmarked} />
+        </span>
       </div>
 
       {/* Case numbers row */}
@@ -539,6 +564,17 @@ export default function AramaPage() {
   const [siralama, setSiralama] = useState("Alaka düzeyi");
   const [showFilters, setShowFilters] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [bookmarks, setBookmarks] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("lexora_bookmarks");
+        if (saved) return new Set(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+    return new Set();
+  });
+
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -561,6 +597,7 @@ export default function AramaPage() {
   const [casesError, setCasesError] = useState<string | null>(null);
   const caseDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsContainerRef = useRef<HTMLDivElement>(null);
   const lastKararRequestRef = useRef<string | null>(null);
   const lastMevzuatRequestRef = useRef<string | null>(null);
 
@@ -692,6 +729,20 @@ export default function AramaPage() {
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }, []);
+
+  const toggleBookmark = useCallback((karar_id: string) => {
+    setBookmarks(prev => {
+      const next = new Set(prev);
+      if (next.has(karar_id)) {
+        next.delete(karar_id);
+      } else {
+        next.add(karar_id);
+        setToast("Karar kaydedildi");
+      }
+      localStorage.setItem("lexora_bookmarks", JSON.stringify([...next]));
+      return next;
+    });
   }, []);
 
   /* ─── Mevzuat Search Handler ─── */
@@ -896,6 +947,7 @@ export default function AramaPage() {
         body: JSON.stringify({
           query: query.trim(),
           max_sonuc: 20,
+          sayfa: currentPage,
           ...(mahkeme !== "Tümü" && MAHKEME_VALUE_MAP[mahkeme] && { mahkeme: [MAHKEME_VALUE_MAP[mahkeme]] }),
           ...(daire !== "Tümü" && parseDaireValue(daire) && { daire: parseDaireValue(daire) }),
           ...(tarihBaslangic && { tarih_baslangic: tarihBaslangic }),
@@ -930,7 +982,7 @@ export default function AramaPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, activeTab, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, loading, handleMevzuatSearch, handleAIAsk]);
+  }, [query, activeTab, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, currentPage, loading, handleMevzuatSearch, handleAIAsk]);
 
   const handleSelectResult = useCallback(async (result: IctihatResult) => {
     const requestId = result.karar_id;
@@ -999,8 +1051,14 @@ export default function AramaPage() {
 
   const handleSuggestedQuery = (q: string) => {
     setQuery(q);
+    setCurrentPage(1);
     inputRef.current?.focus();
   };
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    resultsContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const handleDownloadResults = () => {
     if (!results) return;
@@ -1017,8 +1075,27 @@ export default function AramaPage() {
     setToast("Sonuçlar indirildi");
   };
 
+  // Trigger search when page changes (but not on initial render)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (query.trim() && activeTab === "ictihat") {
+      handleSearch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  const handleNewSearch = useCallback(() => {
+    setCurrentPage(1);
+    // If page was already 1, effect won't fire, so call directly
+    handleSearch();
+  }, [handleSearch]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSearch();
+    if (e.key === "Enter") handleNewSearch();
     if (e.key === "Escape") { setShowHistory(false); inputRef.current?.blur(); }
   };
 
@@ -1103,7 +1180,7 @@ export default function AramaPage() {
                   </button>
                 )}
                 <button
-                  onClick={handleSearch}
+                  onClick={handleNewSearch}
                   disabled={loading || !query.trim()}
                   className="px-4 py-2 bg-[#6C6CFF] hover:bg-[#7B7BFF] disabled:bg-[#1A1A1F] disabled:text-[#5C5C5F] rounded-xl text-[13px] font-medium text-white transition-all duration-150 active:scale-[0.98]"
                 >
@@ -1284,13 +1361,13 @@ export default function AramaPage() {
             >
               <div className="px-4 md:px-6 py-3">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-                  <FilterSelect value={mahkeme} onChange={setMahkeme} options={MAHKEMELER} prefix="Mahkeme" />
-                  <FilterSelect value={daire} onChange={setDaire} options={DAIRELER} prefix="Daire" />
+                  <FilterSelect value={mahkeme} onChange={(v) => { setMahkeme(v); setCurrentPage(1); }} options={MAHKEMELER} prefix="Mahkeme" />
+                  <FilterSelect value={daire} onChange={(v) => { setDaire(v); setCurrentPage(1); }} options={DAIRELER} prefix="Daire" />
                   <div className="relative">
                     <input
                       type="date"
                       value={tarihBaslangic}
-                      onChange={(e) => setTarihBaslangic(e.target.value)}
+                      onChange={(e) => { setTarihBaslangic(e.target.value); setCurrentPage(1); }}
                       title="Başlangıç tarihi"
                       className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 transition-all [color-scheme:dark]"
                     />
@@ -1299,13 +1376,13 @@ export default function AramaPage() {
                     <input
                       type="date"
                       value={tarihBitis}
-                      onChange={(e) => setTarihBitis(e.target.value)}
+                      onChange={(e) => { setTarihBitis(e.target.value); setCurrentPage(1); }}
                       title="Bitiş tarihi"
                       className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[12px] text-[#8B8B8E] focus:outline-none focus:border-[#6C6CFF]/40 transition-all [color-scheme:dark]"
                     />
                   </div>
-                  <FilterSelect value={kaynak} onChange={setKaynak} options={KAYNAKLAR} prefix="Kaynak" />
-                  <FilterSelect value={siralama} onChange={setSiralama} options={SIRALAMALAR} prefix="Sıralama" />
+                  <FilterSelect value={kaynak} onChange={(v) => { setKaynak(v); setCurrentPage(1); }} options={KAYNAKLAR} prefix="Kaynak" />
+                  <FilterSelect value={siralama} onChange={(v) => { setSiralama(v); setCurrentPage(1); }} options={SIRALAMALAR} prefix="Sıralama" />
                 </div>
                 {activeFilterCount > 0 && (
                   <button
@@ -1316,6 +1393,7 @@ export default function AramaPage() {
                       setTarihBitis("");
                       setKaynak("Tümü");
                       setSiralama("Alaka düzeyi");
+                      setCurrentPage(1);
                     }}
                     className="mt-2 text-[11px] text-[#E5484D] hover:text-[#FF6B6F] transition-colors"
                   >
@@ -1375,6 +1453,7 @@ export default function AramaPage() {
             {/* Results panel */}
             {(loading || results || error) && (
               <div
+                ref={resultsContainerRef}
                 className={`overflow-y-auto transition-all duration-200 ${
                   mobileShowDetail ? "hidden md:block" : "flex-1 md:flex-none"
                 } ${
@@ -1447,9 +1526,39 @@ export default function AramaPage() {
                           isSelected={selectedResult?.karar_id === result.karar_id}
                           query={query}
                           onSelect={handleSelectResult}
+                          isBookmarked={bookmarks.has(result.karar_id)}
+                          onToggleBookmark={toggleBookmark}
                         />
                       ))}
                     </motion.div>
+                  )}
+
+                  {/* Pagination bar */}
+                  {hasResults && results.toplam_sayfa > 1 && (
+                    <div className="flex items-center justify-between px-1 py-3 mt-2 border-t border-white/[0.06]">
+                      <span className="text-[12px] text-[#5C5C5F] tabular-nums">
+                        <span className="text-[#8B8B8E] font-medium">{results.toplam_bulunan}</span> sonuçtan sayfa{" "}
+                        <span className="text-[#ECECEE] font-medium">{currentPage}</span> / {results.toplam_sayfa}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage <= 1}
+                          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
+                        >
+                          <ChevronIcon direction="left" />
+                          Onceki
+                        </button>
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage >= results.toplam_sayfa}
+                          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium rounded-lg border border-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed text-[#8B8B8E] hover:text-[#ECECEE] hover:border-white/[0.10] hover:bg-white/[0.03]"
+                        >
+                          Sonraki
+                          <ChevronIcon direction="right" />
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   {/* No results */}
@@ -1490,11 +1599,13 @@ export default function AramaPage() {
               {selectedResult ? (
                 <motion.div
                   key="detail"
-                  className="flex-1 overflow-y-auto bg-[#0C0C0E]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  className={`flex-1 overflow-y-auto bg-[#0C0C0E] ${
+                    mobileShowDetail ? "block" : "hidden md:block"
+                  }`}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
                 >
                   <div className="p-4 md:p-6 max-w-[760px]">
 
@@ -1550,6 +1661,17 @@ export default function AramaPage() {
                           >
                             {copied ? <CheckIcon /> : <CopyIcon />}
                             {copied ? "Kopyalandı" : "Metni Kopyala"}
+                          </button>
+                          <button
+                            onClick={() => toggleBookmark(selectedResult.karar_id)}
+                            className={`flex items-center gap-1.5 px-3 py-2 text-[12px] rounded-xl border transition-all ${
+                              bookmarks.has(selectedResult.karar_id)
+                                ? "text-[#6C6CFF] bg-[#6C6CFF]/[0.06] border-[#6C6CFF]/15 hover:bg-[#6C6CFF]/10"
+                                : "text-[#8B8B8E] hover:text-[#ECECEE] bg-[#111113] border-white/[0.06] hover:border-white/[0.10]"
+                            }`}
+                          >
+                            <BookmarkIcon filled={bookmarks.has(selectedResult.karar_id)} />
+                            {bookmarks.has(selectedResult.karar_id) ? "Kaydedildi" : "Kaydet"}
                           </button>
                           <button
                             onClick={() => {

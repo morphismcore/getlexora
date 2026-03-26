@@ -34,6 +34,7 @@ from app.tasks.ingestion_tasks import (
     ingest_batch_task,
     ingest_daire_task,
     ingest_date_range_task,
+    ingest_exhaustive_task,
     refresh_mevzuat_task,
     REDIS_CHANNEL,
 )
@@ -381,6 +382,44 @@ async def trigger_date_range_ingest(
         "task_id": result.id,
         "start_date": body.start_date,
         "end_date": body.end_date,
+    }
+
+
+class ExhaustiveIngestRequest(BaseModel):
+    court_types: list[str] | None = None
+    concurrent_docs: int = 5
+    doc_delay: float = 0.5
+    page_delay: float = 1.5
+    year_from: int | None = None
+    year_to: int | None = None
+    priority_daireler: list[str] | None = None
+
+
+@router.post("/ingest/exhaustive")
+async def trigger_exhaustive_ingest(
+    body: ExhaustiveIngestRequest = ExhaustiveIngestRequest(),
+    admin: User = Depends(require_platform_admin),
+):
+    """Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek."""
+    result = ingest_exhaustive_task.delay(
+        court_types=body.court_types,
+        concurrent_docs=body.concurrent_docs,
+        doc_delay=body.doc_delay,
+        page_delay=body.page_delay,
+        year_from=body.year_from,
+        year_to=body.year_to,
+        priority_daireler=body.priority_daireler,
+    )
+
+    return {
+        "status": "started",
+        "type": "exhaustive",
+        "task_id": result.id,
+        "court_types": body.court_types or ["yargitay", "danistay"],
+        "concurrent_docs": body.concurrent_docs,
+        "year_from": body.year_from,
+        "year_to": body.year_to,
+        "priority_daireler": body.priority_daireler,
     }
 
 

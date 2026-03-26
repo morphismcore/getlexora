@@ -8,6 +8,9 @@ Hedef: <800ms (onceki: 1.5-4.5s).
 """
 
 import asyncio
+import hashlib
+import json
+import math
 import re
 import time
 import structlog
@@ -75,6 +78,22 @@ class RAGPipeline:
         """
         start = time.monotonic()
 
+        # Check search response cache
+        cache_key = None
+        if self.cache:
+            cache_key = self._build_search_cache_key(request)
+            try:
+                cached = await self.cache.get(cache_key)
+                if cached is not None:
+                    logger.debug("search_cache_hit", query=request.query[:50])
+                    # Reconstruct SearchResponse from cached dict
+                    cached_response = SearchResponse(**cached)
+                    # Update timing to reflect cache hit
+                    cached_response.sure_ms = int((time.monotonic() - start) * 1000)
+                    return cached_response
+            except Exception as e:
+                logger.debug("search_cache_check_error", error=str(e))
+
         # 0. Query expansion (instant, ~1ms — CPU only, no I/O)
         search_query = request.query
         expansion_info = None
@@ -107,18 +126,24 @@ class RAGPipeline:
         tasks = []
         task_labels = []
 
+        # Date filters for Bedesten API
+        date_from = request.tarih_baslangic.isoformat() if request.tarih_baslangic else None
+        date_to = request.tarih_bitis.isoformat() if request.tarih_bitis else None
+
         # Task A: Main Bedesten search
-        tasks.append(self._search_bedesten(search_query, court_types, daire, request.max_sonuc))
+        tasks.append(self._search_bedesten(search_query, court_types, daire, request.max_sonuc, date_from, date_to))
         task_labels.append("bedesten_main")
 
         # Task B: Synonym Bedesten searches (up to 2)
         if expansion_info and expansion_info.get("expanded_queries"):
             for syn_query in expansion_info["expanded_queries"][1:3]:
-                tasks.append(self._search_bedesten_safe(syn_query, court_types, daire, 5))
+                tasks.append(self._search_bedesten_safe(syn_query, court_types, daire, 5, date_from, date_to))
                 task_labels.append("bedesten_synonym")
 
         # Task C: Vector search (embedding + Qdrant in one async call)
-        tasks.append(self._search_vectors(request.query, request.hukuk_alani, request.max_sonuc))
+        # Fetch more candidates to support pagination
+        vector_limit = max(request.max_sonuc * 3, 60)
+        tasks.append(self._search_vectors(request.query, request, vector_limit))
         task_labels.append("vector")
 
         # Run ALL tasks in parallel
@@ -149,16 +174,18 @@ class RAGPipeline:
                 if isinstance(result, list):
                     api_results.extend(result)
 
-        # 2. Merge (instant, ~1ms)
-        results = self._merge_results(api_results, vector_results, request.max_sonuc)
+        # 2. Merge — collect ALL candidates (don't slice yet, pagination needs full set)
+        merge_limit = max(request.max_sonuc * request.sayfa, 60)
+        results = self._merge_results(api_results, vector_results, merge_limit)
 
-        # 3. Cross-encoder reranking — only TOP 10 for speed
+        # 3. Cross-encoder reranking — only TOP results for speed
         if self.reranker and self.settings.reranking_enabled and len(results) > 1:
             try:
+                rerank_top_k = min(len(results), self.settings.rag_rerank_top_k or 20)
                 results = self.reranker.rerank_ictihat(
                     query=request.query,
                     results=results,
-                    top_k=min(10, self.settings.rag_rerank_top_k or request.max_sonuc),
+                    top_k=rerank_top_k,
                 )
                 logger.debug(
                     "reranking_applied",
@@ -168,34 +195,82 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning("reranking_skip", error=str(e))
 
+        # 4. Sort based on siralama parameter
+        if request.siralama == "tarih_desc":
+            results.sort(key=lambda x: x.tarih or "", reverse=True)
+        elif request.siralama == "tarih_asc":
+            results.sort(key=lambda x: x.tarih or "")
+        # else: None — keep relevance_score order (default)
+
+        # 5. Pagination
+        toplam_bulunan = len(results)
+        toplam_sayfa = max(1, math.ceil(toplam_bulunan / request.max_sonuc))
+        page_start = (request.sayfa - 1) * request.max_sonuc
+        page_end = page_start + request.max_sonuc
+        results = results[page_start:page_end]
+
         elapsed = int((time.monotonic() - start) * 1000)
 
-        return SearchResponse(
+        response = SearchResponse(
             sonuclar=results,
-            toplam_bulunan=len(results),
+            toplam_bulunan=toplam_bulunan,
+            sayfa=request.sayfa,
+            toplam_sayfa=toplam_sayfa,
             sure_ms=elapsed,
             query_kullanilan=request.query,
             warnings=search_warnings if search_warnings else [],
         )
 
+        # Cache the search response (TTL: 5 minutes)
+        if self.cache and cache_key:
+            try:
+                await self.cache.set(cache_key, response.model_dump(), ttl=300)
+                logger.debug("search_cache_stored", query=request.query[:50])
+            except Exception as e:
+                logger.debug("search_cache_store_error", error=str(e))
+
+        return response
+
+    # ── Search cache helper ─────────────────────────────────────────
+
+    @staticmethod
+    def _build_search_cache_key(request: SearchRequest) -> str:
+        """Build deterministic cache key from search request parameters."""
+        parts = {
+            "q": request.query,
+            "mahkeme": sorted([m.value for m in request.mahkeme]) if request.mahkeme else None,
+            "daire": request.daire if hasattr(request, "daire") and request.daire else None,
+            "tarih_baslangic": str(request.tarih_baslangic) if request.tarih_baslangic else None,
+            "tarih_bitis": str(request.tarih_bitis) if request.tarih_bitis else None,
+            "hukuk_alani": request.hukuk_alani.value if request.hukuk_alani else None,
+            "max_sonuc": request.max_sonuc,
+            "sayfa": request.sayfa,
+            "siralama": request.siralama if hasattr(request, "siralama") else None,
+        }
+        raw = json.dumps(parts, sort_keys=True, ensure_ascii=False)
+        digest = hashlib.md5(raw.encode()).hexdigest()
+        return f"lexora:search:{digest}"
+
     # ── Parallel search helpers ────────────────────────────────────
 
-    async def _search_bedesten(self, query, court_types, daire, max_results):
+    async def _search_bedesten(self, query, court_types, daire, max_results, date_from=None, date_to=None):
         """Bedesten API search."""
         return await self.yargi.search_unified(
-            keyword=query, court_types=court_types, daire=daire, max_results=max_results
+            keyword=query, court_types=court_types, daire=daire, max_results=max_results,
+            date_from=date_from, date_to=date_to,
         )
 
-    async def _search_bedesten_safe(self, query, court_types, daire, max_results):
+    async def _search_bedesten_safe(self, query, court_types, daire, max_results, date_from=None, date_to=None):
         """Bedesten API search — returns empty on error."""
         try:
             return await self.yargi.search_unified(
-                keyword=query, court_types=court_types, daire=daire, max_results=max_results
+                keyword=query, court_types=court_types, daire=daire, max_results=max_results,
+                date_from=date_from, date_to=date_to,
             )
         except Exception:
             return []
 
-    async def _search_vectors(self, query, hukuk_alani, max_results):
+    async def _search_vectors(self, query, request, max_results):
         """Embedding + Qdrant search — async embedding to not block event loop."""
         try:
             info = await self.vector_store.get_collection_info(
@@ -210,18 +285,25 @@ class RAGPipeline:
                 query_embedding = await self._get_cached_embedding(query)
 
             if query_embedding is None:
-                # Run embedding in thread pool (CPU-bound, don't block event loop)
-                loop = asyncio.get_event_loop()
-                query_embedding = await loop.run_in_executor(
-                    None, self.embedding.embed_query, query
-                )
+                # Use async embedding (GPU API when available, thread pool for CPU)
+                embeddings = await self.embedding.embed_texts_async([query])
+                query_embedding = embeddings[0]
                 # Cache for next time
                 if self.cache:
                     await self._cache_embedding(query, query_embedding)
 
+            # Build filters from request
             filters = {}
-            if hukuk_alani:
-                filters["hukuk_alani"] = hukuk_alani.value
+            if request.hukuk_alani:
+                filters["hukuk_alani"] = request.hukuk_alani.value
+            if request.mahkeme:
+                filters["mahkeme"] = [m.value for m in request.mahkeme]
+            if request.daire:
+                filters["daire"] = request.daire
+            if request.tarih_baslangic:
+                filters["yil_min"] = request.tarih_baslangic.year
+            if request.tarih_bitis:
+                filters["yil_max"] = request.tarih_bitis.year
 
             return await self.vector_store.search_hybrid(
                 collection=self.settings.qdrant_collection_ictihat,

@@ -432,6 +432,81 @@ def ingest_batch_task(
 @celery_app.task(
     bind=True,
     base=LexoraTask,
+    name="app.tasks.ingestion_tasks.ingest_exhaustive_task",
+    autoretry_for=(Exception,),
+    max_retries=5,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    retry_jitter=True,
+    time_limit=86400,
+    soft_time_limit=82800,
+)
+def ingest_exhaustive_task(
+    self,
+    court_types: list[str] | None = None,
+    concurrent_docs: int = 5,
+    doc_delay: float = 0.5,
+    page_delay: float = 1.5,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    priority_daireler: list[str] | None = None,
+):
+    """Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek."""
+    task_id = self.request.id
+    logger.info("celery_ingest_exhaustive_start", task_id=task_id, court_types=court_types)
+
+    self.update_state(state="PROGRESS", meta={
+        "source": "exhaustive",
+        "progress_pct": 0,
+    })
+    _publish_progress({
+        "task_id": task_id,
+        "state": "STARTED",
+        "source": "exhaustive",
+    })
+
+    pipeline = _create_pipeline()
+
+    async def _run():
+        return await pipeline.ingest_exhaustive(
+            court_types=court_types,
+            concurrent_docs=concurrent_docs,
+            doc_delay=doc_delay,
+            page_delay=page_delay,
+            year_from=year_from,
+            year_to=year_to,
+            priority_daireler=priority_daireler,
+        )
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        _publish_progress({
+            "task_id": task_id,
+            "state": "SUCCESS",
+            "source": "exhaustive",
+            "result": result,
+        })
+        logger.info("celery_ingest_exhaustive_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        _publish_progress({
+            "task_id": task_id,
+            "state": "FAILURE",
+            "source": "exhaustive",
+            "error": str(exc),
+        })
+        logger.error("celery_ingest_exhaustive_error", task_id=task_id, error=str(exc))
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
     name="app.tasks.ingestion_tasks.ingest_daire_task",
     autoretry_for=(Exception,),
     max_retries=3,

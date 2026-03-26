@@ -39,7 +39,10 @@ class SearchRequest(BaseModel):
     daire: str | None = None
     tarih_baslangic: date | None = None
     tarih_bitis: date | None = None
+    kaynak: str | None = None
     max_sonuc: int = Field(default=10, ge=1, le=50)
+    sayfa: int = Field(default=1, ge=1, le=100)
+    siralama: str | None = None  # "tarih_desc", "tarih_asc", None=relevance
 
 
 class IctihatResult(BaseModel):
@@ -61,6 +64,8 @@ class IctihatResult(BaseModel):
 class SearchResponse(BaseModel):
     sonuclar: list[IctihatResult]
     toplam_bulunan: int
+    sayfa: int = 1
+    toplam_sayfa: int = 1
     sure_ms: int
     query_kullanilan: str
     guven_skoru: float | None = None

@@ -15,6 +15,7 @@ from qdrant_client.models import (
     PointStruct,
     Filter,
     FieldCondition,
+    MatchAny,
     MatchValue,
     Range,
     SearchParams,
@@ -212,23 +213,39 @@ class VectorStoreService:
         ]
 
     def _build_filter(self, filters: dict) -> Filter:
-        """Filtre dict'ini Qdrant Filter'ına çevir."""
+        """Filtre dict'ini Qdrant Filter'ına çevir. Liste değerler MatchAny ile eşlenir."""
         conditions = []
 
         if "mahkeme" in filters:
-            conditions.append(
-                FieldCondition(key="mahkeme", match=MatchValue(value=filters["mahkeme"]))
-            )
-        if "daire" in filters:
-            conditions.append(
-                FieldCondition(key="daire", match=MatchValue(value=filters["daire"]))
-            )
-        if "hukuk_alani" in filters:
-            conditions.append(
-                FieldCondition(
-                    key="hukuk_alani", match=MatchValue(value=filters["hukuk_alani"])
+            val = filters["mahkeme"]
+            if isinstance(val, list):
+                conditions.append(
+                    FieldCondition(key="mahkeme", match=MatchAny(any=val))
                 )
-            )
+            else:
+                conditions.append(
+                    FieldCondition(key="mahkeme", match=MatchValue(value=val))
+                )
+        if "daire" in filters:
+            val = filters["daire"]
+            if isinstance(val, list):
+                conditions.append(
+                    FieldCondition(key="daire", match=MatchAny(any=val))
+                )
+            else:
+                conditions.append(
+                    FieldCondition(key="daire", match=MatchValue(value=val))
+                )
+        if "hukuk_alani" in filters:
+            val = filters["hukuk_alani"]
+            if isinstance(val, list):
+                conditions.append(
+                    FieldCondition(key="hukuk_alani", match=MatchAny(any=val))
+                )
+            else:
+                conditions.append(
+                    FieldCondition(key="hukuk_alani", match=MatchValue(value=val))
+                )
         if "yil_min" in filters:
             conditions.append(
                 FieldCondition(key="yil", range=Range(gte=filters["yil_min"]))

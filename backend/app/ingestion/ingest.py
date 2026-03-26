@@ -15,7 +15,7 @@ from datetime import datetime
 
 import structlog
 
-from app.services.yargi import YargiService, ITEM_TYPES, YARGITAY_HUKUK_DAIRELERI, YARGITAY_CEZA_DAIRELERI
+from app.services.yargi import YargiService, ITEM_TYPES, YARGITAY_HUKUK_DAIRELERI, YARGITAY_CEZA_DAIRELERI, DANISTAY_DAIRELERI
 from app.services.vector_store import VectorStoreService
 from app.services.embedding import EmbeddingService
 from app.ingestion.chunker import LegalChunker
@@ -374,7 +374,7 @@ class IngestionPipeline:
             for page in range(1, pages + 1):
                 try:
                     result = await self.yargi.search_bedesten(
-                        keyword="*",
+                        keyword="karar",
                         item_type=item_type,
                         birim_adi=d_name,
                         page=page,
@@ -509,7 +509,7 @@ class IngestionPipeline:
             for page in range(1, max_pages + 1):
                 try:
                     result = await self.yargi.search_bedesten(
-                        keyword="*",
+                        keyword="karar",
                         item_type=item_type,
                         page=page,
                         page_size=10,
@@ -616,6 +616,291 @@ class IngestionPipeline:
             "total_embedded": total_embedded,
         }
         _log("success", f"✅ Tarih bazlı ingestion tamamlandı — {total_embedded} embedding")
+        return summary
+
+    async def ingest_exhaustive(
+        self,
+        court_types: list[str] | None = None,
+        concurrent_docs: int = 5,
+        doc_delay: float = 0.5,
+        page_delay: float = 1.5,
+        year_from: int | None = None,
+        year_to: int | None = None,
+        priority_daireler: list[str] | None = None,
+    ) -> dict:
+        """
+        Tüm daireleri sayfa sayfa, bitene kadar çek.
+        "*" yerine "karar" kullanır (API wildcard desteklemiyor).
+        Paralel belge çekme + daire+sayfa checkpoint ile sürdürülebilir.
+        """
+        if court_types is None:
+            court_types = ["yargitay", "danistay"]
+
+        # Date range parameters for Bedesten API
+        api_date_from = f"01.01.{year_from}" if year_from else None
+        api_date_to = f"31.12.{year_to}" if year_to else None
+
+        # Telegram reporting
+        from app.services.telegram import TelegramService
+        telegram = TelegramService()
+        import time as _time
+        last_telegram_report = _time.time()
+        start_time = _time.time()
+
+        checkpoint = self._load_checkpoint()
+        exhaustive_cp = checkpoint.get("exhaustive", {})
+        total_embedded = 0
+        total_fetched = 0
+        total_skipped = 0
+        sem = asyncio.Semaphore(concurrent_docs)
+
+        # Daire listesini oluştur
+        all_daireler = []
+        for ct in court_types:
+            if ct == "yargitay":
+                item_type = ITEM_TYPES["yargitay"]
+                daireler = {**YARGITAY_HUKUK_DAIRELERI, **YARGITAY_CEZA_DAIRELERI}
+            elif ct == "danistay":
+                item_type = ITEM_TYPES["danistay"]
+                daireler = DANISTAY_DAIRELERI
+            else:
+                continue
+            for d_id, d_name in daireler.items():
+                all_daireler.append((ct, item_type, d_id, d_name))
+
+        # Priority daireler: move them to the front
+        if priority_daireler:
+            priority_set = set(priority_daireler)
+            priority_items = [d for d in all_daireler if d[2] in priority_set]
+            rest_items = [d for d in all_daireler if d[2] not in priority_set]
+            all_daireler = priority_items + rest_items
+
+        _log("info", f"🚀 Exhaustive ingestion başladı — {len(all_daireler)} daire, {len(court_types)} mahkeme")
+        _update_state(
+            running=True, source="exhaustive",
+            started_at=datetime.now().isoformat(),
+            fetched=0, embedded=0, errors=0,
+            total_topics=len(all_daireler), completed_topics=0,
+        )
+
+        async def _fetch_doc(doc_id: str) -> tuple[str, str]:
+            """Semaphore ile rate-limited belge çekme."""
+            async with sem:
+                try:
+                    doc = await self.yargi.get_document(doc_id)
+                    content = doc.get("data", {}).get("decoded_content", "")
+                    await asyncio.sleep(doc_delay)
+                    return doc_id, content
+                except Exception as e:
+                    logger.warning("exhaustive_doc_error", doc_id=doc_id, error=str(e))
+                    await asyncio.sleep(doc_delay * 2)
+                    return doc_id, ""
+
+        completed_daire_count = 0
+
+        try:
+            for ct, item_type, d_id, d_name in all_daireler:
+                daire_key = f"{ct}:{d_id}"
+                daire_cp = exhaustive_cp.get(daire_key, {})
+
+                if daire_cp.get("done"):
+                    completed_daire_count += 1
+                    _update_state(completed_topics=completed_daire_count)
+                    continue
+
+                start_page = daire_cp.get("last_page", 0) + 1
+                daire_embedded = daire_cp.get("embedded", 0)
+                daire_total_api = None
+                consecutive_empty = 0
+
+                _log("info", f"📋 {ct.upper()} {d_name} — sayfa {start_page}'den devam")
+                _update_state(task=f"{ct} {d_name} (p{start_page})")
+
+                page = start_page
+                while True:
+                    try:
+                        result = await self.yargi.search_bedesten(
+                            keyword="karar",
+                            item_type=item_type,
+                            birim_adi=d_name,
+                            page=page,
+                            page_size=10,
+                            date_from=api_date_from,
+                            date_to=api_date_to,
+                        )
+
+                        items = result.get("data", {}).get("emsalKararList", [])
+                        api_total = result.get("data", {}).get("total", 0)
+
+                        if daire_total_api is None:
+                            daire_total_api = api_total
+                            _log("info", f"📊 {d_name}: API toplam {api_total:,} karar")
+
+                        if not items:
+                            consecutive_empty += 1
+                            if consecutive_empty >= 3:
+                                break
+                            page += 1
+                            await asyncio.sleep(page_delay)
+                            continue
+
+                        consecutive_empty = 0
+                        total_fetched += len(items)
+
+                        # Paralel belge çekme
+                        doc_ids = [item.get("documentId", "") for item in items if item.get("documentId")]
+                        doc_results = await asyncio.gather(*[_fetch_doc(did) for did in doc_ids])
+
+                        # Chunk ve embed
+                        all_chunks = []
+                        for item, (doc_id, content) in zip(
+                            [i for i in items if i.get("documentId")],
+                            doc_results,
+                        ):
+                            if not content:
+                                continue
+
+                            clean = clean_legal_html(content)
+                            if len(clean) < self.settings.min_karar_chars:
+                                continue
+
+                            esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
+                            karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+                            tarih = item.get("kararTarihiStr", "")
+                            yil = int(tarih.split(".")[-1]) if tarih and "." in tarih else None
+
+                            metadata = {
+                                "karar_id": doc_id,
+                                "mahkeme": ct.lower().strip(),
+                                "daire": d_name.strip(),
+                                "esas_no": esas_no,
+                                "karar_no": karar_no,
+                                "tarih": tarih,
+                                "yil": yil,
+                                "kaynak": "bedesten",
+                            }
+
+                            chunks = self.chunker.chunk_karar(clean, metadata)
+                            if not chunks:
+                                chunks = self.chunker.chunk_generic(clean, metadata)
+                            all_chunks.extend(chunks)
+
+                        if all_chunks:
+                            texts = [c["text"] for c in all_chunks]
+                            embeddings = await self.embedding.embed_texts_async(texts)
+
+                            points = []
+                            for i, (chunk, emb) in enumerate(zip(all_chunks, embeddings)):
+                                point_id = self._generate_id(
+                                    chunk["metadata"].get("karar_id", "") + str(i)
+                                )
+                                points.append({
+                                    "id": point_id,
+                                    "dense_vector": emb["dense_vector"],
+                                    "sparse_vector": emb.get("sparse_vector"),
+                                    "payload": {
+                                        **chunk["metadata"],
+                                        "text": chunk["text"][:self.settings.max_payload_text_chars],
+                                        "ozet": chunk["text"][:500],
+                                    },
+                                })
+
+                            await self.vector_store.upsert_points(
+                                collection=self.settings.qdrant_collection_ictihat,
+                                points=points,
+                            )
+                            daire_embedded += len(points)
+                            total_embedded += len(points)
+
+                        # Checkpoint her sayfa
+                        exhaustive_cp[daire_key] = {
+                            "last_page": page,
+                            "embedded": daire_embedded,
+                            "api_total": daire_total_api,
+                        }
+                        checkpoint["exhaustive"] = exhaustive_cp
+                        self._save_checkpoint(checkpoint)
+
+                        _update_state(
+                            fetched=total_fetched,
+                            embedded=total_embedded,
+                            task=f"{ct} {d_name} (p{page}/{math.ceil((daire_total_api or 1)/10)})",
+                        )
+
+                        # Telegram report every 2 hours
+                        now_ts = _time.time()
+                        if now_ts - last_telegram_report >= 7200:
+                            elapsed_str = f"{(now_ts - start_time) / 3600:.1f}h"
+                            await telegram.send_ingestion_report({
+                                "source": "exhaustive",
+                                "embedded": total_embedded,
+                                "fetched": total_fetched,
+                                "errors": _ingest_state.get("errors", 0),
+                                "daire": d_name,
+                                "page": f"{page}/{math.ceil((daire_total_api or 1) / 10)}",
+                                "elapsed": elapsed_str,
+                                "status": "devam ediyor",
+                            })
+                            last_telegram_report = now_ts
+
+                        # Her 50 sayfada log
+                        if page % 50 == 0:
+                            _log("info", f"📄 {d_name} sayfa {page} — {daire_embedded} embedding (API toplam: {daire_total_api:,})")
+
+                        # Son sayfaya ulaştıysak dur
+                        max_page = math.ceil((daire_total_api or 1) / 10)
+                        if page >= max_page:
+                            break
+
+                        page += 1
+                        await asyncio.sleep(page_delay)
+
+                    except Exception as e:
+                        logger.error("exhaustive_page_error", daire=d_name, page=page, error=str(e))
+                        _update_state(errors=_ingest_state["errors"] + 1)
+                        await telegram.send_message(
+                            f"\u26a0\ufe0f *Exhaustive hata*\n"
+                            f"Daire: `{d_name}` sayfa {page}\n"
+                            f"Hata: `{str(e)[:200]}`"
+                        )
+                        # Rate limit veya geçici hata — biraz bekle ve devam et
+                        await asyncio.sleep(10.0)
+                        page += 1
+                        continue
+
+                # Daire tamamlandı
+                exhaustive_cp[daire_key]["done"] = True
+                checkpoint["exhaustive"] = exhaustive_cp
+                self._save_checkpoint(checkpoint)
+
+                completed_daire_count += 1
+                _update_state(completed_topics=completed_daire_count)
+                _log("info", f"✅ {d_name} tamamlandı — {daire_embedded} embedding ({page} sayfa)")
+                await asyncio.sleep(3.0)
+
+        finally:
+            _update_state(running=False, source=None, task=None)
+
+        summary = {
+            "court_types": court_types,
+            "daireler_total": len(all_daireler),
+            "daireler_completed": completed_daire_count,
+            "total_fetched": total_fetched,
+            "total_embedded": total_embedded,
+        }
+        _log("success", f"🎉 Exhaustive ingestion tamamlandı — {total_embedded} embedding, {completed_daire_count} daire")
+
+        # Final Telegram completion report
+        elapsed_str = f"{(_time.time() - start_time) / 3600:.1f}h"
+        await telegram.send_ingestion_report({
+            "source": "exhaustive",
+            "embedded": total_embedded,
+            "fetched": total_fetched,
+            "errors": _ingest_state.get("errors", 0),
+            "elapsed": elapsed_str,
+            "status": f"TAMAMLANDI ({completed_daire_count}/{len(all_daireler)} daire)",
+        })
+
         return summary
 
     async def ingest_aym(

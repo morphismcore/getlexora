@@ -158,7 +158,6 @@ class EmbeddingService:
                 total=len(texts),
                 mode="gpu",
             )
-            await asyncio.sleep(0.1)
         return results
 
     # ── Local CPU Implementations ───────────────────────────
@@ -224,7 +223,6 @@ class EmbeddingService:
                 total=len(texts),
                 mode="cpu",
             )
-            await asyncio.sleep(0.5)
         return results
 
     @staticmethod

@@ -63,7 +63,7 @@ class IncrementalIngestion:
 
                 try:
                     result = await self.yargi.search_bedesten(
-                        keyword="*",
+                        keyword="karar",
                         item_type=item_type,
                         page=page,
                         page_size=10,

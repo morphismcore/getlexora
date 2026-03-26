@@ -36,6 +36,8 @@ class Settings(BaseSettings):
 
     # Bedesten API (yargi-mcp source)
     bedesten_base_url: str = "https://bedesten.adalet.gov.tr"
+    bedesten_timeout: float = 15.0
+    bedesten_max_retries: int = 3
 
     # Mevzuat API
     mevzuat_base_url: str = "https://www.mevzuat.gov.tr"
@@ -83,6 +85,10 @@ class Settings(BaseSettings):
 
     # Frontend URL (for password reset links etc.)
     frontend_url: str = "http://localhost:3000"
+
+    # Telegram notifications
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
 
     # CORS
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
