@@ -230,6 +230,22 @@ async def system_status(
     except Exception as e:
         checks["redis"] = {"status": "error", "error": str(e)}
 
+    # GPU Embedding
+    try:
+        import httpx
+        gpu_url = settings.embedding_api_url
+        if gpu_url:
+            r = httpx.get(f"{gpu_url}/health", timeout=5)
+            if r.status_code == 200:
+                gpu_info = r.json()
+                checks["gpu"] = {"status": "ok", "gpu": gpu_info.get("gpu", ""), "model": gpu_info.get("model", "")}
+            else:
+                checks["gpu"] = {"status": "error", "http_status": r.status_code}
+        else:
+            checks["gpu"] = {"status": "unavailable", "reason": "EMBEDDING_API_URL not set"}
+    except Exception as e:
+        checks["gpu"] = {"status": "error", "error": str(e)}
+
     return {"checks": checks}
 
 
