@@ -593,27 +593,57 @@ async def ingest_stream(
         except Exception:
             pubsub = None
 
+        last_state: dict = {}
+
         try:
             while True:
-                # In-process state (backward compat)
+                data: dict = {**_ingest_state, "new_logs": []}
+
+                # In-process logs (backward compat for in-process ingestion)
                 current_logs = _ingest_logs.copy()
                 new_logs = current_logs[last_log_count:] if last_log_count < len(current_logs) else []
                 last_log_count = len(current_logs)
+                if new_logs:
+                    data["new_logs"] = new_logs[-10:]
 
-                data = {
-                    **_ingest_state,
-                    "new_logs": new_logs[-10:],
-                }
-
-                # Check Redis pub/sub for Celery worker events
+                # Read ALL pending Redis pub/sub messages from Celery worker
                 if pubsub:
                     try:
-                        msg = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=0.1)
-                        if msg and msg["type"] == "message":
-                            celery_event = json.loads(msg["data"])
-                            data["celery_event"] = celery_event
+                        for _ in range(20):  # drain up to 20 messages per cycle
+                            msg = await asyncio.wait_for(pubsub.get_message(ignore_subscribe_messages=True), timeout=0.05)
+                            if msg and msg["type"] == "message":
+                                event = json.loads(msg["data"])
+                                last_state = event
+                                # Extract logs from worker event
+                                if event.get("new_logs"):
+                                    data["new_logs"].extend(event["new_logs"][-5:])
+                            else:
+                                break
                     except (asyncio.TimeoutError, Exception):
                         pass
+
+                # Use last worker state as primary (worker runs in separate container)
+                if last_state:
+                    worker_state = last_state.get("state", "")
+                    is_running = worker_state in ("STARTED", "PROGRESS", "RUNNING")
+                    data.update({
+                        "running": last_state.get("running", is_running),
+                        "source": last_state.get("source", ""),
+                        "task": last_state.get("task", ""),
+                        "fetched": last_state.get("fetched", 0),
+                        "embedded": last_state.get("embedded", 0),
+                        "errors": last_state.get("errors", 0),
+                        "total_topics": last_state.get("total_topics", 0),
+                        "completed_topics": last_state.get("completed_topics", 0),
+                        "started_at": last_state.get("started_at"),
+                    })
+                    # Include worker log messages
+                    if last_state.get("msg"):
+                        data["new_logs"].append({
+                            "ts": last_state.get("started_at", ""),
+                            "level": "info" if worker_state != "FAILURE" else "error",
+                            "msg": last_state["msg"],
+                        })
 
                 yield f"data: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
                 await asyncio.sleep(2)
