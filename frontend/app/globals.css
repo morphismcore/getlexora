@@ -239,3 +239,83 @@ html {
     text-shadow: none !important;
   }
 }
+
+/* Search page enhancements */
+.court-accent-line {
+  position: relative;
+}
+.court-accent-line::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  opacity: 0.15;
+}
+
+/* Justified legal text */
+.legal-text {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  word-break: break-word;
+  line-height: 1.85;
+  font-variant-ligatures: common-ligatures;
+}
+
+/* Official document header style */
+.official-header {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  border-top: 2px solid var(--court-color, #6C6CFF);
+}
+
+/* Animated search dot */
+@keyframes search-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.search-pulse {
+  animation: search-pulse 2s ease-in-out infinite;
+}
+
+/* Source dots row */
+.source-dots {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.source-dot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #5C5C5F;
+}
+.source-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot-color);
+}
+
+/* Card left accent */
+.card-accent-left {
+  border-left: 3px solid var(--accent-color, #6C6CFF);
+}
+
+/* Better scrollbar for results */
+.results-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.results-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.results-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+}
+.results-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}

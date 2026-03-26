@@ -575,11 +575,12 @@ const SearchResultCard = React.memo(function SearchResultCard({
       key={result.karar_id}
       variants={listItem}
       onClick={() => onSelect(result)}
-      className={`group w-full text-left bg-[#111113] border rounded-2xl p-5 transition-all duration-200 relative overflow-hidden min-w-0 ${
+      className={`group w-full text-left bg-[#111113] border rounded-2xl p-5 transition-all duration-200 relative overflow-hidden min-w-0 border-l-[3px] ${
         isSelected
           ? "border-[#6C6CFF]/30 bg-[#6C6CFF]/[0.04] shadow-[0_0_0_1px_rgba(108,108,255,0.15)]"
           : `border-white/[0.06] ${court.hoverBorder} hover:bg-[#141418]`
       }`}
+      style={{ borderLeftColor: court.barColor }}
     >
       {/* Top row: court badge + daire + bookmark + copy */}
       <div className="flex items-center gap-2 mb-3">
@@ -627,13 +628,13 @@ const SearchResultCard = React.memo(function SearchResultCard({
 
       {/* Case numbers row — prominent monospace display */}
       <div className="flex items-baseline gap-3 mb-2.5">
-        <span className="font-mono text-[14px] font-medium text-[#ECECEE] tracking-tight">
-          <span className="text-[#5C5C5F] text-[10px] font-sans mr-1">E.</span>
+        <span className="font-mono text-[15px] font-bold text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[10px] font-sans font-semibold mr-1">E.</span>
           {result.esas_no}
         </span>
         <span className="text-[#3A3A3F] text-[10px]">/</span>
-        <span className="font-mono text-[14px] font-medium text-[#ECECEE] tracking-tight">
-          <span className="text-[#5C5C5F] text-[10px] font-sans mr-1">K.</span>
+        <span className="font-mono text-[15px] font-bold text-[#ECECEE] tracking-tight">
+          <span className="text-[#5C5C5F] text-[10px] font-sans font-semibold mr-1">K.</span>
           {result.karar_no}
         </span>
         <span className="ml-auto text-[11px] text-[#5C5C5F] tabular-nums flex items-center gap-1">
@@ -667,6 +668,9 @@ const SearchResultCard = React.memo(function SearchResultCard({
       {result.relevance_score !== undefined && (
         <RelevanceBar score={result.relevance_score} />
       )}
+
+      {/* Subtle gradient line at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${court.barColor}20, transparent)` }} />
     </motion.button>
   );
 });
@@ -1640,28 +1644,50 @@ export default function AramaPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="text-center px-4 max-w-lg"
+                  className="text-center px-4 max-w-xl"
                 >
-                  <div className="relative w-16 h-16 mx-auto mb-5">
-                    <div className="absolute inset-0 bg-[#6C6CFF]/10 rounded-2xl blur-xl" />
-                    <div className="relative w-16 h-16 bg-[#111113] border border-white/[0.06] rounded-2xl flex items-center justify-center">
-                      <SearchIcon className="w-7 h-7 text-[#6C6CFF]/60" />
+                  <div className="relative w-20 h-20 mx-auto mb-6">
+                    <div className="absolute inset-[-8px] bg-[#6C6CFF]/15 rounded-3xl blur-2xl animate-pulse" />
+                    <div className="absolute inset-[-4px] bg-[#6C6CFF]/8 rounded-2xl blur-lg" />
+                    <div className="relative w-20 h-20 bg-[#111113] border border-[#6C6CFF]/15 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(108,108,255,0.12)]">
+                      <SearchIcon className="w-9 h-9 text-[#6C6CFF]/70" />
                     </div>
                   </div>
 
-                  <h2 className="text-[16px] font-semibold text-[#ECECEE] mb-1.5">
+                  <h2 className="text-[18px] font-bold text-[#ECECEE] mb-2">
                     Hukuk veritabanında arama yapın
                   </h2>
-                  <p className="text-[13px] text-[#5C5C5F] mb-6 leading-relaxed">
+                  <p className="text-[13px] text-[#5C5C5F] mb-3 leading-relaxed">
                     Doğal dil ile içtihat arayın. AI destekli semantik arama ile en alakalı kararları bulun.
                   </p>
+                  <p className="text-[12px] text-[#6C6CFF]/60 font-medium mb-5 tracking-wide">
+                    65.000+ karar · 7 kaynak · yapay zekâ destekli hibrit arama
+                  </p>
 
-                  <div className="flex flex-wrap justify-center gap-2">
+                  {/* Source dots */}
+                  <div className="flex items-center justify-center gap-4 mb-7 flex-wrap">
+                    {[
+                      { label: "Yargıtay", color: "#6C6CFF" },
+                      { label: "Danıştay", color: "#A78BFA" },
+                      { label: "AYM", color: "#E5484D" },
+                      { label: "AİHM", color: "#3DD68C" },
+                      { label: "Rekabet", color: "#30A46C" },
+                      { label: "KVKK", color: "#F76B15" },
+                      { label: "Mevzuat", color: "#FFB224" },
+                    ].map((s) => (
+                      <div key={s.label} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                        <span className="text-[11px] text-[#5C5C5F]">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap justify-center gap-2.5">
                     {SUGGESTED_QUERIES.map((q) => (
                       <button
                         key={q}
                         onClick={() => handleSuggestedQuery(q)}
-                        className="px-3 py-1.5 text-[12px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-lg hover:border-[#6C6CFF]/30 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.04] transition-all duration-200"
+                        className="px-4 py-2 text-[13px] text-[#8B8B8E] bg-[#111113] border border-white/[0.06] rounded-xl hover:border-[#6C6CFF]/40 hover:text-[#ECECEE] hover:bg-[#6C6CFF]/[0.06] hover:shadow-[0_0_16px_rgba(108,108,255,0.08)] transition-all duration-300"
                       >
                         {q}
                       </button>
@@ -1731,9 +1757,13 @@ export default function AramaPage() {
                   {/* Status bar */}
                   {results && !loading && (
                     <div className="flex items-center justify-between px-1 mb-1">
-                      <p className="text-[12px] text-[#5C5C5F] tabular-nums">
-                        <span className="text-[#8B8B8E] font-medium">{results.toplam_bulunan}</span> sonuç bulundu
-                        <span className="text-[#3A3A3F] mx-1.5">·</span>
+                      <p className="text-[12px] text-[#5C5C5F] tabular-nums flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3DD68C] opacity-50" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3DD68C]" />
+                        </span>
+                        <span className="text-[#ECECEE] font-semibold text-[14px]">{results.toplam_bulunan}</span> sonuç bulundu
+                        <span className="text-[#3A3A3F] mx-0.5">·</span>
                         {formatDuration(results.sure_ms)}
                       </p>
                       {results.sonuclar.length > 0 && (
@@ -1947,36 +1977,40 @@ export default function AramaPage() {
                       Sonuçlara Dön
                     </button>
 
-                    {/* Detail header */}
-                    <div className="mb-6">
-                      <div className="flex items-center gap-2.5 mb-3">
-                        {(() => {
-                          const court = getCourtStyle(selectedResult.mahkeme);
-                          return (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide uppercase ${court.bg} ${court.text} border border-current/10`}>
-                              {court.label || selectedResult.mahkeme}
-                            </span>
-                          );
-                        })()}
-                        {selectedResult.daire && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
-                            {selectedResult.daire}
-                          </span>
-                        )}
-                      </div>
+                    {/* Detail header — official-looking card */}
+                    <div className="mb-6 bg-[#111113] border border-white/[0.06] rounded-2xl overflow-hidden" style={{ borderTopWidth: "3px", borderTopColor: getCourtStyle(selectedResult.mahkeme).barColor }}>
+                      <div className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2.5">
+                            {(() => {
+                              const court = getCourtStyle(selectedResult.mahkeme);
+                              return (
+                                <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-[13px] font-bold tracking-wide uppercase ${court.bg} ${court.text}`}>
+                                  {court.label || selectedResult.mahkeme}
+                                </span>
+                              );
+                            })()}
+                            {selectedResult.daire && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-medium bg-white/[0.04] text-[#8B8B8E] border border-white/[0.06]">
+                                {selectedResult.daire}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[12px] text-[#8B8B8E] tabular-nums font-medium">{formatTurkishDate(selectedResult.tarih)}</span>
+                        </div>
 
-                      <div className="flex items-center gap-2.5 text-[13px]">
-                        <span className="font-mono text-[#ECECEE]">
-                          <span className="text-[#5C5C5F] text-[11px]">Esas </span>
-                          {selectedResult.esas_no}
-                        </span>
-                        <span className="text-[#3A3A3F]">/</span>
-                        <span className="font-mono text-[#ECECEE]">
-                          <span className="text-[#5C5C5F] text-[11px]">Karar </span>
-                          {selectedResult.karar_no}
-                        </span>
-                        <span className="text-[#3A3A3F]">/</span>
-                        <span className="text-[#5C5C5F] tabular-nums">{selectedResult.tarih}</span>
+                        <div className="h-px bg-white/[0.06] my-3" />
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <span className="text-[10px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">Esas No</span>
+                            <span className="font-mono text-[15px] font-bold text-[#ECECEE]">{selectedResult.esas_no}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-semibold text-[#5C5C5F] uppercase tracking-wider block mb-1">Karar No</span>
+                            <span className="font-mono text-[15px] font-bold text-[#ECECEE]">{selectedResult.karar_no}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -2128,12 +2162,12 @@ export default function AramaPage() {
                     ) : kararDetail ? (
                       <div className="space-y-6">
                         {/* Summary card */}
-                        <div className="bg-[#111113] border border-white/[0.06] rounded-2xl p-5">
+                        <div className="bg-[#13131A] border border-[#6C6CFF]/10 rounded-2xl p-5">
                           <div className="flex items-center gap-2 mb-3">
                             <div className="w-1 h-4 bg-[#6C6CFF] rounded-full" />
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Özet</h3>
                           </div>
-                          <p className="text-[13px] text-[#ECECEE] leading-[1.7] break-words">
+                          <p className="text-[13px] text-[#ECECEE] leading-[1.8] break-words">
                             {highlightText(kararDetail.ozet, query)}
                           </p>
                         </div>
@@ -2144,7 +2178,7 @@ export default function AramaPage() {
                             <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
                           </div>
-                          <div className="prose prose-invert max-w-none overflow-hidden break-words">
+                          <div className="prose prose-invert max-w-none overflow-hidden break-words" style={{ lineHeight: "1.85", textAlign: "justify" }}>
                             {kararDetail.tam_metin ? (
                               <CitationText
                                 text={kararDetail.tam_metin}
