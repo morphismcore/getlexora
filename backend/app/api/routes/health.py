@@ -26,7 +26,7 @@ async def health_details(current_user: User = Depends(get_current_user)):
     t0 = time.monotonic()
     try:
         from qdrant_client import QdrantClient
-        client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=5)
+        client = QdrantClient(url=f"http://{settings.qdrant_host}:{settings.qdrant_port}", timeout=5)
         collections = client.get_collections().collections
         collection_details = {}
         for col in collections:

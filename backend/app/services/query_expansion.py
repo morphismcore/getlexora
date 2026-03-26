@@ -1,12 +1,31 @@
 """
 Türkçe Hukuk Query Expansion Service.
 Kısaltmaları açar, eş anlamlı terimleri ekler.
+Türkçe karakter normalizasyonu ile fuzzy eşleştirme yapar.
 """
 
 import re
 import structlog
 
 logger = structlog.get_logger()
+
+# ---------------------------------------------------------------------------
+# Türkçe Karakter Normalizasyon Tablosu
+# ---------------------------------------------------------------------------
+
+_TR_CHAR_MAP = str.maketrans(
+    "ıİşŞçÇğĞöÖüÜ",
+    "iIsScCgGoOuU",
+)
+
+
+def normalize_turkish(text: str) -> str:
+    """Türkçe özel karakterleri ASCII karşılıklarına dönüştürür.
+
+    'iş kazası' -> 'is kazasi', 'İİK' -> 'IIK' vb.
+    Eşleştirme (matching) amaçlıdır; orijinal metin korunmalıdır.
+    """
+    return text.translate(_TR_CHAR_MAP)
 
 # ---------------------------------------------------------------------------
 # Türkçe Hukuk Kısaltma Sözlüğü
@@ -56,6 +75,10 @@ ABBREVIATION_MAP: dict[str, str] = {
     "HSK": "Hakimler ve Savcılar Kurulu",
     "UYAP": "Ulusal Yargı Ağı Projesi",
     "TBMM": "Türkiye Büyük Millet Meclisi",
+    "HD": "Hukuk Dairesi",
+    "CD": "Ceza Dairesi",
+    "HGK": "Hukuk Genel Kurulu",
+    "CGK": "Ceza Genel Kurulu",
 
     # Diğer Önemli Kanunlar
     "KHK": "Kanun Hükmünde Kararname",
@@ -66,7 +89,7 @@ ABBREVIATION_MAP: dict[str, str] = {
     "KIK": "Kamu İhale Kanunu",
     "VUK": "Vergi Usul Kanunu",
     "GVK": "Gelir Vergisi Kanunu",
-    "KVK": "Kurumlar Vergisi Kanunu",
+    "KVK": "Katma Değer Vergisi Kanunu",
     "KDV": "Katma Değer Vergisi",
     "ÖTV": "Özel Tüketim Vergisi",
     "MTV": "Motorlu Taşıtlar Vergisi",
@@ -87,12 +110,14 @@ SYNONYM_MAP: dict[str, list[str]] = {
     "fazla mesai": ["fazla çalışma", "hafta tatili çalışması", "ulusal bayram çalışması"],
     "mobbing": ["psikolojik taciz", "işyerinde bezdiri", "yıldırma"],
     "sendika": ["sendikal faaliyet", "toplu iş sözleşmesi", "sendika hakkı"],
+    "fesih": ["sözleşme feshi", "iş akdi feshi", "haksız fesih", "haklı fesih"],
 
     # Aile Hukuku
     "boşanma": ["evliliğin sona ermesi", "evlilik birliğinin temelinden sarsılması"],
     "nafaka": ["yoksulluk nafakası", "iştirak nafakası", "tedbir nafakası"],
     "velayet": ["çocuk velayeti", "müşterek çocuk", "çocuğun üstün yararı"],
     "mal paylaşımı": ["edinilmiş mallara katılma", "mal rejimi tasfiyesi"],
+    "miras": ["tereke", "muris", "miras paylaşımı", "mirasçılık belgesi"],
 
     # Ceza Hukuku
     "dolandırıcılık": ["nitelikli dolandırıcılık", "hile", "aldatma"],
@@ -115,13 +140,15 @@ SYNONYM_MAP: dict[str, list[str]] = {
     "imar": ["imar planı", "yapı ruhsatı", "imar barışı"],
 
     # İcra-İflas
-    "haciz": ["haciz işlemi", "menkul haczi", "gayrimenkul haczi"],
+    "haciz": ["haciz işlemi", "menkul haczi", "gayrimenkul haczi", "icra takibi"],
     "itirazın iptali": ["itirazın kaldırılması", "icra takibi"],
     "menfi tespit": ["borçlu olmadığının tespiti", "istirdat"],
 
     # Gayrimenkul / Kira
     "tahliye": ["kiracı tahliyesi", "tahliye taahhüdü"],
+    "kira": ["kira sözleşmesi", "tahliye", "kira bedeli"],
     "kira tespit": ["kira bedeli tespiti", "kira artışı"],
+    "ipotek": ["rehin", "ipotek tesisi", "taşınmaz rehni"],
     "tapu": ["tapu iptali", "tapu tescili", "taşınmaz"],
     "kamulaştırma": ["istimlak", "bedel tespiti"],
 
@@ -146,6 +173,15 @@ for _key, _synonyms in SYNONYM_MAP.items():
             _REVERSE_MAP[_syn] = []
         _REVERSE_MAP[_syn].append(_key)
 
+# Normalize edilmiş synonym anahtarları (ASCII) -> orijinal anahtar eşlemesi
+# "is kazasi" -> "iş kazası" gibi eşleştirmeler için kullanılır
+_NORMALIZED_SYNONYM_KEYS: dict[str, str] = {
+    normalize_turkish(k): k for k in SYNONYM_MAP
+}
+_NORMALIZED_REVERSE_KEYS: dict[str, str] = {
+    normalize_turkish(k): k for k in _REVERSE_MAP
+}
+
 
 class QueryExpansionService:
     """Arama sorgularını genişleten servis."""
@@ -158,11 +194,17 @@ class QueryExpansionService:
         )
 
     def expand_abbreviations(self, query: str) -> str:
-        """Kısaltmaları açarak sorguyu genişlet."""
+        """Kısaltmaları açarak sorguyu genişlet.
+
+        Hem orijinal hem de normalize edilmiş (ASCII) formlarla eşleşir.
+        Örneğin 'IIK' sorgusu 'İİK' kısaltmasını da yakalar.
+        """
         def _replace(match: re.Match) -> str:
             abbr = match.group(0).upper()
+            abbr_norm = normalize_turkish(abbr)
             for key in ABBREVIATION_MAP:
-                if key.upper() == abbr or key == abbr:
+                key_upper = key.upper()
+                if key_upper == abbr or normalize_turkish(key_upper) == abbr_norm:
                     full = ABBREVIATION_MAP[key]
                     return f"{match.group(0)} ({full})"
             return match.group(0)
@@ -170,18 +212,39 @@ class QueryExpansionService:
         return self._abbr_pattern.sub(_replace, query)
 
     def get_synonyms(self, query: str) -> list[str]:
-        """Sorgu için eş anlamlı terimleri bul."""
+        """Sorgu için eş anlamlı terimleri bul.
+
+        Hem orijinal Türkçe karakterlerle hem de normalize edilmiş
+        (ASCII) formlarla eşleştirme yapar. Böylece "is kazasi" sorgusu
+        "iş kazası" eş anlamlılarını da bulabilir.
+        """
         query_lower = query.lower().strip()
+        query_normalized = normalize_turkish(query_lower)
         synonyms: set[str] = set()
 
-        # Doğrudan eşleşme
+        # Doğrudan eşleşme (orijinal Türkçe karakterlerle)
         for key, syns in SYNONYM_MAP.items():
             if key in query_lower:
                 synonyms.update(syns)
 
+        # Normalize edilmiş eşleşme (ASCII karakterlerle)
+        # Orijinal eşleşmede bulunamayan terimleri yakalar
+        for norm_key, orig_key in _NORMALIZED_SYNONYM_KEYS.items():
+            if norm_key in query_normalized and orig_key not in query_lower:
+                synonyms.update(SYNONYM_MAP[orig_key])
+
         # Ters eşleşme (eş anlamlı terimden ana terime)
         for syn_key, main_keys in _REVERSE_MAP.items():
             if syn_key in query_lower:
+                synonyms.update(main_keys)
+                for mk in main_keys:
+                    if mk in SYNONYM_MAP:
+                        synonyms.update(SYNONYM_MAP[mk])
+
+        # Ters eşleşme — normalize edilmiş
+        for norm_key, orig_key in _NORMALIZED_REVERSE_KEYS.items():
+            if norm_key in query_normalized and orig_key not in query_lower:
+                main_keys = _REVERSE_MAP[orig_key]
                 synonyms.update(main_keys)
                 for mk in main_keys:
                     if mk in SYNONYM_MAP:
@@ -207,6 +270,11 @@ class QueryExpansionService:
         synonyms = self.get_synonyms(query)
 
         expanded_queries = [query]
+
+        # Kısaltma açılmış form farklıysa, onu da ekle
+        if expanded != query:
+            expanded_queries.append(expanded)
+
         for syn in synonyms[:3]:
             expanded_queries.append(f"{query} {syn}")
 

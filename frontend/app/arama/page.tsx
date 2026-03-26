@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import CitationText from "./_components/CitationText";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -659,6 +660,8 @@ export default function AramaPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
+  const [relatedResults, setRelatedResults] = useState<IctihatResult[]>([]);
+  const relatedCacheRef = useRef<Record<string, IctihatResult[]>>({});
 
   const [llmStatus, setLlmStatus] = useState<"ok" | "error" | "loading">("loading");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -728,6 +731,33 @@ export default function AramaPage() {
       if (saved) try { setSearchHistory(JSON.parse(saved)); } catch { /* ignore */ }
     }
   }, []);
+
+  // Fetch related decisions when a karar detail is loaded
+  useEffect(() => {
+    if (!kararDetail) { setRelatedResults([]); return; }
+    const kararId = kararDetail.id;
+    // Check cache first
+    if (relatedCacheRef.current[kararId]) {
+      setRelatedResults(relatedCacheRef.current[kararId]);
+      return;
+    }
+    const ozetText = kararDetail.ozet || kararDetail.tam_metin?.slice(0, 500) || "";
+    if (!ozetText) return;
+    let cancelled = false;
+    fetch(`${API_URL}/api/v1/search/related`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ karar_id: kararId, ozet: ozetText, limit: 5 }),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled || !data) return;
+        setRelatedResults(data);
+        relatedCacheRef.current[kararId] = data;
+      })
+      .catch(() => { /* silently ignore */ });
+    return () => { cancelled = true; };
+  }, [kararDetail]);
 
   // Auto-scroll AI chat
   useEffect(() => {
@@ -1063,6 +1093,7 @@ export default function AramaPage() {
 
     setSelectedResult(result);
     setMobileShowDetail(true);
+    setRelatedResults([]);
 
     // Check cache first
     if (kararCache[result.karar_id]) {
@@ -2022,11 +2053,62 @@ export default function AramaPage() {
                             <h3 className="text-[12px] font-semibold text-[#8B8B8E] uppercase tracking-wider">Karar Metni</h3>
                           </div>
                           <div className="prose prose-invert max-w-none overflow-hidden break-words">
-                            {kararDetail.tam_metin ? formatLegalText(kararDetail.tam_metin, query) : (
+                            {kararDetail.tam_metin ? (
+                              <CitationText
+                                text={kararDetail.tam_metin}
+                                searchQuery={query}
+                                onCitationClick={(citation) => {
+                                  if (citation.type === "ictihat" && citation.esas_no) {
+                                    setQuery(citation.esas_no);
+                                    handleSearch();
+                                  } else if (citation.type === "mevzuat" && citation.kanun_no) {
+                                    setActiveTab("mevzuat");
+                                  }
+                                }}
+                              />
+                            ) : (
                               <p className="text-[#5C5C5F] italic">Tam metin yüklenemedi. Özet gösteriliyor.</p>
                             )}
                           </div>
                         </div>
+
+                        {/* Related decisions */}
+                        {relatedResults.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="flex-1 h-px bg-white/[0.06]" />
+                              <h3 className="text-[12px] font-semibold text-[#5C5C5F] uppercase tracking-wider whitespace-nowrap">Benzer Kararlar</h3>
+                              <div className="flex-1 h-px bg-white/[0.06]" />
+                            </div>
+                            <div className="space-y-2">
+                              {relatedResults.map((r) => {
+                                const court = getCourtStyle(r.mahkeme);
+                                return (
+                                  <button
+                                    key={r.karar_id}
+                                    onClick={() => handleSelectResult(r)}
+                                    className="w-full text-left bg-[#111113] border border-white/[0.06] rounded-xl p-3 hover:border-white/[0.12] hover:bg-white/[0.02] transition-all group"
+                                  >
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${court.bg} ${court.text}`}>
+                                        {court.label || r.mahkeme}
+                                      </span>
+                                      {r.esas_no && (
+                                        <span className="text-[11px] font-mono text-[#8B8B8E]">{r.esas_no}</span>
+                                      )}
+                                      {r.relevance_score != null && (
+                                        <span className="ml-auto text-[10px] text-[#5C5C5F]">{Math.round(r.relevance_score * 100)}%</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[12px] text-[#8B8B8E] group-hover:text-[#ECECEE] line-clamp-2 leading-relaxed transition-colors">
+                                      {r.ozet?.slice(0, 150)}{r.ozet && r.ozet.length > 150 ? "..." : ""}
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </div>

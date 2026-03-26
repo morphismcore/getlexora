@@ -34,8 +34,8 @@ class VectorStoreService:
     def __init__(self):
         settings = get_settings()
         self.client = AsyncQdrantClient(
-            host=settings.qdrant_host,
-            port=settings.qdrant_port,
+            url=f"http://{settings.qdrant_host}:{settings.qdrant_port}",
+            timeout=30,
         )
         self.ictihat_collection = settings.qdrant_collection_ictihat
         self.mevzuat_collection = settings.qdrant_collection_mevzuat

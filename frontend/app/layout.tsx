@@ -27,6 +27,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" className={`${geist.variable} ${notoSerif.variable} h-full`}>
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+      </head>
       <body className="h-full bg-[#09090B] text-[#ECECEE] font-[family-name:var(--font-geist)] antialiased">
         <AppShell>{children}</AppShell>
       </body>
