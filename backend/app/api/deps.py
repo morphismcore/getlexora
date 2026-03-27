@@ -38,6 +38,7 @@ _query_expander: QueryExpansionService | None = None
 _reranker: RerankerService | None = None
 _rag: RAGPipeline | None = None
 _ingestion: IngestionPipeline | None = None
+_decision_search = None
 
 
 def get_cache_service() -> CacheService | None:
@@ -67,17 +68,40 @@ def get_mevzuat_service() -> MevzuatService:
     return _mevzuat
 
 
-def get_vector_store() -> VectorStoreService:
+def get_decision_search():
+    """PostgreSQL full-text search servisi."""
+    global _decision_search
+    if _decision_search is None:
+        try:
+            from app.services.decision_search import DecisionSearchService
+            _decision_search = DecisionSearchService()
+            logger.info("decision_search_initialized")
+        except Exception as e:
+            logger.warning("decision_search_init_failed", error=str(e))
+    return _decision_search
+
+
+def get_vector_store() -> VectorStoreService | None:
+    """Qdrant vektör DB — bağlantı yoksa None döner."""
     global _vector_store
     if _vector_store is None:
-        _vector_store = VectorStoreService()
+        try:
+            _vector_store = VectorStoreService()
+        except Exception as e:
+            logger.warning("vector_store_init_failed", error=str(e), hint="Qdrant bağlantısı kurulamadı")
+            return None
     return _vector_store
 
 
-def get_embedding_service() -> EmbeddingService:
+def get_embedding_service() -> EmbeddingService | None:
+    """Embedding servisi — GPU yoksa None döner."""
     global _embedding
     if _embedding is None:
-        _embedding = EmbeddingService()
+        try:
+            _embedding = EmbeddingService()
+        except Exception as e:
+            logger.warning("embedding_init_failed", error=str(e), hint="Embedding servisi başlatılamadı")
+            return None
     return _embedding
 
 
@@ -152,17 +176,24 @@ def get_rag_pipeline() -> RAGPipeline:
             query_expander=get_query_expander(),
             reranker=get_reranker(),
             cache=get_cache_service(),
+            decision_search=get_decision_search(),
         )
     return _rag
 
 
-def get_ingestion_pipeline() -> IngestionPipeline:
+def get_ingestion_pipeline() -> IngestionPipeline | None:
+    """Legacy embedding pipeline — GPU/Qdrant yoksa None döner."""
     global _ingestion
     if _ingestion is None:
+        vs = get_vector_store()
+        emb = get_embedding_service()
+        if vs is None or emb is None:
+            logger.warning("ingestion_pipeline_skip", hint="VectorStore veya Embedding servisi yok")
+            return None
         _ingestion = IngestionPipeline(
             yargi=get_yargi_service(),
-            vector_store=get_vector_store(),
-            embedding=get_embedding_service(),
+            vector_store=vs,
+            embedding=emb,
         )
     return _ingestion
 

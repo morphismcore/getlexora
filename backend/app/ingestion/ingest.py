@@ -1,6 +1,8 @@
+# LEGACY: Bu pipeline GPU/embedding gerektirir. PostgreSQL-first ingestion için pg_ingest.py kullanın.
 """
-Veri ingestion pipeline.
+Veri ingestion pipeline (LEGACY — embedding bağımlı).
 Bedesten API'den kararları çeker, chunk'lar, embed eder, Qdrant'a yükler.
+Yeni sistem: pg_ingest.py — doğrudan PostgreSQL'e yazar, GPU gerektirmez.
 """
 
 import asyncio

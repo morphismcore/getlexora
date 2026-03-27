@@ -740,3 +740,86 @@ def ingest_date_range_task(self, start_date: str, end_date: str, court_types: li
         })
         logger.error("celery_ingest_date_range_error", task_id=task_id, error=str(exc))
         raise
+
+
+# ── PostgreSQL-First Ingestion Tasks ──────────────────────────────
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
+    name="app.tasks.ingestion_tasks.ingest_pg_exhaustive_task",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+    retry_backoff_max=600,
+    time_limit=86400,
+    soft_time_limit=82800,
+)
+def ingest_pg_exhaustive_task(self, court_types=None, year_from=None, year_to=None):
+    """PostgreSQL-based exhaustive ingestion — GPU gerektirmez."""
+    task_id = self.request.id
+    logger.info("celery_pg_exhaustive_start", task_id=task_id, court_types=court_types, year_from=year_from)
+
+    _publish_progress({"task_id": task_id, "state": "STARTED", "source": "pg_exhaustive"})
+
+    from app.models.db import async_session
+    from app.ingestion.pg_ingest import PgIngestionPipeline
+
+    pipeline = PgIngestionPipeline(session_factory=async_session)
+
+    async def _run():
+        return await pipeline.ingest_bedesten(
+            court_types=court_types or ["yargitay", "danistay"],
+            year_from=year_from,
+            year_to=year_to,
+        )
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        _publish_progress({"task_id": task_id, "state": "SUCCESS", "source": "pg_exhaustive", "result": result})
+        logger.info("celery_pg_exhaustive_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        _publish_progress({"task_id": task_id, "state": "FAILURE", "source": "pg_exhaustive", "error": str(exc)})
+        logger.error("celery_pg_exhaustive_error", task_id=task_id, error=str(exc))
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    base=LexoraTask,
+    name="app.tasks.ingestion_tasks.ingest_pg_retry_task",
+    max_retries=1,
+    time_limit=3600,
+)
+def ingest_pg_retry_task(self, kaynak=None, limit=500):
+    """Başarısız PG ingestion girişimlerini tekrar dene."""
+    task_id = self.request.id
+    logger.info("celery_pg_retry_start", task_id=task_id, kaynak=kaynak, limit=limit)
+
+    from app.models.db import async_session
+    from app.ingestion.pg_ingest import PgIngestionPipeline
+
+    pipeline = PgIngestionPipeline(session_factory=async_session)
+
+    async def _run():
+        return await pipeline.retry_failed(kaynak=kaynak, limit=limit)
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        logger.info("celery_pg_retry_done", task_id=task_id, result=result)
+        return result
+    except Exception as exc:
+        logger.error("celery_pg_retry_error", task_id=task_id, error=str(exc))
+        raise

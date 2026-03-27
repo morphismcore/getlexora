@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, date
 
 from sqlalchemy import (
+    Column,
     String,
     Text,
     Boolean,
@@ -16,8 +17,10 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
+from sqlalchemy.types import LargeBinary
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -476,3 +479,63 @@ class JudicialRecess(Base):
 
     def __repr__(self) -> str:
         return f"<JudicialRecess {self.year}>"
+
+
+# ── Decisions & Ingestion ──────────────────────────────────────────────────
+
+
+class Decision(Base):
+    """İçtihat kararları — PostgreSQL'de tam metin saklama."""
+    __tablename__ = "decisions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dedup_hash: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    kaynak: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(200), nullable=False)
+    mahkeme: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    daire: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    esas_no: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    karar_no: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    tarih: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    tarih_str: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    raw_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cleaned_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_type: Mapped[str] = mapped_column(String(20), default="text/html", nullable=False)
+    pdf_data = mapped_column(LargeBinary, nullable=True)
+    source_meta = mapped_column(JSONB, default=dict, nullable=False)
+    search_vector = Column(TSVECTOR)
+    is_embedded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    embedded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    ingestion_logs: Mapped[list["IngestionLog"]] = relationship(back_populates="decision")
+
+    __table_args__ = (
+        Index("ix_decisions_search_vector", "search_vector", postgresql_using="gin"),
+        Index("ix_decisions_mahkeme_tarih", "mahkeme", "tarih"),
+        Index("ix_decisions_kaynak_mahkeme", "kaynak", "mahkeme"),
+        Index("ix_decisions_source_id", "source_id"),
+        Index("ix_decisions_not_embedded", "is_embedded", postgresql_where=text("is_embedded = false")),
+    )
+
+
+class IngestionLog(Base):
+    """Veri çekme girişimlerinin logu."""
+    __tablename__ = "ingestion_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    kaynak: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    source_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    mahkeme: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    daire: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    can_retry: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    decision_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("decisions.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    decision: Mapped["Decision | None"] = relationship(back_populates="ingestion_logs")

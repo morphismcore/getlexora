@@ -1560,6 +1560,53 @@ async def delete_judicial_recess(
     return {"status": "ok", "message": f"{year} yılı adli tatil dönemi silindi"}
 
 
+# ── PostgreSQL Ingestion Endpoints ──────────────────────────────
+
+
+@router.post("/ingest/pg/exhaustive")
+async def trigger_pg_exhaustive(
+    body: ExhaustiveIngestRequest = ExhaustiveIngestRequest(),
+    admin: User = Depends(require_platform_admin),
+):
+    """PostgreSQL-based exhaustive ingestion — GPU gerektirmez."""
+    from app.tasks.ingestion_tasks import ingest_pg_exhaustive_task
+    result = ingest_pg_exhaustive_task.delay(
+        court_types=body.court_types,
+        year_from=body.year_from,
+        year_to=body.year_to,
+    )
+    return {
+        "status": "started",
+        "type": "pg_exhaustive",
+        "task_id": result.id,
+        "court_types": body.court_types or ["yargitay", "danistay"],
+        "year_from": body.year_from,
+    }
+
+
+@router.get("/ingest/pg/stats")
+async def pg_ingest_stats(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """PostgreSQL ingestion istatistikleri."""
+    from app.services.decision_search import DecisionSearchService
+    service = DecisionSearchService()
+    return await service.get_stats(db)
+
+
+@router.post("/ingest/pg/retry")
+async def pg_ingest_retry(
+    kaynak: str | None = None,
+    limit: int = 500,
+    admin: User = Depends(require_platform_admin),
+):
+    """Başarısız ingestion girişimlerini tekrar dene."""
+    from app.tasks.ingestion_tasks import ingest_pg_retry_task
+    result = ingest_pg_retry_task.delay(kaynak=kaynak, limit=limit)
+    return {"status": "started", "task_id": result.id}
+
+
 async def _store_monitoring_snapshot():
     """Her 60 saniyede bir monitoring snapshot'i Redis'e kaydet. Scheduler'dan cagirilir."""
     import psutil

@@ -55,6 +55,7 @@ class RAGPipeline:
         query_expander: QueryExpansionService | None = None,
         reranker: RerankerService | None = None,
         cache=None,  # CacheService for embedding caching
+        decision_search=None,  # PostgreSQL full-text search (primary)
     ):
         self.yargi = yargi
         self.mevzuat = mevzuat
@@ -65,6 +66,7 @@ class RAGPipeline:
         self.query_expander = query_expander
         self.reranker = reranker
         self.cache = cache
+        self.decision_search = decision_search
         self.settings = get_settings()
 
     @property
@@ -124,8 +126,65 @@ class RAGPipeline:
 
         daire = request.daire if hasattr(request, "daire") and request.daire else None
 
-        # 1. Vector-only search — Bedesten artık sadece ingestion için kullanılır
-        # Tüm kararlar Qdrant'ta embedding olarak mevcut, API'ye gitmeye gerek yok
+        # 0.5. PostgreSQL full-text search (primary — GPU/Qdrant gerektirmez)
+        if self.decision_search:
+            try:
+                from app.models.db import async_session
+                mahkeme_list = [m.value for m in request.mahkeme] if request.mahkeme else None
+                async with async_session() as db:
+                    pg_result = await self.decision_search.search(
+                        db=db,
+                        query=search_query,
+                        mahkeme=mahkeme_list,
+                        daire=daire,
+                        tarih_from=request.tarih_baslangic if hasattr(request, "tarih_baslangic") else None,
+                        tarih_to=request.tarih_bitis if hasattr(request, "tarih_bitis") else None,
+                        kaynak=request.kaynak if hasattr(request, "kaynak") else None,
+                        page=request.sayfa,
+                        limit=request.max_sonuc,
+                        sort=request.siralama if hasattr(request, "siralama") else None,
+                    )
+                if pg_result and pg_result.get("sonuclar"):
+                    sonuclar = [
+                        IctihatResult(
+                            karar_id=r["karar_id"],
+                            mahkeme=r.get("mahkeme", ""),
+                            daire=r.get("daire"),
+                            esas_no=r.get("esas_no"),
+                            karar_no=r.get("karar_no"),
+                            tarih=r.get("tarih"),
+                            ozet=r.get("ozet", ""),
+                            relevance_score=r.get("relevance_score", 0.0),
+                            verification_status=VerificationStatus.VERIFIED,
+                        )
+                        for r in pg_result["sonuclar"]
+                    ]
+                    facets_raw = pg_result.get("facets", {})
+                    facets = SearchFacets(
+                        mahkeme=[FacetBucket(value=k, count=v) for k, v in facets_raw.get("mahkeme", {}).items()],
+                        daire=[FacetBucket(value=k, count=v) for k, v in facets_raw.get("daire", {}).items()],
+                        yil=[FacetBucket(value=str(k), count=v) for k, v in facets_raw.get("yil", {}).items()],
+                    )
+                    response = SearchResponse(
+                        sonuclar=sonuclar,
+                        toplam_bulunan=pg_result.get("toplam_bulunan", len(sonuclar)),
+                        sayfa=pg_result.get("sayfa", request.sayfa),
+                        toplam_sayfa=pg_result.get("toplam_sayfa", 1),
+                        sure_ms=int((time.monotonic() - start) * 1000),
+                        query_kullanilan=search_query,
+                        facets=facets,
+                    )
+                    # Cache PG results
+                    if self.cache and cache_key:
+                        try:
+                            await self.cache.set(cache_key, response.model_dump(), ttl=300)
+                        except Exception:
+                            pass
+                    return response
+            except Exception as e:
+                logger.warning("pg_search_fallback_to_qdrant", error=str(e))
+
+        # 1. Vector-only search — fallback when PG search unavailable or empty
         vector_limit = max(request.max_sonuc * request.sayfa * 2, 60)
         search_warnings = []
 
@@ -240,6 +299,9 @@ class RAGPipeline:
 
     async def _search_vectors(self, query, request, max_results):
         """Embedding + Qdrant search — async embedding to not block event loop."""
+        if self.vector_store is None or self.embedding is None:
+            logger.debug("vector_search_skip", reason="vector_store or embedding not available")
+            return []
         try:
             info = await self.vector_store.get_collection_info(
                 self.settings.qdrant_collection_ictihat

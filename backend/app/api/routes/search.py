@@ -219,10 +219,26 @@ async def get_karar(
 ):
     """
     Tam karar metnini getir. LLM GEREKTIRMEZ.
-    Birincil kaynak: Bedesten API.
-    Yedek kaynak: Qdrant chunk'larından birleştirme (Bedesten başarısız olursa).
+    Birincil: PostgreSQL. İkincil: Bedesten API. Yedek: Qdrant chunks.
     """
-    # --- 1. Try Bedesten API first ---
+    # --- 0. Try PostgreSQL first (fastest, no network) ---
+    try:
+        from app.services.decision_search import DecisionSearchService
+        from app.models.db import async_session
+        _ds = DecisionSearchService()
+        async with async_session() as _db:
+            _dec = await _ds.get_decision(_db, document_id)
+            if _dec and _dec.get("cleaned_text"):
+                return {
+                    "document_id": document_id,
+                    "content": _dec["cleaned_text"],
+                    "html": _dec.get("raw_content", ""),
+                    "source": "postgresql",
+                }
+    except Exception as _e:
+        logger.debug("karar_pg_skip", error=str(_e), document_id=document_id)
+
+    # --- 1. Try Bedesten API ---
     bedesten_error = None
     try:
         doc = await yargi.get_document(document_id)
