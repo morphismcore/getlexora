@@ -757,6 +757,8 @@ class IngestionPipeline:
                 _update_state(task=f"{ct} {d_name} (p{start_page})")
 
                 page = start_page
+                page_retries = 0
+                skipped_pages = []
                 while True:
                     try:
                         result = await self.yargi.search_bedesten(
@@ -896,17 +898,100 @@ class IngestionPipeline:
                         await asyncio.sleep(page_delay)
 
                     except Exception as e:
-                        logger.error("exhaustive_page_error", daire=d_name, page=page, error=str(e))
+                        page_retries += 1
+                        logger.error("exhaustive_page_error", daire=d_name, page=page, error=str(e), retry=page_retries)
                         _update_state(errors=_ingest_state["errors"] + 1)
+
+                        if page_retries < 3:
+                            # Aynı sayfayı tekrar dene
+                            await asyncio.sleep(10.0 * page_retries)
+                            continue
+
+                        # 3 deneme başarısız — sayfayı kaydet, sonraki sayfaya geç
+                        skipped_pages.append(page)
                         await telegram.send_message(
-                            f"\u26a0\ufe0f *Exhaustive hata*\n"
+                            f"\u26a0\ufe0f *Exhaustive sayfa atlandı*\n"
                             f"Daire: `{d_name}` sayfa {page}\n"
-                            f"Hata: `{str(e)[:200]}`"
+                            f"Hata: `{str(e)[:200]}`\n"
+                            f"3 deneme başarısız, daire sonunda tekrar denenecek"
                         )
-                        # Rate limit veya geçici hata — biraz bekle ve devam et
-                        await asyncio.sleep(10.0)
+                        page_retries = 0
                         page += 1
+                        await asyncio.sleep(5.0)
                         continue
+
+                # Atlanan sayfaları tekrar dene
+                if skipped_pages:
+                    _log("info", f"🔄 {d_name} — {len(skipped_pages)} atlanan sayfa tekrar deneniyor: {skipped_pages[:20]}")
+                    recovered = 0
+                    still_failed = []
+                    for retry_page in skipped_pages:
+                        try:
+                            result = await self.yargi.search_bedesten(
+                                keyword="karar", item_type=item_type,
+                                birim_adi=d_name, page=retry_page, page_size=10,
+                                date_from=daire_date_from, date_to=daire_date_to,
+                            )
+                            items = result.get("data", {}).get("emsalKararList", [])
+                            if not items:
+                                continue
+
+                            total_fetched += len(items)
+                            doc_ids = [item.get("documentId", "") for item in items if item.get("documentId")]
+                            doc_results = await asyncio.gather(*[_fetch_doc(did) for did in doc_ids])
+
+                            retry_chunks = []
+                            for item, (doc_id, content) in zip(
+                                [i for i in items if i.get("documentId")], doc_results,
+                            ):
+                                if not content:
+                                    continue
+                                clean = clean_legal_html(content)
+                                if len(clean) < self.settings.min_karar_chars:
+                                    continue
+                                esas_no = f"{item.get('esasNoYil', '')}/{item.get('esasNoSira', '')}"
+                                karar_no = f"{item.get('kararNoYil', '')}/{item.get('kararNoSira', '')}"
+                                tarih = item.get("kararTarihiStr", "")
+                                yil = int(tarih.split(".")[-1]) if tarih and "." in tarih else None
+                                metadata = {
+                                    "karar_id": doc_id, "mahkeme": ct_base.lower().strip(),
+                                    "daire": d_name.strip(), "esas_no": esas_no,
+                                    "karar_no": karar_no, "tarih": tarih, "yil": yil,
+                                    "kaynak": "bedesten",
+                                }
+                                chunks = self.chunker.chunk_karar(clean, metadata)
+                                if not chunks:
+                                    chunks = self.chunker.chunk_generic(clean, metadata)
+                                retry_chunks.extend(chunks)
+
+                            if retry_chunks:
+                                texts = [c["text"] for c in retry_chunks]
+                                embeddings = await self.embedding.embed_texts_async(texts)
+                                points = []
+                                for i, (chunk, emb) in enumerate(zip(retry_chunks, embeddings)):
+                                    point_id = self._generate_id(chunk["metadata"].get("karar_id", "") + str(i))
+                                    points.append({
+                                        "id": point_id,
+                                        "dense_vector": emb["dense_vector"],
+                                        "sparse_vector": emb.get("sparse_vector"),
+                                        "payload": {**chunk["metadata"], "text": chunk["text"][:self.settings.max_payload_text_chars], "ozet": chunk["text"][:500]},
+                                    })
+                                await self.vector_store.upsert_points(collection=self.settings.qdrant_collection_ictihat, points=points)
+                                daire_embedded += len(points)
+                                total_embedded += len(points)
+                                recovered += 1
+
+                            await asyncio.sleep(page_delay)
+                        except Exception as e:
+                            still_failed.append(retry_page)
+                            logger.warning("exhaustive_retry_fail", daire=d_name, page=retry_page, error=str(e)[:200])
+
+                    if still_failed:
+                        _log("warning", f"⚠️ {d_name} — {len(still_failed)} sayfa kurtarılamadı: {still_failed[:20]}")
+                        # Checkpoint'e kaydet ki gelecekte tekrar denenebilsin
+                        exhaustive_cp[daire_key]["skipped_pages"] = still_failed
+                    if recovered:
+                        _log("info", f"✅ {d_name} — {recovered}/{len(skipped_pages)} atlanan sayfa kurtarıldı")
 
                 # Daire tamamlandı
                 if daire_key not in exhaustive_cp:
