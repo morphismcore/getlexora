@@ -365,7 +365,7 @@ class PgIngestionPipeline:
         while empty_streak < max_empty_streak:
             try:
                 search_result = await yargi.search_bedesten(
-                    keyword="*",
+                    keyword="karar",
                     item_type=item_type,
                     birim_adi=birim_adi,
                     page=page,
