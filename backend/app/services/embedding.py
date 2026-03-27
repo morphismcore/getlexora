@@ -80,26 +80,42 @@ class EmbeddingService:
     # ── Remote GPU API ──────────────────────────────────────
 
     async def _embed_via_api(self, texts: list[str]) -> list[dict]:
-        """Remote GPU API üzerinden embed et. Dense + sparse döner."""
+        """Remote GPU API üzerinden embed et. Dense + sparse döner. 500 hatalarında retry yapar."""
         import httpx
+        import asyncio
 
         url = self._api_url.rstrip("/") + "/embed"
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(url, json={"texts": texts})
-            resp.raise_for_status()
-            data = resp.json()
-
-        # GPU API doğrudan {"embeddings": [{"dense_vector": [...], "sparse_vector": {...}}, ...]} döner
-        return data["embeddings"]
+        last_exc = None
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(timeout=120) as client:
+                    resp = await client.post(url, json={"texts": texts})
+                    resp.raise_for_status()
+                    data = resp.json()
+                return data["embeddings"]
+            except (httpx.HTTPStatusError, httpx.ConnectError, httpx.ReadTimeout) as e:
+                last_exc = e
+                logger.warning("embed_api_retry", attempt=attempt + 1, error=str(e)[:200])
+                await asyncio.sleep(5 * (attempt + 1))
+        raise last_exc
 
     def _embed_via_api_sync(self, texts: list[str]) -> list[dict]:
-        """Senkron GPU API çağrısı."""
+        """Senkron GPU API çağrısı. 500 hatalarında retry yapar."""
         import requests
+        import time
 
         url = self._api_url.rstrip("/") + "/embed"
-        resp = requests.post(url, json={"texts": texts}, timeout=120)
-        resp.raise_for_status()
-        return resp.json()["embeddings"]
+        last_exc = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(url, json={"texts": texts}, timeout=120)
+                resp.raise_for_status()
+                return resp.json()["embeddings"]
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                last_exc = e
+                logger.warning("embed_api_retry_sync", attempt=attempt + 1, error=str(e)[:200])
+                time.sleep(5 * (attempt + 1))
+        raise last_exc
 
     # ── Public API ──────────────────────────────────────────
 

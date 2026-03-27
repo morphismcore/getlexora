@@ -347,22 +347,30 @@ class IngestionPipeline:
         daire_id None ise tüm daireleri çeker.
         """
         if court_type == "yargitay":
-            daireler = {**YARGITAY_HUKUK_DAIRELERI, **YARGITAY_CEZA_DAIRELERI}
+            # Prefix ile birleştir — key collision önlenir
+            daireler = {}
+            for k, v in YARGITAY_HUKUK_DAIRELERI.items():
+                daireler[f"hukuk:{k}"] = v
+            for k, v in YARGITAY_CEZA_DAIRELERI.items():
+                daireler[f"ceza:{k}"] = v
         else:
             daireler = {}
 
         if daire_id:
-            if daire_id not in daireler:
+            # Hem Hukuk hem Ceza'da ara
+            matches = {k: v for k, v in daireler.items() if k.endswith(f":{daire_id}")}
+            if not matches:
                 return {"error": f"Daire bulunamadı: {daire_id}"}
-            daireler = {daire_id: daireler[daire_id]}
+            daireler = matches
 
         checkpoint = self._load_checkpoint()
         completed_daireler = set(checkpoint.get("completed_daireler", []))
         total_embedded = 0
         seen_dedup_keys: set[str] = set()
 
-        for d_id, d_name in daireler.items():
-            key = f"{court_type}:{d_id}"
+        for d_composite_id, d_name in daireler.items():
+            d_id = d_composite_id.split(":")[-1] if ":" in d_composite_id else d_composite_id
+            key = f"{court_type}:{d_composite_id}"
             if key in completed_daireler:
                 logger.info("ingest_daire_skipped", daire=d_name, reason="checkpoint")
                 continue
@@ -664,19 +672,22 @@ class IngestionPipeline:
         total_skipped = 0
         sem = asyncio.Semaphore(concurrent_docs)
 
-        # Daire listesini oluştur
+        # Daire listesini oluştur — Hukuk ve Ceza ayrı tutulur (key collision önlenir)
         all_daireler = []
         for ct in court_types:
             if ct == "yargitay":
                 item_type = ITEM_TYPES["yargitay"]
-                daireler = {**YARGITAY_HUKUK_DAIRELERI, **YARGITAY_CEZA_DAIRELERI}
+                # Hukuk ve Ceza dairelerini AYRI iterate et — dict merge key collision yapar
+                for d_id, d_name in YARGITAY_HUKUK_DAIRELERI.items():
+                    all_daireler.append(("yargitay_hukuk", item_type, d_id, d_name))
+                for d_id, d_name in YARGITAY_CEZA_DAIRELERI.items():
+                    all_daireler.append(("yargitay_ceza", item_type, d_id, d_name))
             elif ct == "danistay":
                 item_type = ITEM_TYPES["danistay"]
-                daireler = DANISTAY_DAIRELERI
+                for d_id, d_name in DANISTAY_DAIRELERI.items():
+                    all_daireler.append((ct, item_type, d_id, d_name))
             else:
                 continue
-            for d_id, d_name in daireler.items():
-                all_daireler.append((ct, item_type, d_id, d_name))
 
         # Priority daireler: move them to the front
         if priority_daireler:
@@ -730,7 +741,9 @@ class IngestionPipeline:
                 consecutive_empty = 0
 
                 # Per-daire year config override
-                ct_config = ing_config.get(ct, {})
+                # ct may be "yargitay_hukuk" or "yargitay_ceza" — map back to base court type for config
+                ct_base = ct.split("_")[0]  # "yargitay_hukuk" -> "yargitay"
+                ct_config = ing_config.get(ct_base, {})
                 daire_year_from = year_from  # explicit param takes priority
                 if daire_year_from is None:
                     # Check daire-specific config
@@ -798,7 +811,7 @@ class IngestionPipeline:
 
                             metadata = {
                                 "karar_id": doc_id,
-                                "mahkeme": ct.lower().strip(),
+                                "mahkeme": ct_base.lower().strip(),
                                 "daire": d_name.strip(),
                                 "esas_no": esas_no,
                                 "karar_no": karar_no,
