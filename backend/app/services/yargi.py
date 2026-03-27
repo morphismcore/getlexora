@@ -64,6 +64,11 @@ BEDESTEN_HEADERS = {
 }
 
 
+class CircuitBreakerOpen(Exception):
+    """Bedesten circuit breaker açık — retry yapılabilir."""
+    pass
+
+
 class YargiService:
     """Bedesten API üzerinden içtihat arama servisi."""
 
@@ -123,14 +128,17 @@ class YargiService:
         page_size: int = 10,
         date_from: str | None = None,
         date_to: str | None = None,
+        raise_on_circuit: bool = False,
     ) -> dict:
         """
         Bedesten API'de karar arama.
         POST /emsal-karar/searchDocuments
+        raise_on_circuit=True: circuit breaker açıksa exception fırlat (ingestion için)
         """
-        # Circuit breaker check
         if self._check_circuit():
             logger.warning("bedesten_circuit_open_skip", keyword=keyword)
+            if raise_on_circuit:
+                raise CircuitBreakerOpen("Bedesten circuit breaker açık — geçici olarak devre dışı")
             return {"data": {"total": 0, "emsalKararList": []}}
 
         payload = {
@@ -200,11 +208,12 @@ class YargiService:
             raise
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
-    async def get_document(self, document_id: str) -> dict:
+    async def get_document(self, document_id: str, raise_on_circuit: bool = False) -> dict:
         """Tam karar metnini getir (base64 encoded HTML/PDF)."""
-        # Circuit breaker check
         if self._check_circuit():
             logger.warning("bedesten_circuit_open_skip_doc", doc_id=document_id)
+            if raise_on_circuit:
+                raise CircuitBreakerOpen("Bedesten circuit breaker açık — geçici olarak devre dışı")
             return {"data": {}}
 
         # Check cache first

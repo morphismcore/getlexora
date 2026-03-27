@@ -15,7 +15,7 @@ from datetime import datetime
 
 import structlog
 
-from app.services.yargi import YargiService, ITEM_TYPES, YARGITAY_HUKUK_DAIRELERI, YARGITAY_CEZA_DAIRELERI, DANISTAY_DAIRELERI
+from app.services.yargi import YargiService, ITEM_TYPES, YARGITAY_HUKUK_DAIRELERI, YARGITAY_CEZA_DAIRELERI, DANISTAY_DAIRELERI, CircuitBreakerOpen
 from app.services.vector_store import VectorStoreService
 from app.services.embedding import EmbeddingService
 from app.ingestion.chunker import LegalChunker
@@ -769,6 +769,7 @@ class IngestionPipeline:
                             page_size=10,
                             date_from=daire_date_from,
                             date_to=daire_date_to,
+                            raise_on_circuit=True,
                         )
 
                         items = result.get("data", {}).get("emsalKararList", [])
@@ -931,6 +932,7 @@ class IngestionPipeline:
                                 keyword="karar", item_type=item_type,
                                 birim_adi=d_name, page=retry_page, page_size=10,
                                 date_from=daire_date_from, date_to=daire_date_to,
+                                raise_on_circuit=True,
                             )
                             items = result.get("data", {}).get("emsalKararList", [])
                             if not items:
