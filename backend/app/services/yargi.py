@@ -184,9 +184,11 @@ class YargiService:
                 logger.warning("bedesten_search_empty_response", keyword=keyword)
                 return {"data": {"total": 0, "emsalKararList": []}}
 
-            inner = data.get("data") or {}
-            total = inner.get("total", 0)
-            results = inner.get("emsalKararList", [])
+            # data["data"] None olabilir — güvenli hale getir
+            if data.get("data") is None:
+                data["data"] = {"total": 0, "emsalKararList": []}
+            total = data["data"].get("total", 0)
+            results = data["data"].get("emsalKararList", [])
 
             self._record_success()
             logger.info(
@@ -247,9 +249,10 @@ class YargiService:
                 return {"data": {}}
 
             # Base64 decode
-            inner = data.get("data") or {}
-            content_b64 = inner.get("content", "")
-            mime_type = inner.get("mimeType", "text/html")
+            if data.get("data") is None:
+                data["data"] = {}
+            content_b64 = data["data"].get("content", "")
+            mime_type = data["data"].get("mimeType", "text/html")
 
             if content_b64:
                 if mime_type == "text/html":
