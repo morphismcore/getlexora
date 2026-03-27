@@ -62,11 +62,13 @@ COURT_LABEL: dict[str, str] = {
 _TRANSIENT_ERRORS = (
     "timeout",
     "connection",
+    "429",
     "502",
     "503",
     "504",
     "rate",
     "throttl",
+    "too many requests",
 )
 
 _PERMANENT_ERRORS = (
@@ -398,9 +400,15 @@ class PgIngestionPipeline:
                     page=page,
                     error=str(exc)[:200],
                 )
-                empty_streak += 1
-                page += 1
-                await asyncio.sleep(page_delay)
+                if can_retry:
+                    # Transient error (429, timeout, etc) — back off and retry same page
+                    await asyncio.sleep(page_delay * 3)
+                    empty_streak += 1
+                else:
+                    # Permanent error — skip page
+                    empty_streak += 1
+                    page += 1
+                    await asyncio.sleep(page_delay)
                 continue
 
             items = search_result.get("data", {}).get("emsalKararList", [])

@@ -303,13 +303,14 @@ async def active_ingestion_tasks():
         return {"running": False, "tasks": [], "error": str(e)}
 
 
-# ── Embedding İstatistikleri ──────────────────────────
+# ── Embedding İstatistikleri (LEGACY — Qdrant bağımlı) ──────────────────────────
 
+# LEGACY: Embedding-based stats. Qdrant bağlantısı gerektirir.
 @router.get("/embeddings")
 async def embedding_stats(
     admin: User = Depends(require_platform_admin),
 ):
-    """Embedding istatistikleri."""
+    """LEGACY — Embedding istatistikleri (Qdrant)."""
     try:
         vs = get_vector_store()
         ictihat = await vs.get_collection_info("ictihat_embeddings")
@@ -323,11 +324,12 @@ async def embedding_stats(
         return {"error": str(e)}
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest")
 async def trigger_ingest(
     admin: User = Depends(require_platform_admin),
 ):
-    """Ictihat embedding ingestion baslat (Celery worker)."""
+    """LEGACY — Ictihat embedding ingestion baslat (Celery worker)."""
     from app.ingestion.ingest import DEFAULT_TOPICS
 
     result = ingest_topics_task.delay(topics=DEFAULT_TOPICS, pages_per_topic=3)
@@ -341,12 +343,13 @@ async def trigger_ingest(
     }
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/mevzuat")
 async def trigger_mevzuat_ingest(
     admin: User = Depends(require_platform_admin),
     fetch_all: bool = False,
 ):
-    """Mevzuat embedding ingestion baslat.
+    """LEGACY — Mevzuat embedding ingestion baslat.
     fetch_all=true: Bedesten'deki tüm kanun+KHK'ları çeker (914+ kanun, 63+ KHK).
     fetch_all=false: Sadece temel 36 kanun listesini çeker.
     """
@@ -360,13 +363,14 @@ async def trigger_mevzuat_ingest(
     }
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/mevzuat-refresh")
 async def trigger_mevzuat_refresh(
     admin: User = Depends(require_platform_admin),
     dry_run: bool = False,
     fetch_all: bool = True,
 ):
-    """Mevzuat diff-based guncelleme. Sadece degisen kanunlari gunceller.
+    """LEGACY — Mevzuat diff-based guncelleme. Sadece degisen kanunlari gunceller.
     dry_run=true: Degisenleri tespit eder ama guncellemez.
     """
     result = refresh_mevzuat_task.delay(dry_run=dry_run, fetch_all=fetch_all)
@@ -380,11 +384,12 @@ async def trigger_mevzuat_refresh(
     }
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/batch")
 async def trigger_batch_ingest(
     admin: User = Depends(require_platform_admin),
 ):
-    """Toplu ingestion — ictihat + mevzuat + AYM + AIHM sirayla (Celery worker)."""
+    """LEGACY — Toplu ingestion — ictihat + mevzuat + AYM + AIHM sirayla (Celery worker)."""
     result = ingest_batch_task.delay(
         include_ictihat=True,
         include_mevzuat=True,
@@ -406,12 +411,13 @@ class DaireIngestRequest(BaseModel):
     pages: int = 10
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/daire")
 async def trigger_daire_ingest(
     body: DaireIngestRequest,
     admin: User = Depends(require_platform_admin),
 ):
-    """Daire bazli sistematik ictihat ingestion (Celery worker)."""
+    """LEGACY — Daire bazli sistematik ictihat ingestion (Celery worker)."""
     result = ingest_daire_task.delay(
         court_type=body.court_type,
         daire_id=body.daire_id,
@@ -435,12 +441,13 @@ class DateRangeIngestRequest(BaseModel):
     max_pages: int = 50
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/date-range")
 async def trigger_date_range_ingest(
     body: DateRangeIngestRequest,
     admin: User = Depends(require_platform_admin),
 ):
-    """Tarih bazli sistematik ictihat ingestion (Celery worker)."""
+    """LEGACY — Tarih bazli sistematik ictihat ingestion (Celery worker)."""
     result = ingest_date_range_task.delay(
         start_date=body.start_date,
         end_date=body.end_date,
@@ -467,12 +474,13 @@ class ExhaustiveIngestRequest(BaseModel):
     priority_daireler: list[str] | None = None
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/exhaustive")
 async def trigger_exhaustive_ingest(
     body: ExhaustiveIngestRequest = ExhaustiveIngestRequest(),
     admin: User = Depends(require_platform_admin),
 ):
-    """Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek."""
+    """LEGACY — Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek."""
     result = ingest_exhaustive_task.delay(
         court_types=body.court_types,
         concurrent_docs=body.concurrent_docs,
@@ -725,40 +733,44 @@ async def ingest_state_endpoint(
     }
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/aym")
 async def admin_ingest_aym(
     admin: User = Depends(require_platform_admin),
 ):
-    """AYM bireysel basvuru kararlarini ingest et (Celery worker)."""
+    """LEGACY — AYM bireysel basvuru kararlarini ingest et (Celery worker)."""
     result = ingest_aym_task.delay(pages=10, ihlal_only=True)
     return {"status": "started", "source": "aym", "task_id": result.id}
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/rekabet")
 async def admin_ingest_rekabet(
     max_pages: int = 1100,
     admin: User = Depends(require_platform_admin),
 ):
-    """Rekabet Kurumu kararlarini ingest et (Celery worker)."""
+    """LEGACY — Rekabet Kurumu kararlarini ingest et (Celery worker)."""
     result = ingest_rekabet_task.delay(max_pages=max_pages)
     return {"status": "started", "source": "rekabet", "task_id": result.id}
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/kvkk")
 async def admin_ingest_kvkk(
     max_decisions: int = 1000,
     admin: User = Depends(require_platform_admin),
 ):
-    """KVKK Kurul kararlarini ingest et (Celery worker)."""
+    """LEGACY — KVKK Kurul kararlarini ingest et (Celery worker)."""
     result = ingest_kvkk_task.delay(max_decisions=max_decisions)
     return {"status": "started", "source": "kvkk", "task_id": result.id}
 
 
+# LEGACY: Embedding-based ingestion. Use /ingest/pg/* endpoints instead.
 @router.post("/ingest/aihm")
 async def admin_ingest_aihm(
     admin: User = Depends(require_platform_admin),
 ):
-    """AIHM Turkiye kararlarini ingest et (Celery worker)."""
+    """LEGACY — AIHM Turkiye kararlarini ingest et (Celery worker)."""
     result = ingest_aihm_task.delay(max_results=50000)
     return {"status": "started", "source": "aihm", "task_id": result.id}
 
@@ -1579,7 +1591,7 @@ async def trigger_pg_exhaustive(
         "status": "started",
         "type": "pg_exhaustive",
         "task_id": result.id,
-        "court_types": body.court_types or ["yargitay", "danistay"],
+        "court_types": body.court_types or ["yargitay_hukuk", "yargitay_ceza", "danistay"],
         "year_from": body.year_from,
     }
 

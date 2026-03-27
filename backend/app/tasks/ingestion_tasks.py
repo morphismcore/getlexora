@@ -57,8 +57,9 @@ def _publish_progress(state: dict):
         logger.warning("redis_publish_failed", error=str(e))
 
 
+# LEGACY: Embedding pipeline factory. PG-first task'lar bunu kullanmaz.
 def _create_pipeline():
-    """Lazy pipeline olustur — worker process icinde."""
+    """LEGACY — Lazy pipeline olustur — worker process icinde (embedding bağımlı)."""
     from app.config import get_settings
     from app.services.yargi import YargiService
     from app.services.vector_store import VectorStoreService
@@ -75,6 +76,7 @@ def _create_pipeline():
     return IngestionPipeline(yargi, vector_store, embedding)
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -86,7 +88,7 @@ def _create_pipeline():
     retry_jitter=True,
 )
 def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
-    """Ictihat ingestion — Bedesten API uzerinden konu bazli."""
+    """LEGACY — Ictihat ingestion — Bedesten API uzerinden konu bazli (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_topics_start", task_id=task_id, topics=len(topics))
 
@@ -134,6 +136,7 @@ def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -145,7 +148,7 @@ def ingest_topics_task(self, topics: list[str], pages_per_topic: int = 3):
     retry_jitter=True,
 )
 def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
-    """AYM bireysel basvuru kararlari ingestion."""
+    """LEGACY — AYM bireysel basvuru kararlari ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_aym_start", task_id=task_id, pages=pages)
 
@@ -191,6 +194,7 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -204,7 +208,7 @@ def ingest_aym_task(self, pages: int = 10, ihlal_only: bool = True):
     soft_time_limit=13800,
 )
 def ingest_rekabet_task(self, max_pages: int = 1100):
-    """Rekabet Kurumu kararlari ingestion."""
+    """LEGACY — Rekabet Kurumu kararlari ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_rekabet_start", task_id=task_id, max_pages=max_pages)
 
@@ -250,6 +254,7 @@ def ingest_rekabet_task(self, max_pages: int = 1100):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -261,7 +266,7 @@ def ingest_rekabet_task(self, max_pages: int = 1100):
     retry_jitter=True,
 )
 def ingest_aihm_task(self, max_results: int = 50000):
-    """AIHM Turkiye aleyhine kararlari ingestion."""
+    """LEGACY — AIHM Turkiye aleyhine kararlari ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_aihm_start", task_id=task_id, max_results=max_results)
 
@@ -307,6 +312,7 @@ def ingest_aihm_task(self, max_results: int = 50000):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -320,7 +326,7 @@ def ingest_aihm_task(self, max_results: int = 50000):
     soft_time_limit=6600,
 )
 def ingest_kvkk_task(self, max_decisions: int = 1000):
-    """KVKK Kurul kararlari ingestion."""
+    """LEGACY — KVKK Kurul kararlari ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_kvkk_start", task_id=task_id, max_decisions=max_decisions)
 
@@ -366,6 +372,7 @@ def ingest_kvkk_task(self, max_decisions: int = 1000):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -377,7 +384,7 @@ def ingest_kvkk_task(self, max_decisions: int = 1000):
     retry_jitter=True,
 )
 def ingest_mevzuat_task(self, fetch_all=False):
-    """Mevzuat ingestion. fetch_all=True: Bedesten'deki tum kanun+KHK'lari ceker."""
+    """LEGACY — Mevzuat ingestion (embedding bağımlı). fetch_all=True: Bedesten'deki tum kanun+KHK'lari ceker."""
     task_id = self.request.id
     logger.info("celery_ingest_mevzuat_start", task_id=task_id, fetch_all=fetch_all)
 
@@ -422,6 +429,7 @@ def ingest_mevzuat_task(self, fetch_all=False):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -433,7 +441,7 @@ def ingest_mevzuat_task(self, fetch_all=False):
     retry_jitter=True,
 )
 def refresh_mevzuat_task(self, dry_run=False, fetch_all=True):
-    """Mevzuat diff-based guncelleme. Sadece degisenleri gunceller."""
+    """LEGACY — Mevzuat diff-based guncelleme (embedding bağımlı). Sadece degisenleri gunceller."""
     task_id = self.request.id
     logger.info("celery_refresh_mevzuat_start", task_id=task_id, dry_run=dry_run)
 
@@ -480,6 +488,7 @@ def refresh_mevzuat_task(self, dry_run=False, fetch_all=True):
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -497,7 +506,7 @@ def ingest_batch_task(
     include_aym: bool = True,
     include_aihm: bool = True,
 ):
-    """Toplu ingestion — tum kaynaklari sirayla calistir."""
+    """LEGACY — Toplu ingestion — tum kaynaklari sirayla calistir (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_batch_start", task_id=task_id)
 
@@ -547,6 +556,7 @@ def ingest_batch_task(
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -569,7 +579,7 @@ def ingest_exhaustive_task(
     year_to: int | None = None,
     priority_daireler: list[str] | None = None,
 ):
-    """Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek."""
+    """LEGACY — Exhaustive ingestion — tum daireleri sayfa sayfa, bitene kadar cek (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_exhaustive_start", task_id=task_id, court_types=court_types)
 
@@ -622,6 +632,7 @@ def ingest_exhaustive_task(
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -633,7 +644,7 @@ def ingest_exhaustive_task(
     retry_jitter=True,
 )
 def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None = None, pages: int = 10):
-    """Daire bazli sistematik ictihat ingestion."""
+    """LEGACY — Daire bazli sistematik ictihat ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_daire_start", task_id=task_id, court_type=court_type, daire_id=daire_id)
 
@@ -682,6 +693,7 @@ def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None =
         raise
 
 
+# LEGACY: Embedding-based ingestion task. Use ingest_pg_exhaustive_task instead.
 @celery_app.task(
     bind=True,
     base=LexoraTask,
@@ -693,7 +705,7 @@ def ingest_daire_task(self, court_type: str = "yargitay", daire_id: str | None =
     retry_jitter=True,
 )
 def ingest_date_range_task(self, start_date: str, end_date: str, court_types: list[str] | None = None, max_pages: int = 50):
-    """Tarih bazli sistematik ictihat ingestion."""
+    """LEGACY — Tarih bazli sistematik ictihat ingestion (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("celery_ingest_date_range_start", task_id=task_id, start_date=start_date, end_date=end_date)
 
@@ -770,7 +782,7 @@ def ingest_pg_exhaustive_task(self, court_types=None, year_from=None, year_to=No
 
     async def _run():
         return await pipeline.ingest_bedesten(
-            court_types=court_types or ["yargitay", "danistay"],
+            court_types=court_types or ["yargitay_hukuk", "yargitay_ceza", "danistay"],
             year_from=year_from,
             year_to=year_to,
         )

@@ -55,7 +55,7 @@ class DecisionSearchService:
 
         # --- Mode selection ---
         if esas_no or karar_no:
-            results, total = self._search_by_number(
+            results, total = await self._search_by_number(
                 db, esas_no=esas_no, karar_no=karar_no,
                 mahkeme=mahkeme, daire=daire,
                 tarih_from=tarih_from, tarih_to=tarih_to,
@@ -63,7 +63,7 @@ class DecisionSearchService:
                 limit=limit, offset=offset,
             )
         elif query and query.strip():
-            results, total = self._search_fulltext(
+            results, total = await self._search_fulltext(
                 db, query=query.strip(),
                 mahkeme=mahkeme, daire=daire,
                 tarih_from=tarih_from, tarih_to=tarih_to,
@@ -71,7 +71,7 @@ class DecisionSearchService:
                 limit=limit, offset=offset,
             )
         else:
-            results, total = self._browse_all(
+            results, total = await self._browse_all(
                 db,
                 mahkeme=mahkeme, daire=daire,
                 tarih_from=tarih_from, tarih_to=tarih_to,
@@ -83,7 +83,7 @@ class DecisionSearchService:
         toplam_sayfa = max(1, math.ceil(total / limit))
 
         # Facets
-        facets = self.get_facets(
+        facets = await self.get_facets(
             db, query=query,
             mahkeme=mahkeme, daire=daire,
             tarih_from=tarih_from, tarih_to=tarih_to,
@@ -101,9 +101,9 @@ class DecisionSearchService:
 
     async def get_decision(self, db: AsyncSession, source_id: str) -> dict | None:
         """Return a single decision by source_id, with full text."""
-        row = await db.execute(
+        row = (await db.execute(
             select(Decision).where(Decision.source_id == source_id)
-        ).scalar_one_or_none()
+        )).scalar_one_or_none()
 
         if row is None:
             return None
@@ -271,7 +271,7 @@ class DecisionSearchService:
             stmt = stmt.where(Decision.kaynak == kaynak)
         return stmt
 
-    def _search_fulltext(
+    async def _search_fulltext(
         self,
         db: AsyncSession,
         query: str,
@@ -333,7 +333,7 @@ class DecisionSearchService:
 
         return results, total
 
-    def _search_by_number(
+    async def _search_by_number(
         self,
         db: AsyncSession,
         esas_no: str | None,
@@ -376,7 +376,7 @@ class DecisionSearchService:
         results = [self._row_to_result_dict(d, score=1.0) for d in rows]
         return results, total
 
-    def _browse_all(
+    async def _browse_all(
         self,
         db: AsyncSession,
         mahkeme: str | None,
