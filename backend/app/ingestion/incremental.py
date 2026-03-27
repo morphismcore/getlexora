@@ -1,6 +1,9 @@
+# LEGACY: Embedding-based incremental ingestion. PostgreSQL-first mimaride kullanılmaz.
+# Phase 2'de embedding katmanı eklendiğinde tekrar aktif olacak.
 """
-Incremental ingestion — gunluk otomatik guncelleme.
+LEGACY — Incremental ingestion — gunluk otomatik guncelleme.
 Son ingestion'dan bu yana eklenen yeni kararlari ceker.
+Embedding pipeline (ingest.py) bağımlıdır. PG-first için pg_ingest.py kullanın.
 """
 
 import asyncio

@@ -48,6 +48,10 @@ interface SearchHeaderProps {
   setKaynak: (v: string) => void;
   siralama: string;
   setSiralama: (v: string) => void;
+  esasNo: string;
+  setEsasNo: (v: string) => void;
+  kararNo: string;
+  setKararNo: (v: string) => void;
   resetFilters: () => void;
   setCurrentPage: (p: number) => void;
 
@@ -84,6 +88,10 @@ export function SearchHeader({
   setKaynak,
   siralama,
   setSiralama,
+  esasNo,
+  setEsasNo,
+  kararNo,
+  setKararNo,
   resetFilters,
   setCurrentPage,
   searchHistory,
@@ -108,8 +116,10 @@ export function SearchHeader({
     if (tarihBitis) count++;
     if (kaynak !== "Tümü") count++;
     if (siralama !== "Alaka düzeyi") count++;
+    if (esasNo.trim()) count++;
+    if (kararNo.trim()) count++;
     return count;
-  }, [mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama]);
+  }, [mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, esasNo, kararNo]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") onSearch();
@@ -488,6 +498,28 @@ export function SearchHeader({
                     prefix="Sıralama"
                   />
                 </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={esasNo}
+                      onChange={(e) => setEsasNo(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setCurrentPage(1); onSearch(); } }}
+                      placeholder="Esas No"
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[14px] text-[#8B8B8E] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={kararNo}
+                      onChange={(e) => setKararNo(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setCurrentPage(1); onSearch(); } }}
+                      placeholder="Karar No"
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[14px] text-[#8B8B8E] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                    />
+                  </div>
+                </div>
                 {activeFilterCount > 0 && (
                   <button
                     onClick={() => {
@@ -610,6 +642,32 @@ export function SearchHeader({
                     options={KAYNAKLAR}
                     prefix="Kaynak"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">
+                      Esas No
+                    </label>
+                    <input
+                      type="text"
+                      value={esasNo}
+                      onChange={(e) => setEsasNo(e.target.value)}
+                      placeholder="ör: 2023/1234"
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[14px] text-[#8B8B8E] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">
+                      Karar No
+                    </label>
+                    <input
+                      type="text"
+                      value={kararNo}
+                      onChange={(e) => setKararNo(e.target.value)}
+                      placeholder="ör: 2024/5678"
+                      className="w-full bg-[#16161A] border border-white/[0.06] rounded-xl px-3 py-2.5 text-[14px] text-[#8B8B8E] placeholder:text-[#3A3A3F] focus:outline-none focus:border-[#6C6CFF]/40 transition-all"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[13px] font-medium text-[#5C5C5F] uppercase tracking-wider mb-1.5">

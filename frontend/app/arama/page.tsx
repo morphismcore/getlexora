@@ -72,7 +72,7 @@ export default function AramaPage() {
       ictihat.search();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ictihat.mahkeme, ictihat.daire]);
+  }, [ictihat.mahkeme, ictihat.daire, ictihat.kaynak]);
 
   /* Load search history on mount */
   useEffect(() => {
@@ -118,6 +118,10 @@ export default function AramaPage() {
         setKaynak={ictihat.setKaynak}
         siralama={ictihat.siralama}
         setSiralama={ictihat.setSiralama}
+        esasNo={ictihat.esasNo}
+        setEsasNo={ictihat.setEsasNo}
+        kararNo={ictihat.kararNo}
+        setKararNo={ictihat.setKararNo}
         resetFilters={ictihat.resetFilters}
         setCurrentPage={ictihat.setCurrentPage}
         searchHistory={searchHistory}

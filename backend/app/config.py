@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_api_key: str = ""
 
-    # Qdrant
+    # Qdrant (LEGACY — PostgreSQL-first mimaride kullanılmaz, Phase 2 için tutuluyor)
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection_ictihat: str = "ictihat_embeddings"
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 4
 
-    # Embedding (POC: lightweight model, production: BAAI/bge-m3)
+    # Embedding (LEGACY — PostgreSQL-first mimaride kullanılmaz, Phase 2 için tutuluyor)
     embedding_model: str = "BAAI/bge-m3"
     embedding_dim: int = 1024
     # Remote GPU embedding API (set to enable GPU-accelerated embedding)
@@ -50,11 +50,11 @@ class Settings(BaseSettings):
     rag_rerank_top_k: int = 30
     rag_min_relevance: float = 0.4
 
-    # RRF (Reciprocal Rank Fusion) weights
+    # RRF (LEGACY — Qdrant hybrid search weights, Phase 2 için tutuluyor)
     rrf_dense_weight: float = 0.55
     rrf_sparse_weight: float = 0.45
 
-    # Reranking (cross-encoder)
+    # Reranking (LEGACY — cross-encoder, Phase 2 için tutuluyor)
     reranking_enabled: bool = False  # CPU cross-encoder çok yavaş (~12s), GPU reranker eklenince açılacak
     reranking_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 

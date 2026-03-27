@@ -1,6 +1,9 @@
+# LEGACY: Embedding servisi. PostgreSQL-first mimaride kullanılmaz.
+# Phase 2'de embedding katmanı eklendiğinde tekrar aktif olacak.
 """
-Embedding servisi.
+LEGACY — Embedding servisi.
 BAAI/bge-m3 modeli ile dense + native sparse vektör üretir.
+PostgreSQL-first mimaride (pg_ingest.py) bu servis kullanılmaz.
 
 Modlar:
 - GPU API (EMBEDDING_API_URL set): Remote GPU sunucusuna HTTP ile istek atar. ~2ms/text.

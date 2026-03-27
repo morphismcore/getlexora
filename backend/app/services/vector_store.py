@@ -1,6 +1,9 @@
+# LEGACY: Qdrant vector store servisi. PostgreSQL-first mimaride kullanılmaz.
+# Phase 2'de embedding katmanı eklendiğinde tekrar aktif olacak.
 """
-Qdrant vector store servisi.
+LEGACY — Qdrant vector store servisi.
 İçtihat ve mevzuat embedding'lerini saklar ve hybrid search yapar.
+PostgreSQL-first mimaride (pg_ingest.py + pg_search) bu servis kullanılmaz.
 Dense + sparse aramaları paralel çalışır (asyncio.gather).
 """
 

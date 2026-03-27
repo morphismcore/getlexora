@@ -133,10 +133,17 @@ const ResultCard = React.memo(function ResultCard({
         </span>
       </div>
 
-      {/* 2-line truncated ozet */}
-      <p className="text-[15px] text-[#8B8B8E] leading-relaxed break-words group-hover:text-[#A0A0A3] transition-colors line-clamp-2">
-        {highlightText(result.ozet, query)}
-      </p>
+      {/* Ozet with PG ts_headline <mark> highlighting */}
+      {result.ozet && /<mark>/i.test(result.ozet) ? (
+        <p
+          className="text-[15px] text-[#8B8B8E] leading-[1.75] break-words group-hover:text-[#A0A0A3] transition-colors line-clamp-4 ictihat-highlight"
+          dangerouslySetInnerHTML={{ __html: result.ozet }}
+        />
+      ) : (
+        <p className="text-[15px] text-[#8B8B8E] leading-[1.75] break-words group-hover:text-[#A0A0A3] transition-colors line-clamp-4">
+          {highlightText(result.ozet, query)}
+        </p>
+      )}
     </motion.button>
   );
 });
@@ -294,8 +301,8 @@ export function IctihatTab({
               Hukuk veritabanında arama yapın
             </h2>
             <p className="text-[15px] text-[#5C5C5F] mb-4 leading-relaxed">
-              Doğal dil ile içtihat arayın. AI destekli semantik arama ile en
-              alakalı kararları bulun.
+              Doğal dil veya anahtar kelimelerle içtihat arayın. Tam metin
+              arama ile en alakalı kararları bulun.
             </p>
             <p className="text-[14px] text-[#6C6CFF]/60 font-medium mb-5 tracking-wide">
               65.000+ karar · 7 kaynak · yapay zeka destekli hibrit arama
@@ -740,9 +747,16 @@ export function IctihatTab({
                         Özet
                       </h3>
                     </div>
-                    <p className="text-[15px] text-[#ECECEE] leading-[1.8] break-words">
-                      {highlightText(kararDetail.ozet, query)}
-                    </p>
+                    {kararDetail.ozet && /<mark>/i.test(kararDetail.ozet) ? (
+                      <div
+                        className="text-[15px] text-[#ECECEE] leading-[1.85] break-words ictihat-highlight"
+                        dangerouslySetInnerHTML={{ __html: kararDetail.ozet }}
+                      />
+                    ) : (
+                      <p className="text-[15px] text-[#ECECEE] leading-[1.85] break-words">
+                        {highlightText(kararDetail.ozet, query)}
+                      </p>
+                    )}
                   </div>
 
                   {/* Full text */}
@@ -750,12 +764,12 @@ export function IctihatTab({
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-1 h-4 bg-[#A78BFA] rounded-full" />
                       <h3 className="text-[14px] font-semibold text-[#8B8B8E] uppercase tracking-wider">
-                        Karar Metni
+                        Tam Metin
                       </h3>
                     </div>
                     <div
-                      className="max-w-none overflow-hidden break-words"
-                      style={{ lineHeight: "1.85" }}
+                      className="max-w-none overflow-hidden break-words legal-text-body"
+                      style={{ lineHeight: "1.9", fontFamily: "'Georgia', 'Noto Serif', serif", fontSize: "15px" }}
                     >
                       {kararDetail.html ? (
                         <div

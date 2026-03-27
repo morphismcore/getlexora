@@ -1,6 +1,9 @@
+# LEGACY: Embedding pipeline chunker. PostgreSQL-first mimaride kullanılmaz.
+# Phase 2'de embedding katmanı eklendiğinde tekrar aktif olacak.
 """
-Hukuk metni chunking stratejisi.
-Karar, mevzuat ve makale türlerine göre özelleşmiş chunking.
+LEGACY — Hukuk metni chunking stratejisi.
+Embedding pipeline (ingest.py) tarafından kullanılır.
+PostgreSQL-first ingestion (pg_ingest.py) bu dosyayı kullanmaz.
 """
 
 import re

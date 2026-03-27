@@ -11,9 +11,10 @@ from app.worker import celery_app
 logger = structlog.get_logger()
 
 
+# LEGACY: Embedding-based incremental ingestion. Uses IncrementalIngestion which depends on Qdrant/embedding.
 @celery_app.task(bind=True, name="app.tasks.scheduled_tasks.daily_incremental")
 def daily_incremental(self):
-    """Gunluk incremental ingestion — Celery Beat ile 00:00'da calisir."""
+    """LEGACY — Gunluk incremental ingestion — Celery Beat ile 00:00'da calisir (embedding bağımlı)."""
     task_id = self.request.id
     logger.info("daily_incremental_start", task_id=task_id)
 

@@ -1,6 +1,9 @@
+# LEGACY: Cross-encoder reranker. PostgreSQL-first mimaride kullanılmaz.
+# Phase 2'de embedding katmanı eklendiğinde tekrar aktif olacak.
 """
-Cross-encoder Reranking Service.
+LEGACY — Cross-encoder Reranking Service.
 sentence-transformers cross-encoder modeli ile sonuçları yeniden sıralar.
+PostgreSQL-first mimaride bu servis kullanılmaz.
 Config ile açılıp kapatılabilir.
 """
 

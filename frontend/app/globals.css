@@ -360,3 +360,32 @@ html {
   color: #6C6CFF;
   text-decoration: underline;
 }
+
+/* PostgreSQL ts_headline <mark> highlight styling */
+.ictihat-highlight mark {
+  background: rgba(108, 108, 255, 0.18);
+  color: #A5A5FF;
+  border-radius: 2px;
+  padding: 0 2px;
+  box-shadow: 0 0 0 1px rgba(108, 108, 255, 0.2);
+}
+
+/* Legal text body — serif typography for reading long decisions */
+.legal-text-body {
+  color: #ECECEE;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  word-break: break-word;
+}
+.legal-text-body p {
+  margin-bottom: 14px;
+  text-indent: 0;
+}
+.legal-text-body mark {
+  background: rgba(108, 108, 255, 0.18);
+  color: #A5A5FF;
+  border-radius: 2px;
+  padding: 0 2px;
+  box-shadow: 0 0 0 1px rgba(108, 108, 255, 0.2);
+}

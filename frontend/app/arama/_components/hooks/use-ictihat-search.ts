@@ -40,6 +40,8 @@ export function useIctihatSearch() {
   const [tarihBitis, setTarihBitis] = useState("");
   const [kaynak, setKaynak] = useState("Tümü");
   const [siralama, setSiralama] = useState("Alaka düzeyi");
+  const [esasNo, setEsasNo] = useState("");
+  const [kararNo, setKararNo] = useState("");
 
   /* ─── Selected result + detail ─── */
   const [selectedResult, setSelectedResult] = useState<IctihatResult | null>(null);
@@ -121,6 +123,8 @@ export function useIctihatSearch() {
           ...(tarihBaslangic && { tarih_baslangic: tarihBaslangic }),
           ...(tarihBitis && { tarih_bitis: tarihBitis }),
           ...(kaynak !== "Tümü" && { kaynak: kaynak.toLowerCase() }),
+          ...(esasNo.trim() && { esas_no: esasNo.trim() }),
+          ...(kararNo.trim() && { karar_no: kararNo.trim() }),
           ...(siralama !== "Alaka düzeyi" && { siralama: siralama === "Tarih (yeni→eski)" ? "tarih_desc" : "tarih_asc" }),
         }),
         signal: controller.signal,
@@ -150,7 +154,7 @@ export function useIctihatSearch() {
     } finally {
       setLoading(false);
     }
-  }, [query, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, siralama, currentPage, loading]);
+  }, [query, mahkeme, daire, tarihBaslangic, tarihBitis, kaynak, esasNo, kararNo, siralama, currentPage, loading]);
 
   const selectResult = useCallback(async (result: IctihatResult) => {
     const requestId = result.karar_id;
@@ -231,6 +235,8 @@ export function useIctihatSearch() {
     setTarihBitis("");
     setKaynak("Tümü");
     setSiralama("Alaka düzeyi");
+    setEsasNo("");
+    setKararNo("");
   }, []);
 
   return {
@@ -257,6 +263,10 @@ export function useIctihatSearch() {
     setKaynak,
     siralama,
     setSiralama,
+    esasNo,
+    setEsasNo,
+    kararNo,
+    setKararNo,
 
     // Selected result + detail
     selectedResult,
