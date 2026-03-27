@@ -363,6 +363,75 @@ class PgIngestionPipeline:
             }
         )
 
+        # Update source registry
+        try:
+            async with self.session_factory() as db:
+                from app.models.database import SourceRegistry
+
+                # Count actuals per subcategory
+                for subcat, mahkeme_filter in [
+                    ("yargitay_hukuk", "Yargıtay"),
+                    ("yargitay_ceza", "Yargıtay"),
+                    ("danistay", "Danıştay"),
+                ]:
+                    # For Yargıtay, distinguish Hukuk vs Ceza by daire name
+                    if subcat == "yargitay_hukuk":
+                        count_q = select(func.count(Decision.id)).where(
+                            Decision.mahkeme == "Yargıtay",
+                            Decision.daire.like("%Hukuk%") | Decision.daire.like("%HGK%")
+                        )
+                    elif subcat == "yargitay_ceza":
+                        count_q = select(func.count(Decision.id)).where(
+                            Decision.mahkeme == "Yargıtay",
+                            Decision.daire.like("%Ceza%") | Decision.daire.like("%CGK%")
+                        )
+                    else:
+                        count_q = select(func.count(Decision.id)).where(
+                            Decision.mahkeme == "Danıştay"
+                        )
+
+                    actual = (await db.execute(count_q)).scalar() or 0
+
+                    # Get latest dates
+                    date_q = select(
+                        func.max(Decision.tarih),
+                        func.max(Decision.created_at),
+                    )
+                    if subcat == "yargitay_hukuk":
+                        date_q = date_q.where(Decision.mahkeme == "Yargıtay", Decision.daire.like("%Hukuk%") | Decision.daire.like("%HGK%"))
+                    elif subcat == "yargitay_ceza":
+                        date_q = date_q.where(Decision.mahkeme == "Yargıtay", Decision.daire.like("%Ceza%") | Decision.daire.like("%CGK%"))
+                    else:
+                        date_q = date_q.where(Decision.mahkeme == "Danıştay")
+
+                    date_row = (await db.execute(date_q)).one_or_none()
+
+                    # Upsert
+                    stmt = pg_insert(SourceRegistry).values(
+                        kaynak="bedesten",
+                        subcategory=subcat,
+                        display_name={"yargitay_hukuk": "Yargıtay Hukuk Daireleri", "yargitay_ceza": "Yargıtay Ceza Daireleri", "danistay": "Danıştay Daireleri"}[subcat],
+                        actual_total=actual,
+                        last_ingested_at=date_row[1] if date_row else None,
+                        last_decision_date=date_row[0] if date_row else None,
+                        status="active",
+                        last_checked_at=func.now(),
+                    ).on_conflict_do_update(
+                        index_elements=["kaynak", "subcategory"],
+                        set_={
+                            "actual_total": actual,
+                            "last_ingested_at": date_row[1] if date_row else None,
+                            "last_decision_date": date_row[0] if date_row else None,
+                            "status": "active",
+                            "last_checked_at": func.now(),
+                            "updated_at": func.now(),
+                        },
+                    )
+                    await db.execute(stmt)
+                await db.commit()
+        except Exception as e:
+            logger.warning("source_registry_update_error", error=str(e))
+
         logger.info("bedesten_ingestion_done", **stats)
         return stats
 

@@ -189,4 +189,51 @@ export interface PgIngestionSummary {
   error_types?: Record<string, number>;
 }
 
+// Source registry item from /api/v1/admin/ingest/pg/sources
+export interface SourceRegistryItem {
+  id: string;
+  kaynak: string;
+  subcategory: string | null;
+  display_name: string;
+  expected_total: number | null;
+  actual_total: number;
+  completeness_pct: number;
+  last_checked_at: string | null;
+  last_ingested_at: string | null;
+  last_decision_date: string | null;
+  status: string;
+  health: string;
+  notes: string | null;
+}
+
+// Data quality from /api/v1/admin/ingest/pg/quality
+export interface DataQuality {
+  total: number;
+  empty_content: number;
+  short_content: number;
+  missing_esas_no: number;
+  missing_karar_no: number;
+  missing_tarih: number;
+  quality_score: number;
+}
+
+// Freshness item from /api/v1/admin/ingest/pg/freshness
+export interface FreshnessItem {
+  kaynak: string;
+  mahkeme: string;
+  daire: string;
+  total: number;
+  latest_decision: string | null;
+  latest_ingestion: string | null;
+  stale: boolean;
+}
+
+// Ingestion history item from /api/v1/admin/ingest/pg/history
+export interface HistoryItem {
+  day: string;
+  kaynak: string;
+  saved: number;
+  errors: number;
+}
+
 export type TabKey = "genel" | "kullanicilar" | "veri-yonetimi" | "sureler";

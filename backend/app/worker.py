@@ -51,6 +51,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.scheduled_tasks.check_deadline_reminders",
         "schedule": crontab(hour=8, minute=0),  # Her gun sabah 08:00'de
     },
+    "daily-completeness-check": {
+        "task": "app.tasks.scheduled_tasks.daily_completeness_check_task",
+        "schedule": crontab(hour=4, minute=0),  # Her gün 04:00
+    },
     # LEGACY: embedding gerektiren mevzuat refresh devre dışı
     # "weekly-mevzuat-refresh": {
     #     "task": "app.tasks.ingestion_tasks.refresh_mevzuat_task",

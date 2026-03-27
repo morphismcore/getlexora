@@ -13,7 +13,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from datetime import date as date_type
-from sqlalchemy import select, func, distinct, text
+from datetime import datetime
+from sqlalchemy import select, func, distinct, text, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1694,6 +1695,187 @@ async def get_ingest_summary(
         "error_summary": {r[0] or "unknown": r[1] for r in error_counts},
         "recent_hour": recent,
     }
+
+
+@router.get("/ingest/pg/quality")
+async def pg_data_quality(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Veri kalite metrikleri."""
+    from app.models.database import Decision
+
+    total = (await db.execute(select(func.count(Decision.id)))).scalar() or 0
+    empty_content = (await db.execute(
+        select(func.count(Decision.id)).where(
+            or_(Decision.cleaned_text.is_(None), func.length(Decision.cleaned_text) < 100)
+        )
+    )).scalar() or 0
+    missing_esas = (await db.execute(
+        select(func.count(Decision.id)).where(Decision.esas_no.is_(None))
+    )).scalar() or 0
+    missing_karar = (await db.execute(
+        select(func.count(Decision.id)).where(Decision.karar_no.is_(None))
+    )).scalar() or 0
+    missing_tarih = (await db.execute(
+        select(func.count(Decision.id)).where(Decision.tarih.is_(None))
+    )).scalar() or 0
+    short_content = (await db.execute(
+        select(func.count(Decision.id)).where(
+            and_(Decision.cleaned_text.is_not(None), func.length(Decision.cleaned_text) < 500)
+        )
+    )).scalar() or 0
+
+    return {
+        "total": total,
+        "empty_content": empty_content,
+        "short_content": short_content,
+        "missing_esas_no": missing_esas,
+        "missing_karar_no": missing_karar,
+        "missing_tarih": missing_tarih,
+        "quality_score": round((1 - (empty_content + missing_esas + missing_tarih) / max(total, 1)) * 100, 1),
+    }
+
+
+@router.get("/ingest/pg/freshness")
+async def pg_data_freshness(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Her kaynaktan son veri ne zaman geldi."""
+    from app.models.database import Decision
+
+    rows = (await db.execute(
+        select(
+            Decision.kaynak,
+            Decision.mahkeme,
+            Decision.daire,
+            func.count().label("total"),
+            func.max(Decision.tarih).label("latest_decision"),
+            func.max(Decision.created_at).label("latest_ingestion"),
+        )
+        .group_by(Decision.kaynak, Decision.mahkeme, Decision.daire)
+        .order_by(text("latest_ingestion DESC"))
+    )).all()
+
+    return [
+        {
+            "kaynak": r.kaynak,
+            "mahkeme": r.mahkeme,
+            "daire": r.daire,
+            "total": r.total,
+            "latest_decision": r.latest_decision.isoformat() if r.latest_decision else None,
+            "latest_ingestion": r.latest_ingestion.isoformat() if r.latest_ingestion else None,
+            "stale": r.latest_ingestion.timestamp() < (datetime.now().timestamp() - 7*86400) if r.latest_ingestion else True,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/ingest/pg/history")
+async def pg_ingestion_history(
+    days: int = 30,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Son N günlük ingestion hızı."""
+    from app.models.database import IngestionLog
+
+    rows = (await db.execute(
+        select(
+            func.date_trunc('day', IngestionLog.created_at).label("day"),
+            IngestionLog.kaynak,
+            func.count().filter(IngestionLog.status == 'saved').label("saved"),
+            func.count().filter(IngestionLog.status != 'saved').label("errors"),
+        )
+        .where(IngestionLog.created_at > func.now() - text(f"INTERVAL '{days} days'"))
+        .group_by(text("day"), IngestionLog.kaynak)
+        .order_by(text("day DESC"))
+    )).all()
+
+    return [
+        {
+            "day": r.day.isoformat() if r.day else None,
+            "kaynak": r.kaynak,
+            "saved": r.saved,
+            "errors": r.errors,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/ingest/pg/sources")
+async def pg_source_registry(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tüm veri kaynaklarının durumu."""
+    from app.models.database import SourceRegistry
+
+    rows = (await db.execute(
+        select(SourceRegistry).order_by(SourceRegistry.kaynak)
+    )).scalars().all()
+
+    return [
+        {
+            "id": str(r.id),
+            "kaynak": r.kaynak,
+            "subcategory": r.subcategory,
+            "display_name": r.display_name,
+            "expected_total": r.expected_total,
+            "actual_total": r.actual_total,
+            "completeness_pct": r.completeness_pct,
+            "last_checked_at": r.last_checked_at.isoformat() if r.last_checked_at else None,
+            "last_ingested_at": r.last_ingested_at.isoformat() if r.last_ingested_at else None,
+            "last_decision_date": r.last_decision_date.isoformat() if r.last_decision_date else None,
+            "status": r.status,
+            "health": r.health,
+            "notes": r.notes,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/ingest/pg/gaps")
+async def pg_esas_gaps(
+    daire: str | None = None,
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Esas numara boşluk analizi."""
+    sql = """
+    WITH parsed AS (
+        SELECT daire, mahkeme,
+               SPLIT_PART(esas_no, '/', 1) AS yil_str,
+               SPLIT_PART(esas_no, '/', 2) AS sira_str
+        FROM decisions
+        WHERE esas_no ~ '^[0-9]{4}/[0-9]+$'
+    ),
+    nums AS (
+        SELECT daire, mahkeme, yil_str::int AS yil, sira_str::int AS sira
+        FROM parsed WHERE yil_str ~ '^[0-9]+$' AND sira_str ~ '^[0-9]+$'
+    ),
+    ranges AS (
+        SELECT daire, mahkeme, yil,
+               MIN(sira) AS min_sira, MAX(sira) AS max_sira, COUNT(*) AS actual
+        FROM nums GROUP BY daire, mahkeme, yil
+    )
+    SELECT daire, mahkeme, yil, min_sira, max_sira,
+           max_sira - min_sira + 1 AS expected, actual,
+           max_sira - min_sira + 1 - actual AS gaps
+    FROM ranges
+    WHERE (:daire IS NULL OR daire = :daire)
+    ORDER BY daire, yil DESC;
+    """
+    rows = (await db.execute(text(sql), {"daire": daire})).all()
+    return [
+        {
+            "daire": r[0], "mahkeme": r[1], "yil": r[2],
+            "min_sira": r[3], "max_sira": r[4],
+            "expected": r[5], "actual": r[6], "gaps": r[7],
+        }
+        for r in rows
+    ]
 
 
 async def _store_monitoring_snapshot():

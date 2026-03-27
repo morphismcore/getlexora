@@ -8,6 +8,7 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     Column,
+    Float,
     String,
     Text,
     Boolean,
@@ -574,4 +575,29 @@ class DaireProgress(Base):
         Index("ix_daire_progress_status", "status"),
         # Unique per daire
         Index("uq_daire_progress", "kaynak", "mahkeme", "daire", unique=True),
+    )
+
+
+class SourceRegistry(Base):
+    """Tüm veri kaynaklarının durumu — tek bakışta tüm resim."""
+    __tablename__ = "source_registry"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    kaynak: Mapped[str] = mapped_column(String(20), nullable=False)
+    subcategory: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    expected_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    actual_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completeness_pct: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_ingested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_decision_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")
+    health: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("uq_source_registry", "kaynak", "subcategory", unique=True),
     )

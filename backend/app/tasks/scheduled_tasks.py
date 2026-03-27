@@ -158,3 +158,112 @@ def check_deadline_reminders(self):
     except Exception as exc:
         logger.error("check_deadline_reminders_error", task_id=task_id, error=str(exc))
         raise
+
+
+async def check_data_completeness():
+    """Tüm kaynakların tamamlanma durumunu kontrol et."""
+    from app.models.db import async_session
+    from app.models.database import SourceRegistry, Decision
+    from app.services.yargi import YargiService, YARGITAY_HUKUK_DAIRELERI, YARGITAY_CEZA_DAIRELERI, DANISTAY_DAIRELERI, ITEM_TYPES
+    from app.services.telegram import TelegramService
+    from sqlalchemy import select, func
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    telegram = TelegramService()
+    yargi = YargiService()
+
+    alerts = []
+
+    try:
+        # Check Bedesten totals per subcategory
+        for subcat, daires, item_type in [
+            ("yargitay_hukuk", YARGITAY_HUKUK_DAIRELERI, ITEM_TYPES["yargitay"]),
+            ("yargitay_ceza", YARGITAY_CEZA_DAIRELERI, ITEM_TYPES["yargitay"]),
+            ("danistay", DANISTAY_DAIRELERI, ITEM_TYPES["danistay"]),
+        ]:
+            api_total = 0
+            for d_id, d_name in daires.items():
+                try:
+                    result = await yargi.search_bedesten(
+                        keyword="karar", item_type=item_type,
+                        birim_adi=d_name, page=1, page_size=1,
+                    )
+                    api_total += result.get("data", {}).get("total", 0)
+                except Exception:
+                    pass
+                await asyncio.sleep(1)  # Rate limit
+
+            # Get actual count
+            async with async_session() as db:
+                if "hukuk" in subcat:
+                    actual = (await db.execute(
+                        select(func.count(Decision.id)).where(
+                            Decision.mahkeme == "Yargıtay",
+                            Decision.daire.like("%Hukuk%") | Decision.daire.like("%HGK%")
+                        )
+                    )).scalar() or 0
+                elif "ceza" in subcat:
+                    actual = (await db.execute(
+                        select(func.count(Decision.id)).where(
+                            Decision.mahkeme == "Yargıtay",
+                            Decision.daire.like("%Ceza%") | Decision.daire.like("%CGK%")
+                        )
+                    )).scalar() or 0
+                else:
+                    actual = (await db.execute(
+                        select(func.count(Decision.id)).where(Decision.mahkeme == "Danıştay")
+                    )).scalar() or 0
+
+                pct = round(actual / max(api_total, 1) * 100, 1)
+
+                # Update source_registry
+                stmt = pg_insert(SourceRegistry).values(
+                    kaynak="bedesten", subcategory=subcat,
+                    display_name=subcat, expected_total=api_total,
+                    actual_total=actual, completeness_pct=pct,
+                    last_checked_at=func.now(), status="active" if pct > 0 else "empty",
+                ).on_conflict_do_update(
+                    index_elements=["kaynak", "subcategory"],
+                    set_={"expected_total": api_total, "actual_total": actual,
+                           "completeness_pct": pct, "last_checked_at": func.now(),
+                           "updated_at": func.now()},
+                )
+                await db.execute(stmt)
+                await db.commit()
+
+                if pct < 50:
+                    alerts.append(f"{subcat}: %{pct} ({actual:,}/{api_total:,})")
+
+        # Send Telegram summary
+        msg = "📊 Günlük Tamamlanma Raporu\n\n"
+        async with async_session() as db:
+            rows = (await db.execute(
+                select(SourceRegistry).order_by(SourceRegistry.kaynak)
+            )).scalars().all()
+            for r in rows:
+                emoji = "✅" if (r.completeness_pct or 0) > 80 else "🟡" if (r.completeness_pct or 0) > 20 else "🔴"
+                msg += f"{emoji} {r.display_name}: {r.actual_total:,}"
+                if r.expected_total:
+                    msg += f" / {r.expected_total:,} (%{r.completeness_pct:.1f})"
+                msg += "\n"
+
+        if alerts:
+            msg += f"\n⚠️ Düşük tamamlanma: {', '.join(alerts)}"
+
+        await telegram.send_message(msg)
+
+    except Exception as e:
+        logger.error("completeness_check_error", error=str(e))
+    finally:
+        await yargi.close()
+
+
+@celery_app.task(name="app.tasks.scheduled_tasks.daily_completeness_check_task")
+def daily_completeness_check_task():
+    """Günlük veri tamamlanma kontrolü."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(check_data_completeness())
+    finally:
+        loop.close()
