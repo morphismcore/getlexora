@@ -29,14 +29,21 @@ LABEL = {
 
 
 def pg_query(dsn, sql):
-    """Run a read-only query via SQLAlchemy (sync) and return rows."""
-    from sqlalchemy import create_engine, text
-    # Convert async DSN to sync if needed
-    sync_dsn = dsn.replace("postgresql+asyncpg://", "postgresql://")
-    engine = create_engine(sync_dsn, pool_pre_ping=True)
-    with engine.connect() as conn:
-        result = conn.execute(text(sql))
-        return result.fetchall()
+    """Run a read-only query via asyncpg (only driver available in container)."""
+    import asyncio
+    import asyncpg
+
+    # Normalize DSN: remove SQLAlchemy prefixes
+    clean_dsn = dsn.replace("postgresql+asyncpg://", "postgresql://")
+
+    async def _run():
+        conn = await asyncpg.connect(clean_dsn)
+        try:
+            return await conn.fetch(sql)
+        finally:
+            await conn.close()
+
+    return asyncio.run(_run())
 
 
 def main():
