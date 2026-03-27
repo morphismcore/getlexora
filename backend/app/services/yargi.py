@@ -9,7 +9,7 @@ import base64
 import time
 import structlog
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_not_exception_type
 
 from app.config import get_settings
 
@@ -118,7 +118,7 @@ class YargiService:
     async def close(self):
         await self.client.aclose()
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10), retry=retry_if_not_exception_type(CircuitBreakerOpen))
     async def search_bedesten(
         self,
         keyword: str,
@@ -180,9 +180,13 @@ class YargiService:
             )
             resp.raise_for_status()
             data = resp.json()
+            if not data or not isinstance(data, dict):
+                logger.warning("bedesten_search_empty_response", keyword=keyword)
+                return {"data": {"total": 0, "emsalKararList": []}}
 
-            total = data.get("data", {}).get("total", 0)
-            results = data.get("data", {}).get("emsalKararList", [])
+            inner = data.get("data") or {}
+            total = inner.get("total", 0)
+            results = inner.get("emsalKararList", [])
 
             self._record_success()
             logger.info(
@@ -207,7 +211,7 @@ class YargiService:
             logger.error("bedesten_search_error", error=str(e), keyword=keyword)
             raise
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10), retry=retry_if_not_exception_type(CircuitBreakerOpen))
     async def get_document(self, document_id: str, raise_on_circuit: bool = False) -> dict:
         """Tam karar metnini getir (base64 encoded HTML/PDF)."""
         if self._check_circuit():
@@ -238,10 +242,14 @@ class YargiService:
             )
             resp.raise_for_status()
             data = resp.json()
+            if not data or not isinstance(data, dict):
+                logger.warning("bedesten_document_empty_response", doc_id=document_id)
+                return {"data": {}}
 
             # Base64 decode
-            content_b64 = data.get("data", {}).get("content", "")
-            mime_type = data.get("data", {}).get("mimeType", "text/html")
+            inner = data.get("data") or {}
+            content_b64 = inner.get("content", "")
+            mime_type = inner.get("mimeType", "text/html")
 
             if content_b64:
                 if mime_type == "text/html":
