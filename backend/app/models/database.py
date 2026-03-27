@@ -539,3 +539,39 @@ class IngestionLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     decision: Mapped["Decision | None"] = relationship(back_populates="ingestion_logs")
+
+
+class DaireProgress(Base):
+    """Daire bazlı ingestion ilerleme takibi."""
+    __tablename__ = "daire_progress"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    kaynak: Mapped[str] = mapped_column(String(20), nullable=False)  # bedesten/aym/aihm
+    mahkeme: Mapped[str] = mapped_column(String(100), nullable=False)  # Yargıtay/Danıştay
+    daire: Mapped[str] = mapped_column(String(200), nullable=False)  # 1. Hukuk Dairesi
+    item_type: Mapped[str | None] = mapped_column(String(50), nullable=True)  # YARGITAYKARARI
+
+    # İlerleme
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # pending / active / done / error
+    total_api: Mapped[int | None] = mapped_column(Integer, nullable=True)  # API'deki toplam karar
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_pages: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Toplam sayfa (total_api / 10)
+    decisions_saved: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    decisions_skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Zaman
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_activity: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_daire_progress_kaynak_mahkeme", "kaynak", "mahkeme"),
+        Index("ix_daire_progress_status", "status"),
+        # Unique per daire
+        Index("uq_daire_progress", "kaynak", "mahkeme", "daire", unique=True),
+    )

@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import get_settings
 from app.ingestion.html_cleaner import clean_legal_html
-from app.models.database import Decision, IngestionLog
+from app.models.database import Decision, DaireProgress, IngestionLog
 from app.services.aym import AymService
 from app.services.hudoc import HudocService
 from app.services.telegram import TelegramService
@@ -272,6 +272,36 @@ class PgIngestionPipeline:
         result = await db.execute(q)
         return result.scalar() or 0
 
+    async def _upsert_daire_progress(
+        self,
+        db: AsyncSession,
+        *,
+        kaynak: str,
+        mahkeme: str,
+        daire: str,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Upsert a DaireProgress row using INSERT ON CONFLICT (kaynak, mahkeme, daire) DO UPDATE.
+        Pass any DaireProgress column values as kwargs (status, last_page, total_api, etc.).
+        """
+        insert_values = {
+            "kaynak": kaynak,
+            "mahkeme": mahkeme,
+            "daire": daire,
+            **kwargs,
+        }
+        stmt = (
+            pg_insert(DaireProgress)
+            .values(**insert_values)
+            .on_conflict_do_update(
+                index_elements=["kaynak", "mahkeme", "daire"],
+                set_={k: v for k, v in kwargs.items()},
+            )
+        )
+        await db.execute(stmt)
+        await db.flush()
+
     # ── Bedesten ingestion ───────────────────────────────────────────────
 
     async def ingest_bedesten(
@@ -357,6 +387,26 @@ class PgIngestionPipeline:
         page_delay = self.settings.ingestion_page_delay
         concurrent = self.settings.ingestion_concurrent_fetches
 
+        # Track per-daire counters for DaireProgress
+        daire_saved = 0
+        daire_skipped = 0
+        daire_errors = 0
+
+        # Mark daire as active
+        async with self.session_factory() as db:
+            await self._upsert_daire_progress(
+                db,
+                kaynak="bedesten",
+                mahkeme=mahkeme,
+                daire=birim_adi,
+                item_type=item_type,
+                status="active",
+                last_page=start_page,
+                started_at=func.now(),
+                last_activity=func.now(),
+            )
+            await db.commit()
+
         logger.info(
             "bedesten_daire_start",
             mahkeme=mahkeme,
@@ -364,23 +414,127 @@ class PgIngestionPipeline:
             start_page=page,
         )
 
-        while empty_streak < max_empty_streak:
-            try:
-                search_result = await yargi.search_bedesten(
-                    keyword="karar",
-                    item_type=item_type,
-                    birim_adi=birim_adi,
-                    page=page,
-                    page_size=10,
-                    date_from=date_from,
-                    date_to=date_to,
-                    raise_on_circuit=True,
-                )
-            except CircuitBreakerOpen:
-                raise
-            except Exception as exc:
-                err_type, can_retry = self._classify_error(exc)
-                self._errors += 1
+        try:
+            while empty_streak < max_empty_streak:
+                try:
+                    search_result = await yargi.search_bedesten(
+                        keyword="karar",
+                        item_type=item_type,
+                        birim_adi=birim_adi,
+                        page=page,
+                        page_size=10,
+                        date_from=date_from,
+                        date_to=date_to,
+                        raise_on_circuit=True,
+                    )
+                except CircuitBreakerOpen:
+                    raise
+                except Exception as exc:
+                    err_type, can_retry = self._classify_error(exc)
+                    self._errors += 1
+                    daire_errors += 1
+                    async with self.session_factory() as db:
+                        await self._log_attempt(
+                            db,
+                            kaynak="bedesten",
+                            mahkeme=mahkeme,
+                            daire=birim_adi,
+                            page=page,
+                            status="error",
+                            error_message=str(exc)[:500],
+                            error_type=err_type,
+                            can_retry=can_retry,
+                        )
+                        await self._upsert_daire_progress(
+                            db,
+                            kaynak="bedesten",
+                            mahkeme=mahkeme,
+                            daire=birim_adi,
+                            errors=daire_errors,
+                            last_activity=func.now(),
+                        )
+                        await db.commit()
+                    logger.warning(
+                        "bedesten_search_error",
+                        daire=birim_adi,
+                        page=page,
+                        error=str(exc)[:200],
+                    )
+                    if can_retry:
+                        # Transient error (429, timeout, etc) — back off and retry same page
+                        await asyncio.sleep(page_delay * 3)
+                        empty_streak += 1
+                    else:
+                        # Permanent error — skip page
+                        empty_streak += 1
+                        page += 1
+                        await asyncio.sleep(page_delay)
+                    continue
+
+                items = search_result.get("data", {}).get("emsalKararList", [])
+                total = search_result.get("data", {}).get("total", 0)
+                total_pages = (total + 9) // 10 if total else None
+
+                if not items:
+                    empty_streak += 1
+                    page += 1
+                    await asyncio.sleep(page_delay)
+                    continue
+
+                empty_streak = 0
+
+                # Fetch full documents concurrently in small batches
+                page_saved_before = self._saved
+                doc_ids = [it.get("documentId") for it in items if it.get("documentId")]
+                for batch_start in range(0, len(doc_ids), concurrent):
+                    batch = doc_ids[batch_start : batch_start + concurrent]
+                    doc_tasks = [
+                        yargi.get_document(did, raise_on_circuit=True) for did in batch
+                    ]
+                    doc_results = await asyncio.gather(*doc_tasks, return_exceptions=True)
+
+                    async with self.session_factory() as db:
+                        for did, doc_or_exc, raw_item in zip(
+                            batch,
+                            doc_results,
+                            items[batch_start : batch_start + concurrent],
+                        ):
+                            if isinstance(doc_or_exc, Exception):
+                                err_type, can_retry = self._classify_error(doc_or_exc)
+                                self._errors += 1
+                                daire_errors += 1
+                                await self._log_attempt(
+                                    db,
+                                    kaynak="bedesten",
+                                    source_id=did,
+                                    mahkeme=mahkeme,
+                                    daire=birim_adi,
+                                    page=page,
+                                    status="error",
+                                    error_message=str(doc_or_exc)[:500],
+                                    error_type=err_type,
+                                    can_retry=can_retry,
+                                )
+                                continue
+
+                            self._fetched += 1
+                            await self._process_bedesten_doc(
+                                db=db,
+                                raw_item=raw_item,
+                                doc_data=doc_or_exc,
+                                mahkeme=mahkeme,
+                                birim_adi=birim_adi,
+                                page=page,
+                            )
+
+                        await db.commit()
+
+                # Update per-daire counters after page
+                page_new_saved = self._saved - page_saved_before
+                daire_saved += page_new_saved
+                daire_skipped += len(items) - page_new_saved
+
+                # Log page success checkpoint + update DaireProgress
                 async with self.session_factory() as db:
                     await self._log_attempt(
                         db,
@@ -388,107 +542,65 @@ class PgIngestionPipeline:
                         mahkeme=mahkeme,
                         daire=birim_adi,
                         page=page,
-                        status="error",
-                        error_message=str(exc)[:500],
-                        error_type=err_type,
-                        can_retry=can_retry,
+                        status="success",
+                    )
+                    await self._upsert_daire_progress(
+                        db,
+                        kaynak="bedesten",
+                        mahkeme=mahkeme,
+                        daire=birim_adi,
+                        last_page=page,
+                        total_api=total if total else None,
+                        total_pages=total_pages,
+                        decisions_saved=daire_saved,
+                        decisions_skipped=daire_skipped,
+                        errors=daire_errors,
+                        last_activity=func.now(),
                     )
                     await db.commit()
-                logger.warning(
-                    "bedesten_search_error",
+
+                logger.info(
+                    "bedesten_page_done",
                     daire=birim_adi,
                     page=page,
-                    error=str(exc)[:200],
+                    total=total,
+                    items=len(items),
+                    saved=self._saved,
                 )
-                if can_retry:
-                    # Transient error (429, timeout, etc) — back off and retry same page
-                    await asyncio.sleep(page_delay * 3)
-                    empty_streak += 1
-                else:
-                    # Permanent error — skip page
-                    empty_streak += 1
-                    page += 1
-                    await asyncio.sleep(page_delay)
-                continue
 
-            items = search_result.get("data", {}).get("emsalKararList", [])
-            total = search_result.get("data", {}).get("total", 0)
-
-            if not items:
-                empty_streak += 1
                 page += 1
                 await asyncio.sleep(page_delay)
-                continue
 
-            empty_streak = 0
-
-            # Fetch full documents concurrently in small batches
-            doc_ids = [it.get("documentId") for it in items if it.get("documentId")]
-            for batch_start in range(0, len(doc_ids), concurrent):
-                batch = doc_ids[batch_start : batch_start + concurrent]
-                doc_tasks = [
-                    yargi.get_document(did, raise_on_circuit=True) for did in batch
-                ]
-                doc_results = await asyncio.gather(*doc_tasks, return_exceptions=True)
-
-                async with self.session_factory() as db:
-                    for did, doc_or_exc, raw_item in zip(
-                        batch,
-                        doc_results,
-                        items[batch_start : batch_start + concurrent],
-                    ):
-                        if isinstance(doc_or_exc, Exception):
-                            err_type, can_retry = self._classify_error(doc_or_exc)
-                            self._errors += 1
-                            await self._log_attempt(
-                                db,
-                                kaynak="bedesten",
-                                source_id=did,
-                                mahkeme=mahkeme,
-                                daire=birim_adi,
-                                page=page,
-                                status="error",
-                                error_message=str(doc_or_exc)[:500],
-                                error_type=err_type,
-                                can_retry=can_retry,
-                            )
-                            continue
-
-                        self._fetched += 1
-                        await self._process_bedesten_doc(
-                            db=db,
-                            raw_item=raw_item,
-                            doc_data=doc_or_exc,
-                            mahkeme=mahkeme,
-                            birim_adi=birim_adi,
-                            page=page,
-                        )
-
-                    await db.commit()
-
-            # Log page success checkpoint
+        except CircuitBreakerOpen:
+            # Mark daire as error on circuit breaker
             async with self.session_factory() as db:
-                await self._log_attempt(
+                await self._upsert_daire_progress(
                     db,
                     kaynak="bedesten",
                     mahkeme=mahkeme,
                     daire=birim_adi,
-                    page=page,
-                    status="success",
+                    status="error",
+                    errors=daire_errors,
+                    last_activity=func.now(),
                 )
                 await db.commit()
+            raise
 
-            logger.info(
-                "bedesten_page_done",
+        # Mark daire as done
+        async with self.session_factory() as db:
+            await self._upsert_daire_progress(
+                db,
+                kaynak="bedesten",
+                mahkeme=mahkeme,
                 daire=birim_adi,
-                page=page,
-                total=total,
-                items=len(items),
-                saved=self._saved,
+                status="done",
+                decisions_saved=daire_saved,
+                decisions_skipped=daire_skipped,
+                errors=daire_errors,
+                completed_at=func.now(),
+                last_activity=func.now(),
             )
-
-            page += 1
-            await asyncio.sleep(page_delay)
+            await db.commit()
 
         logger.info(
             "bedesten_daire_done",

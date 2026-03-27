@@ -13,7 +13,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from datetime import date as date_type
-from sqlalchemy import select, func, distinct
+from sqlalchemy import select, func, distinct, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1617,6 +1617,83 @@ async def pg_ingest_retry(
     from app.tasks.ingestion_tasks import ingest_pg_retry_task
     result = ingest_pg_retry_task.delay(kaynak=kaynak, limit=limit)
     return {"status": "started", "task_id": result.id}
+
+
+@router.get("/ingest/pg/daire-progress")
+async def get_daire_progress(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tüm dairelerin ingestion ilerleme durumu."""
+    from app.models.database import DaireProgress
+    result = await db.execute(
+        select(DaireProgress).order_by(DaireProgress.kaynak, DaireProgress.mahkeme, DaireProgress.daire)
+    )
+    rows = result.scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "kaynak": r.kaynak,
+            "mahkeme": r.mahkeme,
+            "daire": r.daire,
+            "status": r.status,
+            "total_api": r.total_api,
+            "last_page": r.last_page,
+            "total_pages": r.total_pages,
+            "decisions_saved": r.decisions_saved,
+            "decisions_skipped": r.decisions_skipped,
+            "errors": r.errors,
+            "progress_pct": round((r.last_page / r.total_pages * 100) if r.total_pages and r.total_pages > 0 else 0, 1),
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+            "last_activity": r.last_activity.isoformat() if r.last_activity else None,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/ingest/pg/summary")
+async def get_ingest_summary(
+    admin: User = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Ingestion özet istatistikleri."""
+    from app.models.database import DaireProgress, Decision, IngestionLog
+
+    # Daire counts by status
+    daire_stats = (await db.execute(
+        select(DaireProgress.status, func.count()).group_by(DaireProgress.status)
+    )).all()
+
+    # Total decisions
+    total_decisions = (await db.execute(select(func.count(Decision.id)))).scalar() or 0
+
+    # Decisions by mahkeme
+    mahkeme_counts = (await db.execute(
+        select(Decision.mahkeme, func.count()).group_by(Decision.mahkeme).order_by(func.count().desc())
+    )).all()
+
+    # Error summary
+    error_counts = (await db.execute(
+        select(IngestionLog.error_type, func.count())
+        .where(IngestionLog.status != 'saved')
+        .group_by(IngestionLog.error_type)
+        .order_by(func.count().desc())
+    )).all()
+
+    # Recent activity (last hour)
+    recent = (await db.execute(
+        select(func.count(Decision.id))
+        .where(Decision.created_at > func.now() - text("INTERVAL '1 hour'"))
+    )).scalar() or 0
+
+    return {
+        "daire_summary": {r[0]: r[1] for r in daire_stats},
+        "total_decisions": total_decisions,
+        "mahkeme_counts": {r[0]: r[1] for r in mahkeme_counts},
+        "error_summary": {r[0] or "unknown": r[1] for r in error_counts},
+        "recent_hour": recent,
+    }
 
 
 async def _store_monitoring_snapshot():

@@ -161,4 +161,32 @@ export interface RuleFormData {
   is_active: boolean;
 }
 
+// PostgreSQL Ingestion types
+export interface PgDaireProgress {
+  id: string;
+  kaynak: string;
+  mahkeme: string;
+  daire: string;
+  status: "pending" | "active" | "done" | "error";
+  total_api: number | null;
+  last_page: number;
+  total_pages: number | null;
+  decisions_saved: number;
+  decisions_skipped: number;
+  errors: number;
+  progress_pct: number;
+  started_at: string | null;
+  completed_at: string | null;
+  last_activity: string | null;
+}
+
+export interface PgIngestionSummary {
+  total_decisions: number;
+  active_daires: number;
+  completed_daires: number;
+  error_count: number;
+  recent_activity: number;
+  error_types?: Record<string, number>;
+}
+
 export type TabKey = "genel" | "kullanicilar" | "veri-yonetimi" | "sureler";
