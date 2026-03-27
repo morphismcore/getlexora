@@ -29,15 +29,14 @@ LABEL = {
 
 
 def pg_query(dsn, sql):
-    """Run a read-only query via psycopg2 and return rows."""
-    import psycopg2
-    conn = psycopg2.connect(dsn)
-    try:
-        cur = conn.cursor()
-        cur.execute(sql)
-        return cur.fetchall()
-    finally:
-        conn.close()
+    """Run a read-only query via SQLAlchemy (sync) and return rows."""
+    from sqlalchemy import create_engine, text
+    # Convert async DSN to sync if needed
+    sync_dsn = dsn.replace("postgresql+asyncpg://", "postgresql://")
+    engine = create_engine(sync_dsn, pool_pre_ping=True)
+    with engine.connect() as conn:
+        result = conn.execute(text(sql))
+        return result.fetchall()
 
 
 def main():
