@@ -1688,12 +1688,17 @@ async def get_ingest_summary(
         .where(Decision.created_at > func.now() - text("INTERVAL '1 hour'"))
     )).scalar() or 0
 
+    daire_dict = {r[0]: r[1] for r in daire_stats}
+    error_dict = {r[0] or "unknown": r[1] for r in error_counts}
     return {
-        "daire_summary": {r[0]: r[1] for r in daire_stats},
         "total_decisions": total_decisions,
+        "active_daires": daire_dict.get("active", 0),
+        "completed_daires": daire_dict.get("done", 0),
+        "error_count": sum(error_dict.values()),
+        "recent_activity": recent,
+        "error_types": error_dict,
+        "daire_summary": daire_dict,
         "mahkeme_counts": {r[0]: r[1] for r in mahkeme_counts},
-        "error_summary": {r[0] or "unknown": r[1] for r in error_counts},
-        "recent_hour": recent,
     }
 
 
