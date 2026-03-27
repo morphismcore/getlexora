@@ -15,7 +15,7 @@ from datetime import date
 
 import structlog
 from sqlalchemy import Select, func, select, text, case, literal_column, extract
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import Decision
 
@@ -27,9 +27,9 @@ class DecisionSearchService:
 
     # ── Public API ────────────────────────────────────────────────────────
 
-    def search(
+    async def search(
         self,
-        db: Session,
+        db: AsyncSession,
         query: str | None = None,
         mahkeme: str | None = None,
         daire: str | None = None,
@@ -99,9 +99,9 @@ class DecisionSearchService:
             "facets": facets,
         }
 
-    def get_decision(self, db: Session, source_id: str) -> dict | None:
+    async def get_decision(self, db: AsyncSession, source_id: str) -> dict | None:
         """Return a single decision by source_id, with full text."""
-        row = db.execute(
+        row = await db.execute(
             select(Decision).where(Decision.source_id == source_id)
         ).scalar_one_or_none()
 
@@ -110,9 +110,9 @@ class DecisionSearchService:
 
         return self._row_to_full_dict(row)
 
-    def get_facets(
+    async def get_facets(
         self,
-        db: Session,
+        db: AsyncSession,
         query: str | None = None,
         mahkeme: str | None = None,
         daire: str | None = None,
@@ -149,7 +149,7 @@ class DecisionSearchService:
             mahkeme_q = self._apply_filters(mahkeme_q, mahkeme=None, daire=daire, tarih_from=tarih_from, tarih_to=tarih_to, kaynak=kaynak)
 
         mahkeme_q = mahkeme_q.group_by(Decision.mahkeme).order_by(text("cnt DESC")).limit(20)
-        mahkeme_facets = {row[0]: row[1] for row in db.execute(mahkeme_q).all()}
+        mahkeme_facets = {row[0]: row[1] for row in (await db.execute(mahkeme_q)).all()}
 
         # Daire facet (don't filter by daire)
         if query and query.strip():
@@ -169,7 +169,7 @@ class DecisionSearchService:
             )
         daire_q = self._apply_filters(daire_q, mahkeme=mahkeme, daire=None, tarih_from=tarih_from, tarih_to=tarih_to, kaynak=kaynak)
         daire_q = daire_q.group_by(Decision.daire).order_by(text("cnt DESC")).limit(30)
-        daire_facets = {row[0]: row[1] for row in db.execute(daire_q).all()}
+        daire_facets = {row[0]: row[1] for row in (await db.execute(daire_q)).all()}
 
         # Yil facet (don't filter by tarih)
         if query and query.strip():
@@ -195,7 +195,7 @@ class DecisionSearchService:
             )
         yil_q = self._apply_filters(yil_q, mahkeme=mahkeme, daire=daire, tarih_from=None, tarih_to=None, kaynak=kaynak)
         yil_q = yil_q.group_by(text("yil")).order_by(text("yil DESC")).limit(30)
-        yil_facets = {str(int(row[0])): row[1] for row in db.execute(yil_q).all() if row[0]}
+        yil_facets = {str(int(row[0])): row[1] for row in (await db.execute(yil_q)).all() if row[0]}
 
         return {
             "mahkeme": mahkeme_facets,
@@ -203,36 +203,36 @@ class DecisionSearchService:
             "yil": yil_facets,
         }
 
-    def get_stats(self, db: Session) -> dict:
+    async def get_stats(self, db: AsyncSession) -> dict:
         """Return overall statistics about the decisions table."""
-        total = db.execute(select(func.count(Decision.id))).scalar() or 0
-        embedded = db.execute(
+        total = (await db.execute(select(func.count(Decision.id)))).scalar() or 0
+        embedded = (await db.execute(
             select(func.count(Decision.id)).where(Decision.is_embedded.is_(True))
-        ).scalar() or 0
+        )).scalar() or 0
 
         kaynak_counts = dict(
-            db.execute(
+            (await db.execute(
                 select(Decision.kaynak, func.count().label("cnt"))
                 .group_by(Decision.kaynak)
                 .order_by(text("cnt DESC"))
-            ).all()
+            )).all()
         )
 
         mahkeme_counts = dict(
-            db.execute(
+            (await db.execute(
                 select(Decision.mahkeme, func.count().label("cnt"))
                 .group_by(Decision.mahkeme)
                 .order_by(text("cnt DESC"))
                 .limit(20)
-            ).all()
+            )).all()
         )
 
-        tarih_range_row = db.execute(
+        tarih_range_row = (await db.execute(
             select(
                 func.min(Decision.tarih).label("min_tarih"),
                 func.max(Decision.tarih).label("max_tarih"),
             ).where(Decision.tarih.is_not(None))
-        ).one_or_none()
+        )).one_or_none()
 
         min_tarih = tarih_range_row[0].isoformat() if tarih_range_row and tarih_range_row[0] else None
         max_tarih = tarih_range_row[1].isoformat() if tarih_range_row and tarih_range_row[1] else None
@@ -273,7 +273,7 @@ class DecisionSearchService:
 
     def _search_fulltext(
         self,
-        db: Session,
+        db: AsyncSession,
         query: str,
         mahkeme: str | None,
         daire: str | None,
@@ -314,7 +314,7 @@ class DecisionSearchService:
             stmt = stmt.order_by(rank.desc(), Decision.tarih.desc().nullslast())
 
         stmt = stmt.limit(limit).offset(offset)
-        rows = db.execute(stmt).all()
+        rows = (await db.execute(stmt)).all()
 
         # Count query
         count_stmt = (
@@ -322,7 +322,7 @@ class DecisionSearchService:
             .where(Decision.search_vector.op("@@")(tsquery))
         )
         count_stmt = self._apply_filters(count_stmt, mahkeme, daire, tarih_from, tarih_to, kaynak)
-        total = db.execute(count_stmt).scalar() or 0
+        total = (await db.execute(count_stmt)).scalar() or 0
 
         results = []
         for row in rows:
@@ -335,7 +335,7 @@ class DecisionSearchService:
 
     def _search_by_number(
         self,
-        db: Session,
+        db: AsyncSession,
         esas_no: str | None,
         karar_no: str | None,
         mahkeme: str | None,
@@ -362,7 +362,7 @@ class DecisionSearchService:
         if karar_no:
             count_stmt = count_stmt.where(Decision.karar_no.ilike(f"%{karar_no}%"))
         count_stmt = self._apply_filters(count_stmt, mahkeme, daire, tarih_from, tarih_to, kaynak)
-        total = db.execute(count_stmt).scalar() or 0
+        total = (await db.execute(count_stmt)).scalar() or 0
 
         # Sort
         if sort == "tarih_asc":
@@ -371,14 +371,14 @@ class DecisionSearchService:
             stmt = stmt.order_by(Decision.tarih.desc().nullslast())
 
         stmt = stmt.limit(limit).offset(offset)
-        rows = db.execute(stmt).scalars().all()
+        rows = (await db.execute(stmt)).scalars().all()
 
         results = [self._row_to_result_dict(d, score=1.0) for d in rows]
         return results, total
 
     def _browse_all(
         self,
-        db: Session,
+        db: AsyncSession,
         mahkeme: str | None,
         daire: str | None,
         tarih_from: date | None,
@@ -395,7 +395,7 @@ class DecisionSearchService:
         # Count
         count_stmt = select(func.count(Decision.id))
         count_stmt = self._apply_filters(count_stmt, mahkeme, daire, tarih_from, tarih_to, kaynak)
-        total = db.execute(count_stmt).scalar() or 0
+        total = (await db.execute(count_stmt)).scalar() or 0
 
         # Sort
         if sort == "tarih_asc":
@@ -406,7 +406,7 @@ class DecisionSearchService:
             stmt = stmt.order_by(Decision.created_at.desc())
 
         stmt = stmt.limit(limit).offset(offset)
-        rows = db.execute(stmt).scalars().all()
+        rows = (await db.execute(stmt)).scalars().all()
 
         results = [self._row_to_result_dict(d, score=0.0) for d in rows]
         return results, total
