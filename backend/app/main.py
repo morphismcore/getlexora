@@ -58,19 +58,8 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("apscheduler_skipped", reason="USE_CELERY=true, Celery Beat handles scheduling")
 
-    # Preload embedding model at startup (only if GPU API configured)
-    from app.config import get_settings as _get_settings
-    _s = _get_settings()
-    if _s.embedding_api_url:
-        try:
-            from app.services.embedding import EmbeddingService
-            emb = EmbeddingService()
-            emb.embed_query("preload")
-            logger.info("embedding_model_preloaded")
-        except Exception as e:
-            logger.warning("embedding_preload_skip", error=str(e))
-    else:
-        logger.info("embedding_preload_skip", reason="EMBEDDING_API_URL not set, PostgreSQL search active")
+    # Embedding preload devre dışı — PostgreSQL search aktif, GPU opsiyonel
+    logger.info("embedding_preload_skip", reason="PostgreSQL-first mode, embedding lazy-loaded on demand")
 
     yield
 
